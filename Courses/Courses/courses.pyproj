@@ -29,6 +29,15 @@
     <Compile Include="course_1.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="others\Data_analyse.py" />
+    <Compile Include="others\iban_converter.py" />
+    <Compile Include="others\others.py" />
+    <Compile Include="others\plot.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="others\" />
+    <Folder Include="study_1\" />
+    <Folder Include="others\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
