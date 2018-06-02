@@ -2,16 +2,15 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>513af7e1-ff8c-4ba9-b737-ffe3c50e93c1</ProjectGuid>
-    <ProjectHome>
-    </ProjectHome>
-    <StartupFile>PythonApplication1.py</StartupFile>
+    <ProjectGuid>025b859f-91ae-4c8a-a47a-428b2d610a26</ProjectGuid>
+    <ProjectHome>.</ProjectHome>
+    <StartupFile>Courses.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
-    <Name>courses</Name>
-    <RootNamespace>PythonApplication1</RootNamespace>
+    <Name>Courses</Name>
+    <RootNamespace>Courses</RootNamespace>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -22,7 +21,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="PythonApplication1.py" />
+    <Compile Include="Courses.py" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
