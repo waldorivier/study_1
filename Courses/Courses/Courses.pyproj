@@ -4,8 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>025b859f-91ae-4c8a-a47a-428b2d610a26</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>
-    </StartupFile>
+    <StartupFile>course_1.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -29,12 +28,13 @@
     <Compile Include="course_1.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="others.py">
-      <SubType>Code</SubType>
-    </Compile>
+    <Compile Include="others\Data_analyse.py" />
+    <Compile Include="others\iban_converter.py" />
+    <Compile Include="others\others.py" />
+    <Compile Include="others\plot.py" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="study_1\" />
+    <Folder Include="others\" />
     <Folder Include="others\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
