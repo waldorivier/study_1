@@ -23,6 +23,7 @@ try :
     df.dropna(inplace=True)
     df.count()
 
+    
     # selection des colonnes de type numérique don on produit une copie
     df_num_col = df.select_dtypes(include=['float64', 'int64']).copy()
 
@@ -39,9 +40,23 @@ try :
     df_hap_desc = df.sort_values(by = 'Happiness Rank', ascending = False)
     df_hap_desc.head(10)
 
+    # suppression de la région Europe compte tenue que des sous-régions 
+    # sont définies
+    
+    df_region = df.copy()
+    df_region.set_index(['Region'], inplace=True)
+    df_region.drop(['Europe'], axis=0, inplace=True)
 
+    #moyenne par région
+    ser_hap = df_region.groupby(['Region'])['Happiness Score'].mean()
+    ser_hap.sort_values(ascending=False)
 
-
+    #moyenne par région
+    f_above_6 = df_region['Happiness Score'] > 6
+    df_region_f = df_region[f_above_6]
+    ser_nb_region_f = df_region_f.groupby(['Region'])['Happiness Score']
+    ser_nb_region_f.count()
+   
 except ValueError as e  :
     print (e)
        

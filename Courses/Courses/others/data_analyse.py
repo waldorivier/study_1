@@ -31,9 +31,10 @@ try :
     data.dropna(inplace=True)
     data = data[data['First ascent'] != 'unclimbed']
 
-    # on ne peut pas changer de typw sur des lignes qui contiennent des colonnes non définies 
+    # on ne peut pas changer de type sur des lignes qui contiennent des colonnes non définies 
     # ainsi le dropna ci-dessus
 
+    # up casting 
     data['First ascent'] = data['First ascent'].astype(int)
     data['Ascents bef. 2004'] = data['Ascents bef. 2004'].astype(int)
     data['Failed attempts bef. 2004'] = data['Failed attempts bef. 2004'].astype(int)
