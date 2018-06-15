@@ -10,6 +10,38 @@ import seaborn as sns
 
 try :
 
+    #--------------------------------------------------------------------------
+    # décomposition du score de bonheur par critère; forme stack bar 
+    # fonction utilisée plus bas
+    #--------------------------------------------------------------------------
+    def plot_stack_bar (df, title) :
+
+        x = df['Country']
+        x_pos = np.arange(len(x))
+
+        y = df['Happiness Score']
+       
+        fig, a2 = plt.subplots()
+        a2.set_xticks(x_pos)
+        a2.set_xticklabels(x, rotation=90)
+
+        for i in range(3, 10) :
+            ci = df.iloc[:,i]
+            if i == 3 :
+                a2.bar(x_pos, ci, color = 'silver')
+                c = ci
+            else :
+                a2.bar(x_pos, ci, bottom = c)
+                c = c + ci
+
+        a2.legend(labels=df_hap_10.columns[3:10], loc="upper right", bbox_to_anchor=(1.2, 1))
+        a2.set_xlabel('Country')
+        a2.set_ylabel('Happiness Score')
+        a2.set_title(title)
+        plt.show()
+
+   #-------------------------------------------------------------------------
+   
     working_dir = PureWindowsPath(os.getcwd())
     data_dir = PureWindowsPath(working_dir.joinpath('Data'))
     data_file = PureWindowsPath(data_dir.joinpath('data.csv'))
@@ -121,43 +153,31 @@ try :
     sns.distplot(df['Job Satisfaction'], bins=6, kde=False, norm_hist=True)
     
     #--------------------------------------------------------------------------
-    # Scatter PLOT
+    # Pairwise Scatter PLOT
     #--------------------------------------------------------------------------
     
-    sns.pairplot(df)
-    
-    grid = sns.FacetGrid(df, col='Happiness Score', row='Family')
-    plt.show()  
+    # des variables "numérique", on retire "Happiness Score";
+    # on construit alors les comparaisons entre chacune de ces variables 
+    # et "Happiness Score"  
+   
+    comparison_vars = df_num_col.drop(['Happiness Score'], axis=1).columns.values
+    g = sns.PairGrid(df, x_vars=comparison_vars, y_vars=["Happiness Score"])
+    g = g.map(plt.scatter)
+     
+    #--------------------------------------------------------------------------
+    # Correlation
+    #--------------------------------------------------------------------------
 
+    hap_score_corr_values = df.corr()['Happiness Score'].sort_values(ascending=False)
+    hap_score_corr_values.drop(['Happiness Score'], inplace = True)
+
+    print('Meilleure correlation avec "Happiness Score" : ')
+    print(hap_score_corr_values[1])
 
     #--------------------------------------------------------------------------
-    # décomposition du score de bonheur par critère; forme stack bar 
+    # Probabilité
     #--------------------------------------------------------------------------
-    def plot_stack_bar (df, title) :
 
-        x = df['Country']
-        x_pos = np.arange(len(x))
-
-        y = df['Happiness Score']
-       
-        fig, a2 = plt.subplots()
-        a2.set_xticks(x_pos)
-        a2.set_xticklabels(x, rotation=90)
-
-        for i in range(3, 10) :
-            ci = df.iloc[:,i]
-            if i == 3 :
-                a2.bar(x_pos, ci, color = 'silver')
-                c = ci
-            else :
-                a2.bar(x_pos, ci, bottom = c)
-                c = c + ci
-
-        a2.legend(labels=df_hap_10.columns[3:10], loc="upper right", bbox_to_anchor=(1.2, 1))
-        a2.set_xlabel('Country')
-        a2.set_ylabel('Happiness Score')
-        a2.set_title(title)
-        plt.show()
 
 except ValueError as e  :
     print (e)
