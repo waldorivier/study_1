@@ -178,6 +178,20 @@ try :
     # Probabilité
     #--------------------------------------------------------------------------
 
+    region_west_europe = df['Region']=='Western Europe'
+    df_west_europe = df[region_west_europe]
+    
+    # score_above_6 est un filtre définit plus haut
+    df_world_above_6 = df[score_above_6]
+    df_west_europe_above_6 = df_west_europe[score_above_6]
+
+    prob = df_west_europe_above_6.Country.count() / df_world_above_6.Country.count()
+    print (prob)
+
+    #-------------------------------------------------------------------------
+    # Matrice
+    #--------------------------------------------------------------------------
+    
 
 except ValueError as e  :
     print (e)
