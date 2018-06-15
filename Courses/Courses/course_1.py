@@ -136,7 +136,7 @@ try :
     print('Décomposition par critère             ')
     print('--------------------------------------')
     
-    plot_stack_bar (df_hap_10, 'Happiness Score of the 10 Happiest Countries in the World / décomposition')
+    plot_stack_bar (df_hap_10, 'Happiness Score of the 10 Happiest Countries in the World / Deccomposition')
     
     #--------------------------------------------------------------------------
     # Sélectionner tous les pays de la région 'Afrique'
@@ -144,14 +144,15 @@ try :
     region_africa = df['Region']=='Africa'
     df_africa = df[region_africa]
     df_africa.sort_values(by = 'Happiness Rank', ascending = True)
-    plot_stack_bar (df_africa, 'Happiness Score of the All Countries in Africa / décomposition')
+    plot_stack_bar (df_africa, 'Happiness Score of the All Countries in Africa / Decomposition')
   
     #--------------------------------------------------------------------------
     # Histogramme par JOB Satisfaction 
     #--------------------------------------------------------------------------
     
     sns.distplot(df['Job Satisfaction'], bins=6, kde=False, norm_hist=True)
-    
+    plt.show()
+
     #--------------------------------------------------------------------------
     # Pairwise Scatter PLOT
     #--------------------------------------------------------------------------
@@ -163,6 +164,7 @@ try :
     comparison_vars = df_num_col.drop(['Happiness Score'], axis=1).columns.values
     g = sns.PairGrid(df, x_vars=comparison_vars, y_vars=["Happiness Score"])
     g = g.map(plt.scatter)
+    plt.show()
      
     #--------------------------------------------------------------------------
     # Correlation
@@ -172,26 +174,34 @@ try :
     hap_score_corr_values.drop(['Happiness Score'], inplace = True)
 
     print('Meilleure correlation avec "Happiness Score" : ')
-    print(hap_score_corr_values[1])
+    print(hap_score_corr_values.head(1))
 
     #--------------------------------------------------------------------------
     # Probabilité
     #--------------------------------------------------------------------------
 
-    region_west_europe = df['Region']=='Western Europe'
-    df_west_europe = df[region_west_europe]
-    
-    # score_above_6 est un filtre définit plus haut
-    df_world_above_6 = df[score_above_6]
-    df_west_europe_above_6 = df_west_europe[score_above_6]
-
+    df_west_europe_above_6 = df[df['Region']=='Western Europe']
+    df_west_europe_above_6 = df_west_europe_above_6[df_west_europe_above_6['Happiness Score'] > 6]
+        
+    df_world_above_6 = df[df['Happiness Score'] > 6]
     prob = df_west_europe_above_6.Country.count() / df_world_above_6.Country.count()
+    print('Probabilité que parmi les pays avec un "Happiness Score" > 6, celui-ci soit de l''Europe de l''ouest')
     print (prob)
 
     #-------------------------------------------------------------------------
     # Matrice
     #--------------------------------------------------------------------------
     
+    df_countries = df.set_index(['Country'])
+    regions = df_countries['Region']
+    a_rows = regions.index.values
+    a_cols = regions.unique()
+
+    m_country_region = np.array([[a_rows],[a_cols]])
+    for c in a_rows :
+        for r in a_cols : 
+            if regions[c] == r :
+               print()
 
 except ValueError as e  :
     print (e)
