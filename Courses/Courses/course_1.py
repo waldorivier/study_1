@@ -87,14 +87,44 @@ try :
     df_hap_10 = df_hap_asc.head(10)
     y = df_hap_10['Country']
     y_pos = np.arange(len(y))
+    x = df_hap_10['Happiness Score']
   
-    fig, ax = plt.subplots()
-    ax.barh(np.arange(len(y)), x, align='center', color='green', ecolor='black')
-    ax.set_yticks(y_pos)
-    ax.set_yticklabels(y)
-    ax.invert_yaxis()  
-    ax.set_xlabel('Happiness Score')
-    ax.set_title('Happiness Score of the 10 Happiest Countries in the World')
+    fig, a1 = plt.subplots()
+    a1.barh(np.arange(len(y)), x, align='center', color='green', ecolor='black')
+    a1.set_yticks(y_pos)
+    a1.set_yticklabels(y)
+    a1.invert_yaxis()  
+    a1.set_xlabel('Happiness Score')
+    a1.set_title('Happiness Score of the 10 Happiest Countries in the World')
+    plt.show()
+    
+    print('--------------------------------------')
+    print('GRAPHIQUE les 10 + bar plot vertical  ')
+    print('Décomposition par critère             ')
+    print('--------------------------------------')
+    
+    x_pos1 = y_pos
+    y1 = x
+    x1 = y 
+    rx1 = np.arange(len(x1))
+
+    fig, a2 = plt.subplots()
+    a2.set_xticks(x_pos1)
+    a2.set_xticklabels(x1, rotation=45)
+
+    for i in range(3, 10) :
+        ci = df_hap_10.iloc[:,i]
+        if i == 3 :
+            a2.bar(rx1, ci, color = 'silver')
+            c = ci
+        else :
+            a2.bar(rx1, ci, bottom = c)
+            c = c + ci
+
+    a2.legend(labels=df_hap_10.columns[3:10], loc="upper right", bbox_to_anchor=(1.2, 1))
+    a2.set_xlabel('Country')
+    a2.set_ylabel('Happiness Score')
+    a2.set_title('Happiness Score of the 10 Happiest Countries in the World / repartition')
     plt.show()
 
 except ValueError as e  :
