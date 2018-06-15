@@ -37,7 +37,6 @@
   </ItemGroup>
   <ItemGroup>
     <Folder Include="others\" />
-    <Folder Include="study_1\" />
     <Folder Include="others\" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />

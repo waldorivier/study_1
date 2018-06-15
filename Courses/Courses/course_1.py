@@ -88,6 +88,7 @@ try :
     y = df_hap_10['Country']
     y_pos = np.arange(len(y))
     x = df_hap_10['Happiness Score']
+
   
     fig, a1 = plt.subplots()
     a1.barh(np.arange(len(y)), x, align='center', color='green', ecolor='black')
@@ -103,29 +104,60 @@ try :
     print('Décomposition par critère             ')
     print('--------------------------------------')
     
-    x_pos1 = y_pos
-    y1 = x
-    x1 = y 
-    rx1 = np.arange(len(x1))
+    plot_stack_bar (df_hap_10, 'Happiness Score of the 10 Happiest Countries in the World / décomposition')
+    
+    #--------------------------------------------------------------------------
+    # Sélectionner tous les pays de la région 'Afrique'
 
-    fig, a2 = plt.subplots()
-    a2.set_xticks(x_pos1)
-    a2.set_xticklabels(x1, rotation=45)
+    region_africa = df['Region']=='Africa'
+    df_africa = df[region_africa]
+    df_africa.sort_values(by = 'Happiness Rank', ascending = True)
+    plot_stack_bar (df_africa, 'Happiness Score of the All Countries in Africa / décomposition')
+  
+    #--------------------------------------------------------------------------
+    # Histogramme par JOB Satisfaction 
+    #--------------------------------------------------------------------------
+    
+    sns.distplot(df['Job Satisfaction'], bins=6, kde=False, norm_hist=True)
+    
+    #--------------------------------------------------------------------------
+    # Scatter PLOT
+    #--------------------------------------------------------------------------
+    
+    sns.pairplot(df)
+    
+    grid = sns.FacetGrid(df, col='Happiness Score', row='Family')
+    plt.show()  
 
-    for i in range(3, 10) :
-        ci = df_hap_10.iloc[:,i]
-        if i == 3 :
-            a2.bar(rx1, ci, color = 'silver')
-            c = ci
-        else :
-            a2.bar(rx1, ci, bottom = c)
-            c = c + ci
 
-    a2.legend(labels=df_hap_10.columns[3:10], loc="upper right", bbox_to_anchor=(1.2, 1))
-    a2.set_xlabel('Country')
-    a2.set_ylabel('Happiness Score')
-    a2.set_title('Happiness Score of the 10 Happiest Countries in the World / repartition')
-    plt.show()
+    #--------------------------------------------------------------------------
+    # décomposition du score de bonheur par critère; forme stack bar 
+    #--------------------------------------------------------------------------
+    def plot_stack_bar (df, title) :
+
+        x = df['Country']
+        x_pos = np.arange(len(x))
+
+        y = df['Happiness Score']
+       
+        fig, a2 = plt.subplots()
+        a2.set_xticks(x_pos)
+        a2.set_xticklabels(x, rotation=90)
+
+        for i in range(3, 10) :
+            ci = df.iloc[:,i]
+            if i == 3 :
+                a2.bar(x_pos, ci, color = 'silver')
+                c = ci
+            else :
+                a2.bar(x_pos, ci, bottom = c)
+                c = c + ci
+
+        a2.legend(labels=df_hap_10.columns[3:10], loc="upper right", bbox_to_anchor=(1.2, 1))
+        a2.set_xlabel('Country')
+        a2.set_ylabel('Happiness Score')
+        a2.set_title(title)
+        plt.show()
 
 except ValueError as e  :
     print (e)
