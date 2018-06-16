@@ -41,7 +41,7 @@ try :
         plt.show()
 
    #-------------------------------------------------------------------------
-   
+   # lecture du fichier contenant les données du World 
     working_dir = PureWindowsPath(os.getcwd())
     data_dir = PureWindowsPath(working_dir.joinpath('Data'))
     data_file = PureWindowsPath(data_dir.joinpath('data.csv'))
@@ -83,7 +83,7 @@ try :
 
     # suppression de la région Europe compte tenu que des sous-régions
     # sont définies
-    
+        
     df_region = df.copy()
     df_region.set_index(['Region'], inplace=True)
     df_region.drop(['Europe'], axis=0, inplace=True)
@@ -141,10 +141,11 @@ try :
     #--------------------------------------------------------------------------
     # Sélectionner tous les pays de la région 'Afrique'
 
-    region_africa = df['Region']=='Africa'
-    df_africa = df[region_africa]
-    df_africa.sort_values(by = 'Happiness Rank', ascending = True)
-    plot_stack_bar (df_africa, 'Happiness Score of the All Countries in Africa / Decomposition')
+    region = 'Western Europe'
+    f_region = df['Region']==region
+    df_r = df[f_region]
+    df_r_values(by = 'Happiness Rank', ascending = True)
+    plot_stack_bar (df_r, 'Happiness Score of the All Countries in region / Decomposition')
   
     #--------------------------------------------------------------------------
     # Histogramme par JOB Satisfaction 
@@ -191,17 +192,20 @@ try :
     #-------------------------------------------------------------------------
     # Matrice
     #--------------------------------------------------------------------------
-    
+    df_countries = df.copy()
     df_countries = df.set_index(['Country'])
-    regions = df_countries['Region']
-    a_rows = regions.index.values
-    a_cols = regions.unique()
-
-    m_country_region = np.array([[a_rows],[a_cols]])
-    for c in a_rows :
-        for r in a_cols : 
-            if regions[c] == r :
-               print()
+    ser_country_region = df_countries['Region']
+    
+    for r in ser_country_region.unique() :
+        # on ajoute une colonne pour chaque région dans laquelle on associe les régions
+       
+        df_countries[r] = ser_country_region.values
+        # pour chacune des colonnes, on masque les régions qui ne correspondent pas
+        # au "titre" de cette colonne (i.e colonne 'Africa'-> toutes les régions de
+        # cette colonne qui ne sont pas 'Africa' sont masquées avec 0
+        df_countries[r] = df_countries[r].mask(df_countries[r] != r, other = 0)
+        
+    df_countries.as_matrix(columns=ser_country_region.unique())
 
 except ValueError as e  :
     print (e)
