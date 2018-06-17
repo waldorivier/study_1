@@ -1,4 +1,8 @@
-
+# -----------------------------------------------------------------------------
+# WALDO RIVIER
+# 17.06.2018 
+# Exercices du module 1 Applied Data Science: Machine Learning
+# -----------------------------------------------------------------------------
 import os
 from sqlalchemy.dialects.mssql.information_schema import columns
 from pathlib import PureWindowsPath
@@ -39,9 +43,9 @@ try :
         a2.set_ylabel('Happiness Score')
         a2.set_title(title)
         plt.show()
-
+  
    #-------------------------------------------------------------------------
-   
+   # lecture du fichier contenant les données du World 
     working_dir = PureWindowsPath(os.getcwd())
     data_dir = PureWindowsPath(working_dir.joinpath('Data'))
     data_file = PureWindowsPath(data_dir.joinpath('data.csv'))
@@ -83,7 +87,7 @@ try :
 
     # suppression de la région Europe compte tenu que des sous-régions
     # sont définies
-    
+        
     df_region = df.copy()
     df_region.set_index(['Region'], inplace=True)
     df_region.drop(['Europe'], axis=0, inplace=True)
@@ -136,22 +140,24 @@ try :
     print('Décomposition par critère             ')
     print('--------------------------------------')
     
-    plot_stack_bar (df_hap_10, 'Happiness Score of the 10 Happiest Countries in the World / décomposition')
+    plot_stack_bar (df_hap_10, 'Happiness Score of the 10 Happiest Countries in the World / Deccomposition')
     
     #--------------------------------------------------------------------------
     # Sélectionner tous les pays de la région 'Afrique'
 
-    region_africa = df['Region']=='Africa'
-    df_africa = df[region_africa]
-    df_africa.sort_values(by = 'Happiness Rank', ascending = True)
-    plot_stack_bar (df_africa, 'Happiness Score of the All Countries in Africa / décomposition')
+    region = 'Africa'
+    f_region = df['Region']==region
+    df_r = df[f_region]
+    df_r.sort_values(by = 'Happiness Rank', ascending = True)
+    plot_stack_bar (df_r, 'Happiness Score of the All Countries in ' + region + ' / Decomposition')
   
     #--------------------------------------------------------------------------
     # Histogramme par JOB Satisfaction 
     #--------------------------------------------------------------------------
     
     sns.distplot(df['Job Satisfaction'], bins=6, kde=False, norm_hist=True)
-    
+    plt.show()
+
     #--------------------------------------------------------------------------
     # Pairwise Scatter PLOT
     #--------------------------------------------------------------------------
@@ -163,6 +169,7 @@ try :
     comparison_vars = df_num_col.drop(['Happiness Score'], axis=1).columns.values
     g = sns.PairGrid(df, x_vars=comparison_vars, y_vars=["Happiness Score"])
     g = g.map(plt.scatter)
+    plt.show()
      
     #--------------------------------------------------------------------------
     # Correlation
@@ -172,26 +179,54 @@ try :
     hap_score_corr_values.drop(['Happiness Score'], inplace = True)
 
     print('Meilleure correlation avec "Happiness Score" : ')
-    print(hap_score_corr_values[1])
+    print(hap_score_corr_values.head(1))
 
     #--------------------------------------------------------------------------
     # Probabilité
     #--------------------------------------------------------------------------
 
-    region_west_europe = df['Region']=='Western Europe'
-    df_west_europe = df[region_west_europe]
-    
-    # score_above_6 est un filtre définit plus haut
-    df_world_above_6 = df[score_above_6]
-    df_west_europe_above_6 = df_west_europe[score_above_6]
-
+    df_west_europe_above_6 = df[df['Region']=='Western Europe']
+    df_west_europe_above_6 = df_west_europe_above_6[df_west_europe_above_6['Happiness Score'] > 6]
+        
+    df_world_above_6 = df[df['Happiness Score'] > 6]
     prob = df_west_europe_above_6.Country.count() / df_world_above_6.Country.count()
+    print('Probabilité que parmi les pays avec un "Happiness Score" > 6, celui-ci soit de l''Europe de l''ouest')
     print (prob)
 
     #-------------------------------------------------------------------------
     # Matrice
     #--------------------------------------------------------------------------
+
+    #-------------------------------------------------------------------------
+    # function lambda pour convertir en 0 ou 1 les éléments d'une série si 
+    # l'élément est égal / différent de c
+    #-------------------------------------------------------------------------
+    def f_region(r) :
+        def f(x) :
+            b = 0
+            if x == r :
+                b = 1
+            else : 
+                b = 0
+            return b
+        return f
+
+    #-------------------------------------------------------------------------
+    df_countries = df.copy()
+    df_countries = df.set_index(['Country'])
+    ser_country_region = df_countries['Region']
     
+    for r in ser_country_region.unique() :
+        # on ajoute une colonne pour chaque région dans laquelle on associe les régions
+       
+        df_countries[r] = ser_country_region.values
+        # pour chacune des colonnes, on masque les régions qui ne correspondent pas
+        # au "titre" de cette colonne (i.e colonne 'Africa'-> toutes les régions de
+        # on fait appel a une fonction type lambda
+        df_countries[r] = df_countries[r].apply(f_region(r))
+        
+    df_countries.as_matrix(columns=ser_country_region.unique())
+    df_countries
 
 except ValueError as e  :
     print (e)

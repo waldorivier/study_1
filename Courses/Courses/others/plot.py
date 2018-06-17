@@ -17,7 +17,7 @@ def fParam(a) :
 
     return f
 
-# Series est un enumerable (car un tableau n'en est pas un)
+# Series est un enumerable (nb: un tableau n'en est pas un)
 
 x = pd.Series(np.arange(-15,15))
 y1 = x.apply(fParam(1))
