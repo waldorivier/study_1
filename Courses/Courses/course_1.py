@@ -1,4 +1,8 @@
-
+# -----------------------------------------------------------------------------
+# WALDO RIVIER
+# 17.06.2018 
+# Exercices du module 1 Applied Data Science: Machine Learning
+# -----------------------------------------------------------------------------
 import os
 from sqlalchemy.dialects.mssql.information_schema import columns
 from pathlib import PureWindowsPath
@@ -39,7 +43,7 @@ try :
         a2.set_ylabel('Happiness Score')
         a2.set_title(title)
         plt.show()
-
+  
    #-------------------------------------------------------------------------
    # lecture du fichier contenant les données du World 
     working_dir = PureWindowsPath(os.getcwd())
@@ -141,11 +145,11 @@ try :
     #--------------------------------------------------------------------------
     # Sélectionner tous les pays de la région 'Afrique'
 
-    region = 'Western Europe'
+    region = 'Africa'
     f_region = df['Region']==region
     df_r = df[f_region]
-    df_r_values(by = 'Happiness Rank', ascending = True)
-    plot_stack_bar (df_r, 'Happiness Score of the All Countries in region / Decomposition')
+    df_r.sort_values(by = 'Happiness Rank', ascending = True)
+    plot_stack_bar (df_r, 'Happiness Score of the All Countries in ' + region + ' / Decomposition')
   
     #--------------------------------------------------------------------------
     # Histogramme par JOB Satisfaction 
@@ -192,6 +196,22 @@ try :
     #-------------------------------------------------------------------------
     # Matrice
     #--------------------------------------------------------------------------
+
+    #-------------------------------------------------------------------------
+    # function lambda pour convertir en 0 ou 1 les éléments d'une série si 
+    # l'élément est égal / différent de c
+    #-------------------------------------------------------------------------
+    def f_region(r) :
+        def f(x) :
+            b = 0
+            if x == r :
+                b = 1
+            else : 
+                b = 0
+            return b
+        return f
+
+    #-------------------------------------------------------------------------
     df_countries = df.copy()
     df_countries = df.set_index(['Country'])
     ser_country_region = df_countries['Region']
@@ -202,10 +222,11 @@ try :
         df_countries[r] = ser_country_region.values
         # pour chacune des colonnes, on masque les régions qui ne correspondent pas
         # au "titre" de cette colonne (i.e colonne 'Africa'-> toutes les régions de
-        # cette colonne qui ne sont pas 'Africa' sont masquées avec 0
-        df_countries[r] = df_countries[r].mask(df_countries[r] != r, other = 0)
+        # on fait appel a une fonction type lambda
+        df_countries[r] = df_countries[r].apply(f_region(r))
         
     df_countries.as_matrix(columns=ser_country_region.unique())
+    df_countries
 
 except ValueError as e  :
     print (e)
