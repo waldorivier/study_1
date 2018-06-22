@@ -260,3 +260,5 @@ paket-files/
 __pycache__/
 *.pyc
 /Courses/Courses/env
+/.ipynb_checkpoints/Untitled-checkpoint.ipynb
+/Courses/Courses/.ipynb_checkpoints/course_1-checkpoint.ipynb
