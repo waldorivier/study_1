@@ -4,7 +4,7 @@
 # Exercices du module 1 Applied Data Science: Machine Learning
 # -----------------------------------------------------------------------------
 import os
-from sqlalchemy.dialects.mssql.information_schema import columns
+
 from pathlib import PureWindowsPath
 import matplotlib.pyplot as plt
 
@@ -212,9 +212,9 @@ try :
         return f
 
     #-------------------------------------------------------------------------
-    df_countries = df.copy()
-    df_countries = df.set_index(['Country'])
-    ser_country_region = df_countries['Region']
+        df_countries = df.copy()
+        df_countries = df.set_index(['Country'])
+        ser_country_region = df_countries['Region']
     
     for r in ser_country_region.unique() :
         # on ajoute une colonne pour chaque région dans laquelle on associe les régions
@@ -226,7 +226,7 @@ try :
         df_countries[r] = df_countries[r].apply(f_region(r))
         
     df_countries.as_matrix(columns=ser_country_region.unique())
-    df_countries
+    print (df_countries)
 
 except ValueError as e  :
     print (e)

@@ -4,14 +4,14 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>025b859f-91ae-4c8a-a47a-428b2d610a26</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>course_1.py</StartupFile>
+    <StartupFile>others\exercices_module_2.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <Name>Courses</Name>
     <RootNamespace>Courses</RootNamespace>
-    <InterpreterId>Global|ContinuumAnalytics|Anaconda36-64</InterpreterId>
+    <InterpreterId>MSBuild|env|$(MSBuildProjectFullPath)</InterpreterId>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -22,14 +22,11 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <InterpreterReference Include="Global|ContinuumAnalytics|Anaconda36-64" />
-    <InterpreterReference Include="Global|PythonCore|3.6" />
-  </ItemGroup>
-  <ItemGroup>
     <Compile Include="course_1.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="others\Data_analyse.py" />
+    <Compile Include="others\exercices_module_2.py" />
     <Compile Include="others\iban_converter.py" />
     <Compile Include="others\others.py" />
     <Compile Include="others\plot.py" />
@@ -37,6 +34,20 @@
   <ItemGroup>
     <Folder Include="others\" />
     <Folder Include="others\" />
+  </ItemGroup>
+  <ItemGroup>
+    <Interpreter Include="env\">
+      <Id>env</Id>
+      <Version>3.6</Version>
+      <Description>env (Anaconda 4.4.0)</Description>
+      <InterpreterPath>Scripts\python.exe</InterpreterPath>
+      <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
+      <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
+      <Architecture>X64</Architecture>
+    </Interpreter>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Course_1.ipynb" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
