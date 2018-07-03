@@ -10,18 +10,13 @@ try :
 
     clientRootDir = PureWindowsPath('O:\\')
     workingDir = PureWindowsPath(os.getcwd())
-
-    clientDir = PureWindowsPath(clientRootDir.joinpath('CAP','24 BenAdmin-Param','05 Paiement','SEPA'))
-    dataFileOrigine = PureWindowsPath(clientDir.joinpath('5_adresse_paiement_correction_is_iban.xlsx'))
-    dataFileCsvOrigine = PureWindowsPath(clientDir.joinpath('20_adresse_paiement_correction_Autres.csv'))
     
-    ibanData = pd.read_excel(dataFileOrigine.as_posix())
-
-    ibanData.set_index(ibanData.NPERSO, inplace = True)
-    ibanData.STYPAIE = ibanData.STYPAIE.map({7:'IBAN/International'})
-
-    prog = regexp.compile('^CH')
-
+    clientDir = PureWindowsPath(clientRootDir.joinpath('Lausanne','24 BenAdmin-Param','01 Analyse règlement','RGL_2018','Implementation','RSUPP'))
+    dataFileOrigine = PureWindowsPath(clientDir.joinpath('data_rsupxx_QC.csv'))
+    
+    data = pd.read_csv(dataFileOrigine, sep = ';', encoding = "ascii")
+    data.set_index(ibanData.NPERSO, inplace = True)
+   
 
 except ValueError as e  :
     print ("ERROR")
