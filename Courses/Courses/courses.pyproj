@@ -36,18 +36,18 @@
     <Folder Include="others\" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Course_1.ipynb" />
+  </ItemGroup>
+  <ItemGroup>
     <Interpreter Include="env\">
       <Id>env</Id>
       <Version>3.6</Version>
-      <Description>env (Anaconda 4.4.0)</Description>
+      <Description>env (Python 3.6 (64-bit))</Description>
       <InterpreterPath>Scripts\python.exe</InterpreterPath>
       <WindowsInterpreterPath>Scripts\pythonw.exe</WindowsInterpreterPath>
       <PathEnvironmentVariable>PYTHONPATH</PathEnvironmentVariable>
       <Architecture>X64</Architecture>
     </Interpreter>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Course_1.ipynb" />
   </ItemGroup>
   <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
   <!-- Uncomment the CoreCompile target to enable the Build command in
