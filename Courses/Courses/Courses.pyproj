@@ -32,11 +32,17 @@
     <Compile Include="others\plot.py" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="Data\" />
     <Folder Include="others\" />
     <Folder Include="others\" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Course_1.ipynb" />
+    <Content Include="Data\data.csv" />
+    <Content Include="Data\data_rsupxx_QC.csv" />
+    <Content Include="Data\module_2_data_1.xls" />
+    <Content Include="Data\Mountains.csv" />
+    <Content Include="Data\webscraping.html" />
   </ItemGroup>
   <ItemGroup>
     <InterpreterReference Include="Global|ContinuumAnalytics|Anaconda36-64" />
