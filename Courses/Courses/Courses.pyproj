@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>025b859f-91ae-4c8a-a47a-428b2d610a26</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>others\dta_inspect.py</StartupFile>
+    <StartupFile>others\exercices_module_2.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
