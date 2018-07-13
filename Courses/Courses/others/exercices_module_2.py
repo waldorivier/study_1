@@ -107,6 +107,7 @@ if 0 :
 
 #-------------------------------------------------------------------------
 # Text data / Expressions régulières
+# Le multi-index doit encore être revu
 #-------------------------------------------------------------------------
 if 0:
     s2 = pd.Series(['bar', 'sugar', 'cartoon', 'argon'])
@@ -122,6 +123,7 @@ if 0:
 
 #-------------------------------------------------------------------------
 # retourne un dataframe avec le split désiré
+# ceci est un version un peu compliquée
 #-------------------------------------------------------------------------
 
     def parse_day_line (day_line, day_of_week):
@@ -131,7 +133,6 @@ if 0:
         df_day_plan = ser_day_plan.str.extractall('(\d+):(\d+)(\w{2}\W+)([\w|\s]+)')
         df_day_plan['DAY'] = day_of_week
         return df_day_plan
-
 
     df_meal_plan = pd.DataFrame(meal_plan, columns=['TEXT'])
     df_day_of_week = df_meal_plan.TEXT.str.extract('(\w+day)')
@@ -145,9 +146,18 @@ if 0:
             df_result = pd.concat([df_result, parse_day_line(meal_plan_day, day)])
         i += 1
 
-    meridium = 2
-    df_result.set_index('DAY', inplace=True)
-    df_result.drop(df_result.columns[meridium], axis=1, inplace = True)
+    # renommer les colonnes
+    df_result.rename(columns={0:'heure', 1:'minute', 2:'meridium', 3:'repas'}, inplace=True)
 
+    # formatter la colonne meridium 
+    df_result.meridium = df_result.meridium.str.extract('([am|pm]{2})')
 
+    # poser un index multiple
+    df_result.set_index(['DAY', 'heure', 'meridium'], inplace=True)
+    df_result
+   
+
+#-------------------------------------------------------------------------
+# Time SERIES
+#-------------------------------------------------------------------------
 
