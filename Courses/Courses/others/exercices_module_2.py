@@ -101,5 +101,53 @@ if 0 :
 
 #-------------------------------------------------------------------------
 # Jointures 
+# cf dta_inspect pour des exemples de merge
 #-------------------------------------------------------------------------
+
+
+#-------------------------------------------------------------------------
+# Text data / Expressions régulières
+#-------------------------------------------------------------------------
+if 0:
+    s2 = pd.Series(['bar', 'sugar', 'cartoon', 'argon'])
+    s2.str.contains('.ar')
+
+if 0:
+    meal_plan = ['Monday: 9:12am – Omelet,  3:30pm– Apple slices with almond butter', 
+             'Tuesday: 9:35am – Banana bread, 11:00am –Sauteed veggies, 7:02pm– Taco pie',
+             'Wednesday: 9:00am – Banana pancakes',  
+             'Thursday: 7:23pm– Slow cooker pulled pork', 'Friday: 3:30pm – Can of tuna', 
+             'Saturday: 9:11am: Eggs and sweet potato hash browns, 3:22pm: Almonds', 
+             'Sunday: 11:00am: Meat and veggie stir fry'] 
+
+#-------------------------------------------------------------------------
+# retourne un dataframe avec le split désiré
+#-------------------------------------------------------------------------
+
+    def parse_day_line (day_line, day_of_week):
+        part_day = day_line.partition(day_of_week + ':')
+        part_day_plan = part_day[2];
+        ser_day_plan = pd.Series(part_day_plan.split(','))
+        df_day_plan = ser_day_plan.str.extractall('(\d+):(\d+)(\w{2}\W+)([\w|\s]+)')
+        df_day_plan['DAY'] = day_of_week
+        return df_day_plan
+
+
+    df_meal_plan = pd.DataFrame(meal_plan, columns=['TEXT'])
+    df_day_of_week = df_meal_plan.TEXT.str.extract('(\w+day)')
+
+    i = 0
+    for day in df_day_of_week.values :
+        meal_plan_day = df_meal_plan.TEXT[i]
+        if i == 0:
+            df_result = parse_day_line(meal_plan_day, day)
+        else: 
+            df_result = pd.concat([df_result, parse_day_line(meal_plan_day, day)])
+        i += 1
+
+    meridium = 2
+    df_result.set_index('DAY', inplace=True)
+    df_result.drop(df_result.columns[meridium], axis=1, inplace = True)
+
+
 
