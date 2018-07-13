@@ -1,11 +1,10 @@
 import os
+import pandas
 
 from pathlib import PureWindowsPath
-import matplotlib.pyplot as plt
 
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import requests as r
 
 from bs4 import BeautifulSoup
@@ -161,3 +160,6 @@ if 0:
 # Time SERIES
 #-------------------------------------------------------------------------
 
+ser_date = pd.date_range(pd.Timestamp('2010-01-01'), periods=10, freq='M')
+for d in ser_date:
+    print(d.weekday_name)
