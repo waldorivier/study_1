@@ -151,7 +151,7 @@ if 0:
     # formatter la colonne meridium 
     df_result.meridium = df_result.meridium.str.extract('([am|pm]{2})')
 
-    # poser un index multiple
+    # poser un index multiple (une colonne devient une colonne d'index)
     df_result.set_index(['DAY', 'heure', 'meridium'], inplace=True)
     df_result
    

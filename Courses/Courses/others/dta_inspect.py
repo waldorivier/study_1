@@ -14,6 +14,7 @@ try :
     element_paiement_file_name = 'element_paiement.xlsx'
     type_comptes_techniques_file_name = 'type_comptes_techniques.xlsx'
     type_ecritures_file_name = 'type_ecritures.xlsx'
+    liste_45_file_name = 'liste_45.xlsx'
 
     result_merge_file_name = 'merge.csv'
     result_dta_file_name = 'dta.csv'
@@ -42,7 +43,7 @@ try :
     # analyse des éléments de paiement 
     #--------------------------------------------------------------------------
 
-    if 1 : 
+    if 0 : 
         df_elem_paie = pd.read_excel(helper_get_file(element_paiement_file_name))
         
         # split compte / ecriture car ELPA contient la table associative (compte, ecriture)
@@ -125,6 +126,26 @@ try :
         df_m = pd.merge(df_comptes, df_dta, how = "outer")
         df_m.to_csv(helper_get_file(result_merge_file_name), sep = ';')
 
+        #--------------------------------------------------------------------------
+        # lecture des comptes / écriture de la liste 45
+        #--------------------------------------------------------------------------
+
+    if 1 : 
+        df_liste_45 = pd.read_excel(helper_get_file(liste_45_file_name))
+       
+        # forcer en string pour l'évaluation de la regexp (un nombre unique étant considéré 
+        # comme un... numérique)
+
+        df_ecrit = df_liste_45.LTYPE_ECRIT.astype("str")
+        df_ecrit = df_ecrit.str.extractall('(\d+)')
+        df_ecrit.rename(columns={0:'ecrit'}, inplace = True)
+
+        # nous sommes en présence d'un multi index de niveau 2
+        df_ecrit.index.set_names(['type_compte','nb match'], inplace= True)
+        df_ecrit.index.set_levels(levels=[df_liste_45.TYPE_COMPTE.tolist(), np.arange(6)], inplace=True)
+        df_ecrit.sort_values(by = 'ecrit')
+        df_ecrit.to_csv(helper_get_file(result_file_name), sep = ';')
+        
 except ValueError as e  :
     print (e)
 
