@@ -7,6 +7,9 @@ import numpy as np
 import pandas as pd
 import requests as r
 
+import matplotlib.pyplot as plt
+import seaborn
+
 from bs4 import BeautifulSoup
 
 #-------------------------------------------------------------------------
@@ -160,6 +163,25 @@ if 0:
 # Time SERIES
 #-------------------------------------------------------------------------
 
-ser_date = pd.date_range(pd.Timestamp('2010-01-01'), periods=10, freq='M')
-for d in ser_date:
-    print(d.weekday_name)
+if 1 : 
+    ser_date = pd.date_range(pd.Timestamp('2010-01-01'), periods=10, freq='M')
+    for d in ser_date:
+        print(d.weekday_name)
+
+    data_file = PureWindowsPath(data_dir.joinpath('financial_data.csv'))
+    data = pd.read_csv(data_file, index_col='Date')
+    # data.set_index('Date')
+    data.index = pd.to_datetime(data.index)
+    
+    data.plot(figsize=(16,12), style='-')
+    # Différences entre asfrequ et resampling qui elle, applique une fonction (=moyenne)
+   
+    data.resample('BA').mean().plot(style=':')
+    data.asfreq('BA').plot(style='--')
+    plt.legend(['input', 'resample', 'asfreq'], loc='upper left');
+    plt.show()
+
+    rolling = data.rolling(365, center=True)
+    data.plot(figsize=(16,12))
+    rolling.mean().plot(color='red', linewidth=3)
+    plt.show()

@@ -142,6 +142,8 @@ try :
 
         # nous sommes en présence d'un multi index de niveau 2
         df_ecrit.index.set_names(['type_compte','nb match'], inplace= True)
+
+        # renommer l'index (indice) avec le no de type de compte 
         df_ecrit.index.set_levels(levels=[df_liste_45.TYPE_COMPTE.tolist(), np.arange(6)], inplace=True)
         df_ecrit.sort_values(by = 'ecrit')
         df_ecrit.to_csv(helper_get_file(result_file_name), sep = ';')
