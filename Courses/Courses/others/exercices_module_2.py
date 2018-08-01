@@ -11,6 +11,7 @@ import matplotlib.pyplot as plt
 import seaborn
 
 from bs4 import BeautifulSoup
+import sqlite3
 
 #-------------------------------------------------------------------------
 # lecture du fichier contenant les données 
@@ -163,7 +164,7 @@ if 0:
 # Time SERIES
 #-------------------------------------------------------------------------
 
-if 1 : 
+if 0 : 
     ser_date = pd.date_range(pd.Timestamp('2010-01-01'), periods=10, freq='M')
     for d in ser_date:
         print(d.weekday_name)
@@ -185,3 +186,32 @@ if 1 :
     data.plot(figsize=(16,12))
     rolling.mean().plot(color='red', linewidth=3)
     plt.show()
+
+#-------------------------------------------------------------------------
+# Databases
+#-------------------------------------------------------------------------
+
+if 1:
+    # helper class pour exécuter un query via un dataframe
+    def run_query(query):
+        return pd.read_sql_query(query,db)
+
+    # définition d'une base de données
+
+    db = sqlite3.connect('consumer.db')
+    cursor= db.cursor()
+
+    data_file = PureWindowsPath(data_dir.joinpath('consumer_complaints.csv'))
+    for chunk in pd.read_csv(data_file, chunksize=2000):
+        chunk.to_sql(name="data", con=db, if_exists="append", index=False)  
+        # print(chunk.iloc[0, 2])
+
+    run_query("SELECT tbl_name FROM sqlite_master;")
+
+    # variante utilisant un curseur
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
+
+    # restitution du résultat
+    results = cursor.fetchall()
+
+   

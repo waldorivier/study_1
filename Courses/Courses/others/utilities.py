@@ -8,7 +8,6 @@ import numpy as np
 import pandas as pd
 import requests as r
 
-
 #-------------------------------------------------------------------------
 # trier la liste sur les valeurs et non sur la clef
 #-------------------------------------------------------------------------
