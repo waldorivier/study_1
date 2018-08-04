@@ -44,6 +44,7 @@
     <Content Include="Data\consumer_complaints.csv" />
     <Content Include="Data\data.xls" />
     <Content Include="Data\financial_data.csv" />
+    <Content Include="Data\food.db" />
     <Content Include="Data\module_2_data_1.xls" />
     <Content Include="Data\Mountains.csv" />
     <Content Include="Data\songs.csv" />
