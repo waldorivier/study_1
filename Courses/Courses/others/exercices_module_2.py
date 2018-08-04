@@ -226,13 +226,15 @@ if 1 :
     # déclaration d'une base de données temporaire pour le chargement 
     # d'un DataFrame
     #-------------------------------------------------------------------------
-    db = sqlite3.connect('food.db')
+
+    db_file = PureWindowsPath(data_dir.joinpath('food.db'))
+    db = sqlite3.connect(db_file.as_posix())
   
-    data_file = PureWindowsPath(data_dir.joinpath('en.openfoodfacts.org.products.tsv'))
+    # data_file = PureWindowsPath(data_dir.joinpath('en.openfoodfacts.org.products.tsv'))
  
-    # load en base de données par bloc pour éviter un memory overflow
-    for chunk in pd.read_csv(data_file.as_posix(), delimiter='\t', encoding='utf-8', chunksize=2000):
-        chunk.to_sql(name="data", con=db, if_exists="append", index=False)  
+    # load en base de données par bloc pour éviter un memory overflow (load mis en commentaire)
+    # for chunk in pd.read_csv(data_file.as_posix(), delimiter='\t', encoding='utf-8', chunksize=2000):
+    #    chunk.to_sql(name="data", con=db, if_exists="append", index=False)  
     
     #-------------------------------------------------------------------------
     # load du df à partir de la base de données
