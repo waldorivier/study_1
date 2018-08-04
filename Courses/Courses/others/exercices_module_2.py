@@ -62,7 +62,7 @@ if 0 :
     # idem que ci-dessus mais pour les colonnes
     df_movies.dropna(how='all', axis=1)
 
-    # supprime les colonnes (axis = 1) qui on moins plus 4000 lignes manquantes
+    # supprime les colonnes (axis = 1) qui on au moins plus 4000 lignes manquantes
     df_movies.dropna(thresh=4000, axis=1, inplace=True)
 
     # remplacement des données manquantes
@@ -174,13 +174,13 @@ if 0 :
     # data.set_index('Date')
     data.index = pd.to_datetime(data.index)
     
-    data.plot(figsize=(16,12), style='-')
+    # data.plot(figsize=(16,12), style='-')
     # Différences entre asfrequ et resampling qui elle, applique une fonction (=moyenne)
    
-    data.resample('BA').mean().plot(style=':')
-    data.asfreq('BA').plot(style='--')
-    plt.legend(['input', 'resample', 'asfreq'], loc='upper left');
-    plt.show()
+    # data.resample('BA').mean().plot(style=':')
+    # data.asfreq('BA').plot(style='--')
+    # plt.legend(['input', 'resample', 'asfreq'], loc='upper left');
+    # plt.show()
 
     rolling = data.rolling(365, center=True)
     data.plot(figsize=(16,12))
@@ -191,27 +191,100 @@ if 0 :
 # Databases
 #-------------------------------------------------------------------------
 
-if 1:
+if 0 :
     # helper class pour exécuter un query via un dataframe
     def run_query(query):
         return pd.read_sql_query(query,db)
 
     # définition d'une base de données
-
     db = sqlite3.connect('consumer.db')
-    cursor= db.cursor()
-
+ 
     data_file = PureWindowsPath(data_dir.joinpath('consumer_complaints.csv'))
+
+    # lecture par bloc : chunksize correspond au nombre de lignes lues par bloc
+
     for chunk in pd.read_csv(data_file, chunksize=2000):
         chunk.to_sql(name="data", con=db, if_exists="append", index=False)  
-        # print(chunk.iloc[0, 2])
 
     run_query("SELECT tbl_name FROM sqlite_master;")
 
     # variante utilisant un curseur
+    cursor = db.cursor()
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
 
     # restitution du résultat
     results = cursor.fetchall()
 
-   
+#-------------------------------------------------------------------------
+# Databases / données du projet module 2
+# le fichier est en format tsv (tab separator) et contient plus de 
+# 1'300'000 lignes
+#-------------------------------------------------------------------------
+
+if 1 :    
+    #-------------------------------------------------------------------------
+    # déclaration d'une base de données temporaire pour le chargement 
+    # d'un DataFrame
+    #-------------------------------------------------------------------------
+    db = sqlite3.connect('food.db')
+  
+    data_file = PureWindowsPath(data_dir.joinpath('en.openfoodfacts.org.products.tsv'))
+ 
+    # load en base de données par bloc pour éviter un memory overflow
+    for chunk in pd.read_csv(data_file.as_posix(), delimiter='\t', encoding='utf-8', chunksize=2000):
+        chunk.to_sql(name="data", con=db, if_exists="append", index=False)  
+    
+    #-------------------------------------------------------------------------
+    # load du df à partir de la base de données
+    #-------------------------------------------------------------------------
+
+    df_food = pd.read_sql_query("select * from data", con=db)
+    
+    #-------------------------------------------------------------------------
+    # nettoyage des données
+    # suppression de toutes les colonnes qui n'ont pas de données
+    # réduction du tableau à 147 colonnes (initialement 163)
+    #-------------------------------------------------------------------------
+
+    df_food.dropna(axis=1, how="all", inplace=True)
+
+    #-------------------------------------------------------------------------
+    # exporter les colonnes avec le nombre de valeurs nulles afin de 
+    # visualiser les caractéristiques qui ne sont pas relevantes / ou qui ne
+    # nous interesent tout simplement pas 
+    #-------------------------------------------------------------------------
+
+    ser_column_null = df_food.isnull().sum()
+    ser_column_null.to_csv(data_dir.joinpath(data_result_name))
+
+    #-------------------------------------------------------------------------
+    # suppression de toutes les colonnes qui contiennent un nombre 
+    # supérieur ou égal à 1'000'000 de valeurs nulles 
+    # ou une autre dimension permettant une optimisation des caractéristiques 
+    # conservées minimisant les valeurs nulles résiduelles. 
+    #-------------------------------------------------------------------------
+
+    threshes = np.arange(0, df_food.isnull().sum().max(), 10000)
+
+    # construction d'un DF à partir d'une liste de row construite 
+    # à l'aide d'un dictionnaire
+    rows = []
+
+    def optimize_col_selection(thresh):
+        df = df_food.dropna(thresh=thresh, axis=1)
+        
+        dict = {'thresh_' : 0, 'schape_':0, 'mean_':0}
+        dict['thresh_'] = thresh
+        dict['schape_'] = df.shape[1]
+        dict['mean_']   = df.isnull().sum().mean()
+
+        rows.append(dict)
+        
+    for thresh in threshes :
+        optimize_col_selection (thresh)
+    
+    df_result = pd.DataFrame(rows)  
+    df_result.set_index('schape_', inplace=True)
+    df_result.plot(figsize=(16,12))
+    plt.show()
+
