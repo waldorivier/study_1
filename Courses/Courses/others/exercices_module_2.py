@@ -257,6 +257,7 @@ if 1 :
     #-------------------------------------------------------------------------
 
     ser_column_null = df_food.isnull().sum()
+    ser_column_null.sort_index(inplace=True)
     ser_column_null.to_csv(data_dir.joinpath(data_result_name))
 
     #-------------------------------------------------------------------------
@@ -313,10 +314,10 @@ if 1 :
     plt.show()
 
     #-------------------------------------------------------------------------
-    # le niveau de 280'000 définit une sélection de 25 critères (comprenant 
-    # "ingredients_text" nécessaire à notre analyse)
+    # le niveau de 150'000 définit une sélection de 36 critères (comprenant 
+    # tous les critères nécessaires à notre analyse)
     #-------------------------------------------------------------------------
-    df_food_sel = df_food.dropna(thresh=280000, axis=1)
+    df_food_sel = df_food.dropna(thresh=150000, axis=1)
     
     #-------------------------------------------------------------------------
     # autorise l'affichage de toutes les colonnes
@@ -326,14 +327,35 @@ if 1 :
 
     #-------------------------------------------------------------------------
     # suppression de toute les colonnes qui contiennent les mots 
-    # to-be-completed
+    # completed
     #     
-    # par exemple la colonne "states_tags" contient en grand nombre le texte "to-be-completed"
+    # par exemple la colonne "states_tags" contient en grand nombre le texte "completed"
     # qui n'est pas relevant pour notre étude
     #-------------------------------------------------------------------------
-
-    df_food_sel.states_tags.where(lambda x : x.str.contains("to-be-completed")).count()
+    df_food_sel.states_tags.where(lambda x : x.str.contains("completed")).count()
     
-    # on décide de supprimer toutes les colonnes dont le nom contient "states"
+    # suppression de toutes les colonnes dont le nom contient "states" et "tags"
 
+    df_food_sel.drop([col for col in df_food_sel.columns if "states" in col], axis=1, inplace=True)
+    df_food_sel.drop([col for col in df_food_sel.columns if "tags" in col], axis=1, inplace=True)
 
+    #-------------------------------------------------------------------------
+    # ETUDE 1
+    # 
+    # repartition par macronutriment
+    # conserver également la liste des ingredients
+    #-------------------------------------------------------------------------
+    column_to_keep = set(['countries','ingredients_text','nutrition_grade_fr','energy_100g',
+                    'fat_100g','proteins_100g'])
+
+    df_food_study_1 = df_food_sel.drop(axis=1, columns=set(df_food_sel.columns).difference(column_to_keep))
+    df_food_study_1
+
+    #-------------------------------------------------------------------------
+    # tester si le # de lignes dont toutes les valeurs sont non-nulles semble suffisant
+    # ratio du  # de lignes après suppression / # de lignes total
+
+    df_food_study_1.dropna().shape[0] / df_food_study_1.shape[0]
+
+    # il ressort que 65% des lignes sont conservées ce qui paraît raisonnable
+    
