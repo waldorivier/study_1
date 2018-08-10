@@ -260,10 +260,21 @@ if 1 :
     ser_column_null.to_csv(data_dir.joinpath(data_result_name))
 
     #-------------------------------------------------------------------------
+    # gérer les doublons 
+    # en l'occurence, pour les colonnes selectionnées, il n'y a pas de doublon
+    #-------------------------------------------------------------------------
+    
+    if df_food.drop_duplicates().shape == df_food.shape :
+        print ("le tableau ne contient aucune ligne dupliquée")
+    
+    #-------------------------------------------------------------------------
     # suppression de toutes les colonnes qui contiennent un nombre 
     # supérieur ou égal à 1'000'000 de valeurs nulles 
     # ou une autre dimension permettant une optimisation des caractéristiques 
     # conservées minimisant les valeurs nulles résiduelles. 
+    #
+    # La motivation est d'extraire un sous-ensemble le plus large que possible
+    # en terme de valeurs non nulles
     #-------------------------------------------------------------------------
 
     threshes = np.arange(0, df_food.isnull().sum().max(), 10000)
@@ -287,6 +298,42 @@ if 1 :
     
     df_result = pd.DataFrame(rows)  
     df_result.set_index('schape_', inplace=True)
+    
+    #-------------------------------------------------------------------------
+    # le tableau ci-dessous indique le nombre de critères conservés et 
+    # la moyenne des valeurs nulles des colonnes résiduelles conservées
+    # par niveau (thresh) en fonction duquel une colonne est supprimée.   
+    #-------------------------------------------------------------------------
+    df_result
+
     df_result.plot(figsize=(16,12))
+    plt.xlabel('nombre de colonnes')
+    plt.legend(labels=['moyenne du nombre de valeur nulle','niveau'])
+
     plt.show()
+
+    #-------------------------------------------------------------------------
+    # le niveau de 280'000 définit une sélection de 25 critères (comprenant 
+    # "ingredients_text" nécessaire à notre analyse)
+    #-------------------------------------------------------------------------
+    df_food_sel = df_food.dropna(thresh=280000, axis=1)
+    
+    #-------------------------------------------------------------------------
+    # autorise l'affichage de toutes les colonnes
+    #-------------------------------------------------------------------------
+    pd.set_option('display.max_columns', df.shape[1]) 
+    df_food_sel.head()
+
+    #-------------------------------------------------------------------------
+    # suppression de toute les colonnes qui contiennent les mots 
+    # to-be-completed
+    #     
+    # par exemple la colonne "states_tags" contient en grand nombre le texte "to-be-completed"
+    # qui n'est pas relevant pour notre étude
+    #-------------------------------------------------------------------------
+
+    df_food_sel.states_tags.where(lambda x : x.str.contains("to-be-completed")).count()
+    
+    # on décide de supprimer toutes les colonnes dont le nom contient "states"
+
 
