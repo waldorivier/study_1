@@ -263,6 +263,8 @@ if 1 :
     #-------------------------------------------------------------------------
     # gérer les doublons 
     # en l'occurence, pour les colonnes selectionnées, il n'y a pas de doublon
+    # Cepedant, si l'on réduit à nouveau les critères, il est probable que 
+    # des doublons apparaissent à nouveau (cf. plus loin)
     #-------------------------------------------------------------------------
     
     if df_food.drop_duplicates().shape == df_food.shape :
@@ -360,18 +362,31 @@ if 1 :
     # il ressort que 63% des lignes sont conservées ce qui paraît raisonnable
     df_food_study_1.dropna(inplace=True)
 
-    # gestion des doublons 
-    df_food_study_1.drop_duplicates(inplace=True)
-
     #-------------------------------------------------------------------------
-    # cela est insuffisant : en effet, au niveau de l'index, il reste des doublons
-    # Quelle(s) condition(s) retenir pour déterminer les lignes que l'on va conserver ?
-    #-------------------------------------------------------------------------    
-    
+    # gestion des doublons 
+    #-------------------------------------------------------------------------
+    df_food_study_1.drop_duplicates(inplace=True)
 
     # indication d'un index et tri sur celui-ci
     df_food_study_1.set_index(['product_name'], inplace=True)
     df_food_study_1.sort_index(inplace=True)
+
+    #-------------------------------------------------------------------------
+    # cela est insuffisant : en effet, au niveau de l'index, il reste des doublons
+    #-------------------------------------------------------------------------    
+    # export de l'index pour se rendre compte 
+    df_food_study_1.index.to_series().to_csv(data_dir.joinpath(data_result_name))
+
+    #-------------------------------------------------------------------------    
+    # ceci permet d'extraire toutes les colonnes dont l'INDEX présente les doublons
+    #-------------------------------------------------------------------------    
+    df_food_study_1.loc[df_food_study_1.index.duplicated(),:]
+
+    # et inversément (sans doublons selon l'INDEX) à l'aide du ~ ..magique
+    df_food_study_1 = df_food_study_1.loc[~df_food_study_1.index.duplicated(),:]
+  
+    # éliminer les produits décrit en chinois, japonais, cyrilliques, etc...
+    # sur la base de l'INDEX, ne conserver que les caractères qui nous parlent 
 
     # split de la liste des ingredients; séparateur = ','
     
