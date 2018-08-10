@@ -322,7 +322,7 @@ if 1 :
     #-------------------------------------------------------------------------
     # autorise l'affichage de toutes les colonnes
     #-------------------------------------------------------------------------
-    pd.set_option('display.max_columns', df.shape[1]) 
+    pd.set_option('display.max_columns', df_food_sel.shape[1]) 
     df_food_sel.head()
 
     #-------------------------------------------------------------------------
@@ -345,17 +345,33 @@ if 1 :
     # repartition par macronutriment
     # conserver également la liste des ingredients
     #-------------------------------------------------------------------------
-    column_to_keep = set(['countries','ingredients_text','nutrition_grade_fr','energy_100g',
+    column_to_keep = set(['product_name', 'countries','ingredients_text','nutrition_grade_fr','energy_100g',
                     'fat_100g','proteins_100g'])
 
     df_food_study_1 = df_food_sel.drop(axis=1, columns=set(df_food_sel.columns).difference(column_to_keep))
-    df_food_study_1
-
+   
     #-------------------------------------------------------------------------
     # tester si le # de lignes dont toutes les valeurs sont non-nulles semble suffisant
     # ratio du  # de lignes après suppression / # de lignes total
+    #-------------------------------------------------------------------------
 
     df_food_study_1.dropna().shape[0] / df_food_study_1.shape[0]
 
-    # il ressort que 65% des lignes sont conservées ce qui paraît raisonnable
+    # il ressort que 63% des lignes sont conservées ce qui paraît raisonnable
+    df_food_study_1.dropna(inplace=True)
+
+    # gestion des doublons 
+    df_food_study_1.drop_duplicates(inplace=True)
+
+    #-------------------------------------------------------------------------
+    # cela est insuffisant : en effet, au niveau de l'index, il reste des doublons
+    # Quelle(s) condition(s) retenir pour déterminer les lignes que l'on va conserver ?
+    #-------------------------------------------------------------------------    
+    
+
+    # indication d'un index et tri sur celui-ci
+    df_food_study_1.set_index(['product_name'], inplace=True)
+    df_food_study_1.sort_index(inplace=True)
+
+    # split de la liste des ingredients; séparateur = ','
     
