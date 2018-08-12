@@ -238,12 +238,10 @@ if 0 :
     # restitution du résultat
     results = cursor.fetchall()
 
-
-
 #-------------------------------------------------------------------------
 # Databases / données du projet module 2
 # le fichier est en format tsv (tab separator) et contient plus de 
-# 1'300'000 lignes
+# 300'000 lignes
 #-------------------------------------------------------------------------
 
 if 0 :    
@@ -297,7 +295,7 @@ if 0 :
     
     #-------------------------------------------------------------------------
     # suppression de toutes les colonnes qui contiennent un nombre 
-    # supérieur ou égal à 1'000'000 de valeurs nulles 
+    # supérieur ou égal à 1 de valeurs nulles 
     # ou une autre dimension permettant une optimisation des caractéristiques 
     # conservées minimisant les valeurs nulles résiduelles. 
     #
