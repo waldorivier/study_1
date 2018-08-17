@@ -22,12 +22,15 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="course_1.py">
+    <Compile Include="projects\course_1.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="others\data_analyse.py" />
     <Compile Include="others\dta_inspect.py" />
     <Compile Include="others\exercices_module_2.py" />
+    <Compile Include="projects\course_2.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="others\utilities.py">
       <SubType>Code</SubType>
     </Compile>
@@ -38,13 +41,15 @@
     <Folder Include="Data\" />
     <Folder Include="others\" />
     <Folder Include="others\" />
+    <Folder Include="projects\" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="Course_1.ipynb" />
+    <Content Include="projects\Course_1.ipynb" />
     <Content Include="Data\consumer_complaints.csv" />
     <Content Include="Data\data.xls" />
+    <Content Include="projects\food_study_1.db" />
     <Content Include="Data\financial_data.csv" />
-    <Content Include="Data\food.db" />
+    <Content Include="projects\food.db" />
     <Content Include="Data\module_2_data_1.xls" />
     <Content Include="Data\Mountains.csv" />
     <Content Include="Data\songs.csv" />

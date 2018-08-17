@@ -14,7 +14,30 @@ from bs4 import BeautifulSoup
 import sqlite3
 
 #-------------------------------------------------------------------------
+# persiste / charge un DataFrame vers / de la  base de données 
+# REM : db_name sans extension ; le nom de la table correspond à celui de 
+#       la base de données
+#-------------------------------------------------------------------------
+def helper_store_df_to_db(df, db_name) :
+    db_file = PureWindowsPath(data_dir.joinpath(db_name + ".db" ))
+    db = sqlite3.connect(db_file.as_posix())
+
+    table_name = db_name 
+    df_food_study_1.to_sql(table_name, db, chunksize=2000)
+    db.close()
+
+def helper_load_df_from_db(db_name) :
+    db_file = PureWindowsPath(data_dir.joinpath(db_name + ".db"))
+    db = sqlite3.connect(db_file.as_posix())
+
+    table_name = db_name 
+    df = pd.read_sql_query("select * from " + table_name, con=db)
+    db.close()
+    return df
+
+#-------------------------------------------------------------------------
 # lecture du fichier contenant les données 
+#-------------------------------------------------------------------------
 
 working_dir = PureWindowsPath(os.getcwd())
 data_dir = PureWindowsPath(working_dir.joinpath('Data'))
@@ -218,10 +241,10 @@ if 0 :
 #-------------------------------------------------------------------------
 # Databases / données du projet module 2
 # le fichier est en format tsv (tab separator) et contient plus de 
-# 1'300'000 lignes
+# 300'000 lignes
 #-------------------------------------------------------------------------
 
-if 1 :    
+if 0 :    
     #-------------------------------------------------------------------------
     # déclaration d'une base de données temporaire pour le chargement 
     # d'un DataFrame
@@ -272,7 +295,7 @@ if 1 :
     
     #-------------------------------------------------------------------------
     # suppression de toutes les colonnes qui contiennent un nombre 
-    # supérieur ou égal à 1'000'000 de valeurs nulles 
+    # supérieur ou égal à 1 de valeurs nulles 
     # ou une autre dimension permettant une optimisation des caractéristiques 
     # conservées minimisant les valeurs nulles résiduelles. 
     #
@@ -346,7 +369,9 @@ if 1 :
     # 
     # repartition par macronutriment
     # conserver également la liste des ingredients
+    # préparation de la base de données retenues
     #-------------------------------------------------------------------------
+
     column_to_keep = set(['product_name', 'countries','ingredients_text','nutrition_grade_fr','energy_100g',
                     'fat_100g','proteins_100g'])
 
@@ -385,8 +410,17 @@ if 1 :
     # et inversément (sans doublons selon l'INDEX) à l'aide du ~ ..magique
     df_food_study_1 = df_food_study_1.loc[~df_food_study_1.index.duplicated(),:]
   
+    #-------------------------------------------------------------------------    
     # éliminer les produits décrit en chinois, japonais, cyrilliques, etc...
     # sur la base de l'INDEX, ne conserver que les caractères qui nous parlent 
+    # 
+    # Ce n'est pas simple...l.str.match(u'[\u4e00-\u9fff]+') permet de restreindre la table
+    # des caractères unicode 
+  
+    # sauvegarde en base de données 
+ 
+    helper_store_db(df_food_study_1, "food_study_1" )
 
-    # split de la liste des ingredients; séparateur = ','
-    
+if 1 : 
+
+    df_food_study_1 = helper_load_df_from_db("food_study_1" )
