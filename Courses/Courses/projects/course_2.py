@@ -190,4 +190,4 @@ df_food_study_1 = df_food_study_1.loc[~df_food_study_1.index.duplicated(),:]
 #-------------------------------------------------------------------------
 df_food_study_1.drop_duplicates(inplace=True)
 
-# helper_store_df_to_db(df_food_study_1, "df_food_study_1", "df_food_study_1")
+# helper_store_df_to_db(df_food_study_1, "df_food_study_1", "   df_food_study_1")

@@ -47,6 +47,7 @@
     <Content Include="projects\Course_1.ipynb" />
     <Content Include="Data\consumer_complaints.csv" />
     <Content Include="Data\data.xls" />
+    <Content Include="projects\df_food_study_1.db" />
     <Content Include="projects\food_study_1.db" />
     <Content Include="Data\financial_data.csv" />
     <Content Include="projects\food.db" />
