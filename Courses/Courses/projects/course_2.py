@@ -150,8 +150,8 @@ df_food_sel.states_tags.where(lambda x : x.str.contains("completed")).count()
 # suppression de toutes les colonnes dont le nom contient "states" et "tags" 
 # et qui contiennent "completed" en grand nombre
 
-df_food_sel.drop([col for col in df_food_sel.columns if "states" in col], axis=1, inplace=True)
-df_food_sel.drop([col for col in df_food_sel.columns if "tags" in col], axis=1, inplace=True)
+df_food_sel = df_food_sel.drop([col for col in df_food_sel.columns if "states" in col], axis=1)
+df_food_sel = df_food_sel.drop([col for col in df_food_sel.columns if "tags" in col], axis=1)
 
 #-------------------------------------------------------------------------
 # ETUDE 1
@@ -163,14 +163,9 @@ df_food_sel.drop([col for col in df_food_sel.columns if "tags" in col], axis=1, 
 # Le sous-ensemble de colonnes ci-dessous est conservé
 #-------------------------------------------------------------------------
 column_to_keep = set(['product_name', 'countries','ingredients_text','nutrition_grade_fr','energy_100g',
-                'fat_100g','proteins_100g'])
+                'fat_100g','proteins_100g', 'carbohydrates_100g'])
 
 df_food_study_1 = df_food_sel.drop(axis=1, columns=set(df_food_sel.columns).difference(column_to_keep))
-
-#-------------------------------------------------------------------------
-# gestion des doublons 
-#-------------------------------------------------------------------------
-df_food_study_1.drop_duplicates(inplace=True)
 
 # indication d'un index et tri sur celui-ci
 df_food_study_1.set_index(['product_name'], inplace=True)
@@ -189,3 +184,10 @@ df_food_study_1.loc[df_food_study_1.index.duplicated(),:]
 
 # et inversément (sans doublons selon l'INDEX) à l'aide du ~ ..magique
 df_food_study_1 = df_food_study_1.loc[~df_food_study_1.index.duplicated(),:]
+
+#-------------------------------------------------------------------------
+# gestion des doublons 
+#-------------------------------------------------------------------------
+df_food_study_1.drop_duplicates(inplace=True)
+
+# helper_store_df_to_db(df_food_study_1, "df_food_study_1", "   df_food_study_1")
