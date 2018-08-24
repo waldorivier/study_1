@@ -210,5 +210,22 @@ df_food_study_1.set_index(['product_name'], inplace=True)
 df_food_study_1.sort_index(inplace=True)
 
 # parsing ingredients
+
+def trans() :
+    translator = Translator()
+
+    def f_(x):
+        t = translator.translate(x)   
+        
+        return t.text
+
+    return f_
+
+# traitement d'un produit
+
 df_food_study_1.ingredients_text = df_food_study_1.ingredients_text.str.split()
+
 ser_ingredients = pd.Series(df_food_study_1.ingredients_text[0])
+ser_ingredients = ser_ingredients.str.replace(r'[_|(|)|.|,]','')
+ser_ingredients[~ser_ingredients.apply(lambda x : x == ':')]
+
