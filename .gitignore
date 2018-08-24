@@ -268,3 +268,4 @@ __pycache__/
 /Courses/Courses/Data/food.db
 /Courses/Courses/projects/food.db
 .db
+*.db
