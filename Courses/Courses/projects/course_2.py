@@ -10,7 +10,6 @@ import utilities as util
 #-------------------------------------------------------------------------
 # répertoire de travail
 #-------------------------------------------------------------------------
-
 working_dir = PureWindowsPath(os.getcwd())
 data_dir = PureWindowsPath(working_dir.joinpath('projects'))
 data_result_name = 'result.csv'
@@ -20,7 +19,6 @@ data_result_name = 'result.csv'
 # REM : db_name sans extension ; le nom de la table correspond à celui de 
 #       la base de données
 #-------------------------------------------------------------------------
-
 def helper_store_df_to_db(df, db_name, table_name) :
 
     db_file = PureWindowsPath(data_dir.joinpath(db_name + ".db" ))
@@ -54,7 +52,6 @@ def helper_store_csv_to_db(data_file, db_name, table_name) :
 # "en.openfoodfacts.org.products.tsv" est chargé dans une base 
 # de données food.db qui comporte une seule table "data"
 #-------------------------------------------------------------------------
-
 def read_raw_data():
 
     data_file = PureWindowsPath(data_dir.joinpath('en.openfoodfacts.org.products.tsv'))
@@ -197,13 +194,13 @@ def setup_db_study_1():
 
     # gérer les valeurs extrêmes
     # parmi toutes les colonnes numériques, supprimer les valeurs extrêmes correspondantes
-
     for col_name in util.utilities.select_column_label(df_food_study_1, float):
         df_food_study_1 = util.utilities.remove_outliers(df_food_study_1,col_name)
     
-        print (df_food_study_1.shape) 
+        # print (df_food_study_1.shape) 
 
     helper_store_df_to_db(df_food_study_1, "df_food_study_1", "df_food_study_1")
+
 
 df_food_study_1 = helper_load_df_from_db("df_food_study_1", "df_food_study_1")
 df_food_study_1.set_index(['product_name'], inplace=True)
@@ -211,21 +208,27 @@ df_food_study_1.sort_index(inplace=True)
 
 # parsing ingredients
 
-def trans() :
+def translate_ingredient() :
     translator = Translator()
 
-    def f_(x):
-        t = translator.translate(x)   
-        
-        return t.text
+    def f_(x : str):
+        if not x.isalpha():
+            return x
+        else :
+            t = translator.translate(x)
+            return t.text
 
     return f_
 
 # traitement d'un produit
 
+f_translate_ingredient = translate_ingredient()
+
 df_food_study_1.ingredients_text = df_food_study_1.ingredients_text.str.split()
 
 ser_ingredients = pd.Series(df_food_study_1.ingredients_text[0])
 ser_ingredients = ser_ingredients.str.replace(r'[_|(|)|.|,]','')
-ser_ingredients[~ser_ingredients.apply(lambda x : x == ':')]
+ser_ingredients = ser_ingredients[~ser_ingredients.apply(lambda x : x == ':')]
+ser_ingredients.apply(f_translate_ingredient)
+
 

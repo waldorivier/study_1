@@ -36,6 +36,7 @@
     </Compile>
     <Compile Include="others\others.py" />
     <Compile Include="others\plot.py" />
+    <Compile Include="projects\utilities.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Data\" />
