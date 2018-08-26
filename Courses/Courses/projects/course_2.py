@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import seaborn
 import sqlite3
 import utilities as util
+import googletrans as translator
 
 #-------------------------------------------------------------------------
 # répertoire de travail
@@ -173,7 +174,7 @@ def setup_db_study_1():
     df_food_study_1 = df_food_study_1.drop(axis=1, 
                                      columns=set(df_food_study_1.columns).difference(column_to_keep))
 
-    # suppression de toutes les valeurs NAN
+    # suppression de toutes les valeurs nulles
     df_food_study_1.dropna(inplace=True)
 
     # indication d'un index et tri sur celui-ci
@@ -201,7 +202,6 @@ def setup_db_study_1():
 
     helper_store_df_to_db(df_food_study_1, "df_food_study_1", "df_food_study_1")
 
-
 df_food_study_1 = helper_load_df_from_db("df_food_study_1", "df_food_study_1")
 df_food_study_1.set_index(['product_name'], inplace=True)
 df_food_study_1.sort_index(inplace=True)
@@ -209,13 +209,13 @@ df_food_study_1.sort_index(inplace=True)
 # parsing ingredients
 
 def translate_ingredient() :
-    translator = Translator()
+    trans = translator.Translator()
 
     def f_(x : str):
         if not x.isalpha():
             return x
         else :
-            t = translator.translate(x)
+            t = trans.translate(x)
             return t.text
 
     return f_

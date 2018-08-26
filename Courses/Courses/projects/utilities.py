@@ -16,7 +16,6 @@ class utilities:
     # determine (sous l'hypothèse de normalité de la distribution) toutes les valeurs 
     # x | x > abs(mean - 3 * std) 
     #-------------------------------------------------------------------------
-    
     def remove_outliers(df, col_name):
 
         def reject_(ser : pd.Series):
