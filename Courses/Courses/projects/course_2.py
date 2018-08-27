@@ -193,6 +193,8 @@ def setup_db_study_1():
 
     # on décide de sélectionner la dernière mise à jour (last_modified_datetime) du produit
 
+
+
     # gestion des doublons 
     df_food_study_1.drop_duplicates(inplace=True)
 
