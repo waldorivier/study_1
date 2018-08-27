@@ -48,6 +48,8 @@ def helper_store_csv_to_db(data_file, db_name, table_name) :
     for chunk in pd.read_csv(data_file, chunksize=2000):
         chunk.to_sql(name=table_name, con=db, if_exists="append", index=False)  
 
+    db.close()
+
 #-------------------------------------------------------------------------
 # le fichier contenant les données brutes 
 # "en.openfoodfacts.org.products.tsv" est chargé dans une base 
@@ -142,7 +144,7 @@ def clean_raw_data():
     pd.set_option('display.max_columns', df_food_cl.shape[1]) 
     df_food_cl.head()
 
-    # suppression de toute les colonnes qui contiennent les mots "completed"
+    # suppression de toutes les colonnes qui contiennent les mots "completed"
     # par exemple la colonne "states_tags" contient en grand nombre le texte "completed"
     # qui n'est pas relevant pour notre étude
     df_food_cl.states_tags.where(lambda x : x.str.contains("completed")).count()
@@ -167,12 +169,11 @@ def setup_db_study_1():
     df_food_study_1 = helper_load_df_from_db("df_food_cl", "df_food_cl")
 
     # le sous-ensemble comprenant les colonnes ci-dessous est conservé
-    column_to_keep = set(['product_name', 'created_datetime', 'last_modified_datetime', 
+    columns_to_keep = set(['product_name', 'created_datetime', 'last_modified_datetime', 
                           'countries','ingredients_text','nutrition_grade_fr','energy_100g',
                           'fat_100g','proteins_100g', 'carbohydrates_100g'])
 
-    df_food_study_1 = df_food_study_1.drop(axis=1, 
-                                     columns=set(df_food_study_1.columns).difference(column_to_keep))
+    df_food_study_1 = df_food_study_1.drop(axis=1, columns=set(df_food_study_1.columns).difference(columns_to_keep))
 
     # suppression de toutes les valeurs nulles
     df_food_study_1.dropna(inplace=True)
@@ -187,8 +188,10 @@ def setup_db_study_1():
     # ceci permet d'extraire toutes les colonnes dont l'INDEX présente les doublons
     df_food_study_1.loc[df_food_study_1.index.duplicated(),:]
 
-    # et inversément (sans doublons selon l'INDEX) à l'aide du ~ ..magique
+    # et inversément (sans doublons selon l'INDEX) à l'aide du ~...magique
     df_food_study_1 = df_food_study_1.loc[~df_food_study_1.index.duplicated(),:]
+
+    # on décide de sélectionner la dernière mise à jour (last_modified_datetime) du produit
 
     # gestion des doublons 
     df_food_study_1.drop_duplicates(inplace=True)
