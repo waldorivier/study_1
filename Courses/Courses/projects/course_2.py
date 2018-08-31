@@ -5,7 +5,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn
 import sqlite3
-import utilities as util
+
+# import utilities as util
 import googletrans as translator
 
 #-------------------------------------------------------------------------
@@ -14,6 +15,44 @@ import googletrans as translator
 working_dir = PureWindowsPath(os.getcwd())
 data_dir = PureWindowsPath(working_dir.joinpath('projects'))
 data_result_name = 'result.csv'
+
+#-------------------------------------------------------------------------
+#
+#-------------------------------------------------------------------------
+class utilities:
+    #-------------------------------------------------------------------------
+    # retourne la liste des noms de colonne d'un type donné
+    #-------------------------------------------------------------------------
+    def select_column_label(df, type):
+        columns = df.dtypes[df.dtypes.apply(lambda x : x == type)].index.tolist()
+        return columns
+
+    #-------------------------------------------------------------------------
+    # identifier et gérer les valeurs extrêmes 
+    # on considère le seuil de 1% pour déterminer les valeurs extrêmes; ce seuil
+    # determine (sous l'hypothèse de normalité de la distribution) toutes les valeurs 
+    # x | x > abs(mean - 3 * std) 
+    #-------------------------------------------------------------------------
+    def remove_outliers(df, col_name):
+
+        def reject_(ser : pd.Series):
+            _mean = ser.mean() 
+            _std_1  = 3 * ser.std()
+  
+            def f_(x):
+                _reject = False
+
+                if np.abs(x - _mean) > _std_1 : 
+                    _reject = True
+                return _reject
+    
+            return f_
+
+        ser_col = df.loc[:,col_name]
+        f_reject = reject_(ser_col)
+        df = df.loc[~ser_col.apply(f_reject)]
+
+        return df
 
 #-------------------------------------------------------------------------
 # persiste / charge un DataFrame vers / de la  base de données 
@@ -49,7 +88,7 @@ def helper_store_csv_to_db(data_file, db_name, table_name) :
         chunk.to_sql(name=table_name, con=db, if_exists="append", index=False)  
 
     db.close()
-
+ 
 #-------------------------------------------------------------------------
 # le fichier contenant les données brutes 
 # "en.openfoodfacts.org.products.tsv" est chargé dans une base 
@@ -144,6 +183,8 @@ def clean_raw_data():
     pd.set_option('display.max_columns', df_food_cl.shape[1]) 
     df_food_cl.head()
 
+    # A revoir...
+
     # suppression de toutes les colonnes qui contiennent les mots "completed"
     # par exemple la colonne "states_tags" contient en grand nombre le texte "completed"
     # qui n'est pas relevant pour notre étude
@@ -162,7 +203,7 @@ def clean_raw_data():
 # 
 # repartition par macronutriment
 # conserver également la liste des ingredients
-# préparation de la base de données
+# préparation de la base de données après une seconde passe d'épuration
 #-------------------------------------------------------------------------
 def setup_db_study_1():
 
@@ -181,38 +222,36 @@ def setup_db_study_1():
     # indication d'un index et tri sur celui-ci
     df_food_study_1.set_index(['product_name'], inplace=True)
     df_food_study_1.sort_index(inplace=True)
+    df_food_study_1.sort_values(by='last_modified_datetime', ascending = False, inplace=True)
 
     # export de l'index pour se rendre compte des doublons
     df_food_study_1.index.to_series().to_csv(data_dir.joinpath(data_result_name))
 
-    # ceci permet d'extraire toutes les colonnes dont l'INDEX présente les doublons
+    # ceci permet d'extraire toutes les colonnes dont l'index présente les doublons
     df_food_study_1.loc[df_food_study_1.index.duplicated(),:]
 
     # et inversément (sans doublons selon l'INDEX) à l'aide du ~...magique
     df_food_study_1 = df_food_study_1.loc[~df_food_study_1.index.duplicated(),:]
-
-    # on décide de sélectionner la dernière mise à jour (last_modified_datetime) du produit
-
-
 
     # gestion des doublons 
     df_food_study_1.drop_duplicates(inplace=True)
 
     # gérer les valeurs extrêmes
     # parmi toutes les colonnes numériques, supprimer les valeurs extrêmes correspondantes
-    for col_name in util.utilities.select_column_label(df_food_study_1, float):
-        df_food_study_1 = util.utilities.remove_outliers(df_food_study_1,col_name)
+    for col_name in utilities.select_column_label(df_food_study_1, float):
+        df_food_study_1 = utilities.remove_outliers(df_food_study_1,col_name)
     
-        # print (df_food_study_1.shape) 
-
     helper_store_df_to_db(df_food_study_1, "df_food_study_1", "df_food_study_1")
 
+
+# après relecture depuis la base de données, il faut remettre l'index
 df_food_study_1 = helper_load_df_from_db("df_food_study_1", "df_food_study_1")
+
 df_food_study_1.set_index(['product_name'], inplace=True)
 df_food_study_1.sort_index(inplace=True)
 
-# parsing ingredients
-
+#-------------------------------------------------------------------------
+#-------------------------------------------------------------------------
 def translate_ingredient() :
     trans = translator.Translator()
 
@@ -225,15 +264,28 @@ def translate_ingredient() :
 
     return f_
 
-# traitement d'un produit
-
 f_translate_ingredient = translate_ingredient()
-
 df_food_study_1.ingredients_text = df_food_study_1.ingredients_text.str.split()
 
-ser_ingredients = pd.Series(df_food_study_1.ingredients_text[0])
-ser_ingredients = ser_ingredients.str.replace(r'[_|(|)|.|,]','')
-ser_ingredients = ser_ingredients[~ser_ingredients.apply(lambda x : x == ':')]
-ser_ingredients.apply(f_translate_ingredient)
+i = 0
+for row in df_food_study_1.iterrows() :
+    try :
+        ingredients = df_food_study_1.iloc[i, df_food_study_1.columns.get_loc('ingredients_text')]
+        ser_ingredients = pd.Series(ingredients)
+        ser_ingredients = ser_ingredients.str.replace(r'[_|(|)|.|,]','')
+        ser_ingredients = ser_ingredients[~ser_ingredients.apply(lambda x : x == ':')]
+        ser_ingredients = ser_ingredients.apply(f_translate_ingredient)
 
+        print(ser_ingredients.to_json())
 
+        df_food_study_1.iloc[i, df_food_study_1.columns.get_loc('ingredients_text')] = ser_ingredients.to_json()
+
+        i += 1
+        if i > 20 :
+            break
+
+    except ValueError as e :
+        print(e)
+        print(i)
+          
+   
