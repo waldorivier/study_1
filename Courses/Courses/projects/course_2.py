@@ -36,15 +36,15 @@ class utilities:
     def remove_outliers(df, col_name):
 
         def reject_(ser : pd.Series):
-            _mean = ser.mean() 
-            _std_1  = 3 * ser.std()
+            mean = ser.mean() 
+            std  = 3 * ser.std()
   
             def f_(x):
-                _reject = False
+                reject = False
 
-                if np.abs(x - _mean) > _std_1 : 
-                    _reject = True
-                return _reject
+                if np.abs(x - mean) > std : 
+                    reject = True
+                return reject
     
             return f_
 
@@ -53,6 +53,26 @@ class utilities:
         df = df.loc[~ser_col.apply(f_reject)]
 
         return df
+
+    #-------------------------------------------------------------------------
+    # traduction au moyen de googletrans
+    #-------------------------------------------------------------------------
+    def translate_ingredient():
+
+        trans = translator.Translator()
+
+        def f_(x : str):
+            try :
+                if not x.isalpha():
+                    return x
+                else :
+                    t = trans.translate(x)
+                    return t.text
+
+            except ValueError:
+                print ("erreur dans la traduction")
+        
+        return f_
 
 #-------------------------------------------------------------------------
 # persiste / charge un DataFrame vers / de la  base de données 
@@ -230,7 +250,7 @@ def setup_db_study_1():
     # ceci permet d'extraire toutes les colonnes dont l'index présente les doublons
     df_food_study_1.loc[df_food_study_1.index.duplicated(),:]
 
-    # et inversément (sans doublons selon l'INDEX) à l'aide du ~...magique
+    # et inversément (sans doublons selon l'index) à l'aide du ~...magique
     df_food_study_1 = df_food_study_1.loc[~df_food_study_1.index.duplicated(),:]
 
     # gestion des doublons 
@@ -251,41 +271,48 @@ df_food_study_1.set_index(['product_name'], inplace=True)
 df_food_study_1.sort_index(inplace=True)
 
 #-------------------------------------------------------------------------
+# alimente un dictionnaire de tous les ingrédients rencontrés
+# filtre et compte les occurences
+# 
 #-------------------------------------------------------------------------
-def translate_ingredient() :
-    trans = translator.Translator()
-
+def build_ingredient_dictionary(dict_ingredients):
+    assert type(dict_ingredients) is dict
+    
     def f_(x : str):
-        if not x.isalpha():
-            return x
-        else :
-            t = trans.translate(x)
-            return t.text
+        ser_ingredients = pd.read_json(x, typ="records")
+        for item in ser_ingredients.iteritems():
+            ingredient = item[1].upper()
 
-    return f_
+            if (dict_ingredients.get(ingredient) is not None) :
+                dict_ingredients[ingredient] += 1
+            else :
+                dict_ingredients[ingredient] = 1
 
-f_translate_ingredient = translate_ingredient()
+    return f_  
+
+#-------------------------------------------------------------------------
+
+dict_ingredients = {}
+f_build_ingredient_dictionary = build_ingredient_dictionary(dict_ingredients)
+
 df_food_study_1.ingredients_text = df_food_study_1.ingredients_text.str.split()
 
 i = 0
-for row in df_food_study_1.iterrows() :
+for row in df_food_study_1.iterrows():
     try :
         ingredients = df_food_study_1.iloc[i, df_food_study_1.columns.get_loc('ingredients_text')]
         ser_ingredients = pd.Series(ingredients)
-        ser_ingredients = ser_ingredients.str.replace(r'[_|(|)|.|,]','')
-        ser_ingredients = ser_ingredients[~ser_ingredients.apply(lambda x : x == ':')]
-        ser_ingredients = ser_ingredients.apply(f_translate_ingredient)
-
-        print(ser_ingredients.to_json())
-
+        ser_ingredients = ser_ingredients.str.replace(r'[_|(|)|.|,|*|%|#|:|\']','')
+        ser_ingredients = ser_ingredients[~ser_ingredients.apply(lambda x : x  == '')]
+        
         df_food_study_1.iloc[i, df_food_study_1.columns.get_loc('ingredients_text')] = ser_ingredients.to_json()
+        f_build_ingredient_dictionary(df_food_study_1.iloc[i, df_food_study_1.columns.get_loc('ingredients_text')])
 
-        i += 1
-        if i > 20 :
-            break
-
-    except ValueError as e :
-        print(e)
+    except ValueError :
         print(i)
-          
-   
+        print (ser_ingredients)
+  
+    i += 1
+    if i > 50 :
+        break
+  
