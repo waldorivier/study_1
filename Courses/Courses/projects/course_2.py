@@ -279,14 +279,19 @@ def build_ingredient_dictionary(dict_ingredients):
     assert type(dict_ingredients) is dict
     
     def f_(x : str):
-        ser_ingredients = pd.read_json(x, typ="records")
-        for item in ser_ingredients.iteritems():
-            ingredient = item[1].upper()
+        try :
+            ser_ingredients = pd.read_json(x, typ="records")
+            for item in ser_ingredients.iteritems():
+                ingredient = item[1].upper()
 
-            if (dict_ingredients.get(ingredient) is not None) :
-                dict_ingredients[ingredient] += 1
-            else :
-                dict_ingredients[ingredient] = 1
+                if (dict_ingredients.get(ingredient) is not None) :
+                    dict_ingredients[ingredient] += 1
+                else :
+                    dict_ingredients[ingredient] = 1
+        
+        except Exception:   
+            print ("build dictionary error")
+            print (ser_ingredients)
 
     return f_  
 
@@ -297,12 +302,12 @@ f_build_ingredient_dictionary = build_ingredient_dictionary(dict_ingredients)
 
 df_food_study_1.ingredients_text = df_food_study_1.ingredients_text.str.split()
 
-i = 0
+i = 110000
 for row in df_food_study_1.iterrows():
     try :
         ingredients = df_food_study_1.iloc[i, df_food_study_1.columns.get_loc('ingredients_text')]
         ser_ingredients = pd.Series(ingredients)
-        ser_ingredients = ser_ingredients.str.replace(r'[_|(|)|.|,|*|%|#|:|\']','')
+        ser_ingredients = ser_ingredients.str.replace(r'[_|(|)|.|,|*|%|#|:|\'\]\[]','')
         ser_ingredients = ser_ingredients[~ser_ingredients.apply(lambda x : x  == '')]
         
         df_food_study_1.iloc[i, df_food_study_1.columns.get_loc('ingredients_text')] = ser_ingredients.to_json()
@@ -313,6 +318,10 @@ for row in df_food_study_1.iterrows():
         print (ser_ingredients)
   
     i += 1
-    if i > 50 :
+    if i > 120000 :
         break
-  
+
+df_ingredients = pd.DataFrame()
+df_ingredients = df_ingredients.from_dict(dict_ingredients, orient="index", columns=['occurences'])
+df_ingredients.sort_values('occurences', ascending = False, inplace=True)
+df_ingredients.to_csv(data_result_name)
