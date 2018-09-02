@@ -5,6 +5,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn
 import sqlite3
+import random
 
 # import utilities as util
 import googletrans as translator
@@ -264,7 +265,7 @@ def setup_db_study_1():
     helper_store_df_to_db(df_food_study_1, "df_food_study_1", "df_food_study_1")
 
 
-# après relecture depuis la base de données, il faut remettre l'index
+# après relecture depuis la base de données, il faut rétablr l'index
 df_food_study_1 = helper_load_df_from_db("df_food_study_1", "df_food_study_1")
 
 df_food_study_1.set_index(['product_name'], inplace=True)
@@ -273,7 +274,6 @@ df_food_study_1.sort_index(inplace=True)
 #-------------------------------------------------------------------------
 # alimente un dictionnaire de tous les ingrédients rencontrés
 # filtre et compte les occurences
-# 
 #-------------------------------------------------------------------------
 def build_ingredient_dictionary(dict_ingredients):
     assert type(dict_ingredients) is dict
@@ -297,31 +297,41 @@ def build_ingredient_dictionary(dict_ingredients):
 
 #-------------------------------------------------------------------------
 
-dict_ingredients = {}
-f_build_ingredient_dictionary = build_ingredient_dictionary(dict_ingredients)
-
 df_food_study_1.ingredients_text = df_food_study_1.ingredients_text.str.split()
 
-i = 110000
-for row in df_food_study_1.iterrows():
-    try :
-        ingredients = df_food_study_1.iloc[i, df_food_study_1.columns.get_loc('ingredients_text')]
-        ser_ingredients = pd.Series(ingredients)
-        ser_ingredients = ser_ingredients.str.replace(r'[_|(|)|.|,|*|%|#|:|\'\]\[]','')
-        ser_ingredients = ser_ingredients[~ser_ingredients.apply(lambda x : x  == '')]
+#-------------------------------------------------------------------------
+# execute un extraction d'un échantillon aléatoire 
+# retourne un df contenant les résultats (ingredient_name, occurrences)
+#-------------------------------------------------------------------------
+def sampling_parse_ingredients(sample_size:int, population_size:int):
+
+    dict_ingredients = {}
+    f_build_ingredient_dictionary = build_ingredient_dictionary(dict_ingredients)
+
+    i = 0
+    while i < sample_size :
+        try :
+            ingredients = df_food_study_1.iloc[random.randrange(population_size), df_food_study_1.columns.get_loc('ingredients_text')]
+            ser_ingredients = pd.Series(ingredients)
+            ser_ingredients = ser_ingredients.str.replace(r'[_|(|)|.|,|*|%|#|:|\'\]\[]','')
+            ser_ingredients = ser_ingredients[~ser_ingredients.apply(lambda x : x  == '')]
         
-        df_food_study_1.iloc[i, df_food_study_1.columns.get_loc('ingredients_text')] = ser_ingredients.to_json()
-        f_build_ingredient_dictionary(df_food_study_1.iloc[i, df_food_study_1.columns.get_loc('ingredients_text')])
+            df_food_study_1.iloc[i, df_food_study_1.columns.get_loc('ingredients_text')] = ser_ingredients.to_json()
+            f_build_ingredient_dictionary(df_food_study_1.iloc[i, df_food_study_1.columns.get_loc('ingredients_text')])
 
-    except ValueError :
-        print(i)
-        print (ser_ingredients)
+        except ValueError :
+            print(i)
+            print (ser_ingredients)
   
-    i += 1
-    if i > 120000 :
-        break
+        i += 1
+        if i > sample_size :
+            break
 
-df_ingredients = pd.DataFrame()
-df_ingredients = df_ingredients.from_dict(dict_ingredients, orient="index", columns=['occurences'])
-df_ingredients.sort_values('occurences', ascending = False, inplace=True)
+    df_sample = pd.DataFrame()
+    df_sample = df_sample.from_dict(dict_ingredients, orient="index", columns=['occurences'])
+    df_sample.sort_values('occurences', ascending = False, inplace=True)
+
+    return df_sample
+
+df_ingredients = sampling_parse_ingredients(100, df_food_study_1.shape[0])
 df_ingredients.to_csv(data_result_name)
