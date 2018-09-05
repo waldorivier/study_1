@@ -36,21 +36,21 @@ class utilities:
     #-------------------------------------------------------------------------
     def remove_outliers(df, col_name):
 
-        def reject_(ser : pd.Series):
+        def reject(ser : pd.Series):
             mean = ser.mean() 
             std  = 3 * ser.std()
   
-            def f_(x):
+            def f(x):
                 reject = False
 
                 if np.abs(x - mean) > std : 
                     reject = True
                 return reject
     
-            return f_
+            return f
 
         ser_col = df.loc[:,col_name]
-        f_reject = reject_(ser_col)
+        f_reject = reject(ser_col)
         df = df.loc[~ser_col.apply(f_reject)]
 
         return df
@@ -62,7 +62,7 @@ class utilities:
 
         trans = translator.Translator()
 
-        def f_(x : str):
+        def f(x : str):
             try :
                 if not x.isalpha():
                     return x
@@ -71,9 +71,10 @@ class utilities:
                     return t.text
 
             except ValueError:
-                print ("erreur dans la traduction")
+                print ("erreur dans la traduction", x)
+                
         
-        return f_
+        return f
 
 #-------------------------------------------------------------------------
 # persiste / charge un DataFrame vers / de la  base de données 
@@ -147,12 +148,12 @@ def define_thresh_value (df) :
     rows = []
 
     def optimize_col_selection(thresh):
-        df_ = df.dropna(thresh=thresh, axis=1)
+        df = df.dropna(thresh=thresh, axis=1)
         
         dict = {'thresh_' : 0, 'schape_':0, 'mean_':0}
         dict['thresh_'] = thresh
-        dict['schape_'] = df_.shape[1]
-        dict['mean_']   = df_.isnull().sum().mean()
+        dict['schape_'] = df.shape[1]
+        dict['mean_']   = df.isnull().sum().mean()
 
         rows.append(dict)
         
@@ -259,6 +260,7 @@ def setup_db_study_1():
 
     # gérer les valeurs extrêmes
     # parmi toutes les colonnes numériques, supprimer les valeurs extrêmes correspondantes
+
     for col_name in utilities.select_column_label(df_food_study_1, float):
         df_food_study_1 = utilities.remove_outliers(df_food_study_1,col_name)
     
@@ -278,7 +280,7 @@ df_food_study_1.sort_index(inplace=True)
 def build_ingredient_dictionary(dict_ingredients):
     assert type(dict_ingredients) is dict
     
-    def f_(x : str):
+    def f(x : str):
         try :
             ser_ingredients = pd.read_json(x, typ="records")
             for item in ser_ingredients.iteritems():
@@ -293,7 +295,7 @@ def build_ingredient_dictionary(dict_ingredients):
             print ("build dictionary error")
             print (ser_ingredients)
 
-    return f_  
+    return f 
 
 #-------------------------------------------------------------------------
 
@@ -327,6 +329,11 @@ def sampling_parse_ingredients(sample_size:int, population_size:int):
         if i > sample_size :
             break
 
+    # traitement du dictionnaire...
+
+    f_translate = utilities.translate_ingredient()
+    df_ingredients.trad = df_ingredients.index.to_series().apply(f_translate)
+   
     df_sample = pd.DataFrame()
     df_sample = df_sample.from_dict(dict_ingredients, orient="index", columns=['occurences'])
     df_sample.sort_values('occurences', ascending = False, inplace=True)
