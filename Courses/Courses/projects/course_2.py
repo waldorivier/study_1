@@ -6,8 +6,6 @@ import matplotlib.pyplot as plt
 import seaborn
 import sqlite3
 import random
-
-# import utilities as util
 import googletrans as translator
 
 #-------------------------------------------------------------------------
@@ -66,6 +64,10 @@ class utilities:
             try :
                 if not x.isalpha():
                     return x
+
+                elif x == "SEL":
+                    return "SALT"
+
                 else :
                     t = trans.translate(x)
                     return t.text
@@ -75,6 +77,29 @@ class utilities:
                 
         
         return f
+
+    #-------------------------------------------------------------------------
+    # alimente un dictionnaire de tous les ingrédients rencontrés
+    # et en compte les occurences
+    #-------------------------------------------------------------------------
+    def build_ingredient_dictionary(dict_ingredients):
+        assert type(dict_ingredients) is dict
+   
+        def f(x : str):
+            try :
+                ser_ingredients = pd.read_json(x, typ="records")
+                for item in ser_ingredients.iteritems():
+                    ingredient = item[1].upper()
+
+                    if (dict_ingredients.get(ingredient) is not None) :
+                        dict_ingredients[ingredient] += 1
+                    else :
+                        dict_ingredients[ingredient] = 1
+        
+            except Exception:   
+                print ("build dictionary error")
+
+        return f 
 
 #-------------------------------------------------------------------------
 # persiste / charge un DataFrame vers / de la  base de données 
@@ -121,24 +146,25 @@ def read_raw_data():
     data_file = PureWindowsPath(data_dir.joinpath('en.openfoodfacts.org.products.tsv'))
     helper_store_csv_to_db(data_file, "food", "data")
 
-#-------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # exporter les colonnes d'un df dans un fichier csv avec le nombre 
 # de valeurs nulles afin de visualiser les caractéristiques qui ne sont 
 # pas relevantes / ou qui ne nous interesent tout simplement pas 
-#-------------------------------------------------------------------------
+
+#------------------------------------------------------------------------------
 def export_null_columns(df, data_file) : 
    
     ser_column_null = df.isnull().sum()
     ser_column_null.sort_index(inplace=True)
     ser_column_null.to_csv(data_file)
 
-#-------------------------------------------------------------------------
-# La motivation de l'opération ci-dessous est de définir un sous-ensemble 
+#------------------------------------------------------------------------------
+# la motivation de la fonction ci-dessous est de définir un sous-ensemble 
 # de critères aussi large que possible en recherchant à réduire au 
 # maximum les valeurs non nulles
 #
 # Différents "thresh" sont appliqués aux données du df 
-#-------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 def define_thresh_value (df) :
 
     threshes = np.arange(0, df.isnull().sum().max(), 10000)
@@ -174,11 +200,11 @@ def define_thresh_value (df) :
 
     plt.show()
 
-#-------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # première étape de nettoyage des données
 # produit un df qui contient un premier ensemble de données épuréees
 # qui sont sauvegardées en base de données 
-#-------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 def clean_raw_data():
 
     df_food = helper_load_df_from_db("food", "data")
@@ -205,8 +231,6 @@ def clean_raw_data():
     pd.set_option('display.max_columns', df_food_cl.shape[1]) 
     df_food_cl.head()
 
-    # A revoir...
-
     # suppression de toutes les colonnes qui contiennent les mots "completed"
     # par exemple la colonne "states_tags" contient en grand nombre le texte "completed"
     # qui n'est pas relevant pour notre étude
@@ -220,13 +244,13 @@ def clean_raw_data():
     # sauvegarde en base de données
     helper_store_df_to_db(df_food_cl, "df_food_cl", "df_food_cl")
 
-#-------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 # ETUDE 1
 # 
 # repartition par macronutriment
 # conserver également la liste des ingredients
 # préparation de la base de données après une seconde passe d'épuration
-#-------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 def setup_db_study_1():
 
     df_food_study_1 = helper_load_df_from_db("df_food_cl", "df_food_cl")
@@ -273,53 +297,32 @@ df_food_study_1 = helper_load_df_from_db("df_food_study_1", "df_food_study_1")
 df_food_study_1.set_index(['product_name'], inplace=True)
 df_food_study_1.sort_index(inplace=True)
 
-#-------------------------------------------------------------------------
-# alimente un dictionnaire de tous les ingrédients rencontrés
-# filtre et compte les occurences
-#-------------------------------------------------------------------------
-def build_ingredient_dictionary(dict_ingredients):
-    assert type(dict_ingredients) is dict
-    
-    def f(x : str):
-        try :
-            ser_ingredients = pd.read_json(x, typ="records")
-            for item in ser_ingredients.iteritems():
-                ingredient = item[1].upper()
-
-                if (dict_ingredients.get(ingredient) is not None) :
-                    dict_ingredients[ingredient] += 1
-                else :
-                    dict_ingredients[ingredient] = 1
-        
-        except Exception:   
-            print ("build dictionary error")
-            print (ser_ingredients)
-
-    return f 
-
-#-------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 
 df_food_study_1.ingredients_text = df_food_study_1.ingredients_text.str.split()
 
-#-------------------------------------------------------------------------
-# execute un extraction d'un échantillon aléatoire 
-# retourne un df contenant les résultats (ingredient_name, occurrences)
-#-------------------------------------------------------------------------
-def sampling_parse_ingredients(sample_size:int, population_size:int):
+#------------------------------------------------------------------------------
+# execute un extraction d'un échantillon aléatoire parmi tous les produits
+# de df_food_study_1
+#
+# retourne un df ("dictionnaire") contenant les colonnes (ingredient_name, occurrences); 
+# les ingrédients du dictionnaire sont triés par occurence et ils sont 
+# limités à "ingredient_size"
+#------------------------------------------------------------------------------
+def product_ingredient_sample(sample_size:int, population_size:int,ingredient_size:int):
 
     dict_ingredients = {}
-    f_build_ingredient_dictionary = build_ingredient_dictionary(dict_ingredients)
+    f_build_ingredient_dictionary = utilities.build_ingredient_dictionary(dict_ingredients)
 
     i = 0
     while i < sample_size :
         try :
             ingredients = df_food_study_1.iloc[random.randrange(population_size), df_food_study_1.columns.get_loc('ingredients_text')]
             ser_ingredients = pd.Series(ingredients)
-            ser_ingredients = ser_ingredients.str.replace(r'[_|(|)|.|,|*|%|#|:|\'\]\[]','')
+            ser_ingredients = ser_ingredients.str.replace(r'[-|_|(|)|.|,|*|%|#|:|\'\]\[]','')
             ser_ingredients = ser_ingredients[~ser_ingredients.apply(lambda x : x  == '')]
-        
-            df_food_study_1.iloc[i, df_food_study_1.columns.get_loc('ingredients_text')] = ser_ingredients.to_json()
-            f_build_ingredient_dictionary(df_food_study_1.iloc[i, df_food_study_1.columns.get_loc('ingredients_text')])
+ 
+            f_build_ingredient_dictionary(ser_ingredients.to_json())
 
         except ValueError :
             print(i)
@@ -329,16 +332,66 @@ def sampling_parse_ingredients(sample_size:int, population_size:int):
         if i > sample_size :
             break
 
-    # traitement du dictionnaire...
+    # le dictionnaire de l'échantillon est trié par occurence décroissante
+    # est la taille limitée à limit_size
 
-    f_translate = utilities.translate_ingredient()
-    df_ingredients.trad = df_ingredients.index.to_series().apply(f_translate)
-   
     df_sample = pd.DataFrame()
     df_sample = df_sample.from_dict(dict_ingredients, orient="index", columns=['occurences'])
-    df_sample.sort_values('occurences', ascending = False, inplace=True)
+    df_sample.sort_values('occurences', ascending=False, inplace=True)
+    df_sample = df_sample.iloc[0:ingredient_size,]
 
     return df_sample
 
-df_ingredients = sampling_parse_ingredients(100, df_food_study_1.shape[0])
-df_ingredients.to_csv(data_result_name)
+#------------------------------------------------------------------------------
+# ANALYSE de la fréquence des ingredients evaluées à partir de plusieurs échantillons 
+# de produits
+#
+# les "dictionnaires" produit par les échatillons sont consolidés 
+#------------------------------------------------------------------------------
+
+df_ingredient_ = pd.DataFrame()
+
+# les mots qui ne correspondent pas à des ingrédients et que l'on veut par conséquent exclure
+word_to_exclude = pd.Series(['FROM', 'AND', 'DE', 'ET'])
+
+sample_size = 100
+ingredient_size = 100
+ 
+nb_sample = 0
+while nb_sample < 10 : 
+    df_ingredients = product_ingredient_sample(sample_size, df_food_study_1.shape[0], ingredient_size)
+  
+    f_translate = utilities.translate_ingredient()
+    df_ingredients['ingredient_en'] = df_ingredients.index.to_series().apply(f_translate)
+
+    df_ingredients.reset_index(inplace=True)
+    df_ingredients.set_index('ingredient_en', inplace=True)
+
+    df_gr_ingredients = df_ingredients.groupby('ingredient_en').sum()
+    df_gr_ingredients.sort_values('occurences', ascending=False, inplace=True)
+    df_gr_ingredients = df_gr_ingredients.drop(word_to_exclude, errors="ignore")
+
+    df_ingredient_ = pd.concat([df_ingredient_, df_gr_ingredients.transpose()], sort=False)
+
+    nb_sample += 1
+
+df_ingredient_ = df_ingredient_.transpose()
+df_ingredient_.fillna(0, inplace=True)
+df_ingredient_['occurences_mean'] = df_ingredient_.mean(axis=1)
+df_ingredient_.sort_values('occurences_mean', ascending=False, inplace=True)
+
+# on ne retient que les 10 ingrédients les plus féquents
+
+df_ingredient_ = df_ingredient_.iloc[0:10,] 
+ 
+fig, ax = plt.subplots()
+y_pos = np.arange(len(df_ingredient_))
+ax.barh(y_pos, df_ingredient_.occurences_mean, align='center', color='green')
+ax.set_yticks(y_pos)
+ax.set_yticklabels(df_ingredient_.index)
+ax.invert_yaxis() 
+ax.set_xlabel('Nombre d''occurences pour 100 produits')
+ax.set_xlabel('Ingrédients')
+ax.set_title('Nombre d''occurences des ingrédients')
+
+plt.show()
