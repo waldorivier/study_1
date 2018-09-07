@@ -163,42 +163,44 @@ def export_null_columns(df, data_file) :
 # de critères aussi large que possible en recherchant à réduire au 
 # maximum les valeurs non nulles
 #
-# Différents "thresh" sont appliqués aux données du df 
+# Différents "thresh" sont appliqués aux données du df; on fixe un step de 10'000
 #------------------------------------------------------------------------------
 def define_thresh_value (df) :
 
-    threshes = np.arange(0, df.isnull().sum().max(), 10000)
+    null_values_max = df.isnull().sum().max()
+    if null_values_max > 0:
+        threshes = np.arange(0, null_values_max, 10000)
 
-    # construction d'un df à partir d'une liste de lignes construites
-    # sur la base d'un dictionnaire
-    rows = []
+        # construction d'un df à partir d'une liste de lignes construites
+        # sur la base d'un dictionnaire
+        rows = []
 
-    def optimize_col_selection(thresh):
-        df = df.dropna(thresh=thresh, axis=1)
+        def optimize_col_selection(thresh):
+            df = df.dropna(thresh=thresh, axis=1)
         
-        dict = {'thresh_' : 0, 'schape_':0, 'mean_':0}
-        dict['thresh_'] = thresh
-        dict['schape_'] = df.shape[1]
-        dict['mean_']   = df.isnull().sum().mean()
+            dict = {'thresh_' : 0, 'schape_':0, 'mean_':0}
+            dict['thresh_'] = thresh
+            dict['schape_'] = df.shape[1]
+            dict['mean_']   = df.isnull().sum().mean()
 
-        rows.append(dict)
+            rows.append(dict)
         
-    for thresh in threshes :
-        optimize_col_selection (thresh)
+        for thresh in threshes :
+            optimize_col_selection (thresh)
     
-    df_result = pd.DataFrame(rows)  
-    df_result.set_index('schape_', inplace=True)
+        df_result = pd.DataFrame(rows)  
+        df_result.set_index('schape_', inplace=True)
     
-    # le tableau ci-dessous indique le nombre de critères conservés et 
-    # la moyenne des valeurs nulles des colonnes résiduelles conservées
-    # par niveau (thresh) en fonction duquel une colonne est supprimée.   
-    df_result.to_csv(data_dir.joinpath(data_result_name))
+        # le tableau ci-dessous indique le nombre de critères conservés et 
+        # la moyenne des valeurs nulles des colonnes résiduelles conservées
+        # par niveau (thresh) en fonction duquel une colonne est supprimée.   
+        df_result.to_csv(data_dir.joinpath(data_result_name))
 
-    df_result.plot(figsize=(16,12))
-    plt.xlabel('nombre de colonnes')
-    plt.legend(labels=['moyenne du nombre de valeur nulle','niveau'])
+        df_result.plot(figsize=(16,12))
+        plt.xlabel('nombre de colonnes')
+        plt.legend(labels=['moyenne du nombre de valeur nulle','niveau'])
 
-    plt.show()
+        plt.show()
 
 #------------------------------------------------------------------------------
 # première étape de nettoyage des données
@@ -245,153 +247,202 @@ def clean_raw_data():
     helper_store_df_to_db(df_food_cl, "df_food_cl", "df_food_cl")
 
 #------------------------------------------------------------------------------
-# ETUDE 1
+# ETUDE 1.0
 # 
-# repartition par macronutriment
-# conserver également la liste des ingredients
 # préparation de la base de données après une seconde passe d'épuration
 #------------------------------------------------------------------------------
-def setup_db_study_1():
+def setup_db_study():
 
-    df_food_study_1 = helper_load_df_from_db("df_food_cl", "df_food_cl")
+    df_food_study = helper_load_df_from_db("df_food_cl", "df_food_cl")
 
     # le sous-ensemble comprenant les colonnes ci-dessous est conservé
     columns_to_keep = set(['product_name', 'created_datetime', 'last_modified_datetime', 
                           'countries','ingredients_text','nutrition_grade_fr','energy_100g',
                           'fat_100g','proteins_100g', 'carbohydrates_100g'])
 
-    df_food_study_1 = df_food_study_1.drop(axis=1, columns=set(df_food_study_1.columns).difference(columns_to_keep))
+    df_food_study = df_food_study.drop(axis=1, 
+                                       columns=set(df_food_study.columns).difference(columns_to_keep))
 
     # suppression de toutes les valeurs nulles
-    df_food_study_1.dropna(inplace=True)
+    df_food_study.dropna(inplace=True)
 
     # indication d'un index et tri sur celui-ci
-    df_food_study_1.set_index(['product_name'], inplace=True)
-    df_food_study_1.sort_index(inplace=True)
-    df_food_study_1.sort_values(by='last_modified_datetime', ascending = False, inplace=True)
+    df_food_study.set_index(['product_name'], inplace=True)
+    df_food_study.sort_index(inplace=True)
+    df_food_study.sort_values(by='last_modified_datetime', ascending = False, inplace=True)
 
     # export de l'index pour se rendre compte des doublons
-    df_food_study_1.index.to_series().to_csv(data_dir.joinpath(data_result_name))
+    df_food_study.index.to_series().to_csv(data_dir.joinpath(data_result_name))
 
     # ceci permet d'extraire toutes les colonnes dont l'index présente les doublons
-    df_food_study_1.loc[df_food_study_1.index.duplicated(),:]
+    df_food_study.loc[df_food_study.index.duplicated(),:]
 
     # et inversément (sans doublons selon l'index) à l'aide du ~...magique
-    df_food_study_1 = df_food_study_1.loc[~df_food_study_1.index.duplicated(),:]
+    df_food_study = df_food_study.loc[~df_food_study.index.duplicated(),:]
 
     # gestion des doublons 
-    df_food_study_1.drop_duplicates(inplace=True)
+    df_food_study.drop_duplicates(inplace=True)
 
     # gérer les valeurs extrêmes
     # parmi toutes les colonnes numériques, supprimer les valeurs extrêmes correspondantes
 
-    for col_name in utilities.select_column_label(df_food_study_1, float):
-        df_food_study_1 = utilities.remove_outliers(df_food_study_1,col_name)
+    for col_name in utilities.select_column_label(df_food_study, float):
+        df_food_study = utilities.remove_outliers(df_food_study,col_name)
     
-    helper_store_df_to_db(df_food_study_1, "df_food_study_1", "df_food_study_1")
-
-
-# après relecture depuis la base de données, il faut rétablr l'index
-df_food_study_1 = helper_load_df_from_db("df_food_study_1", "df_food_study_1")
-
-df_food_study_1.set_index(['product_name'], inplace=True)
-df_food_study_1.sort_index(inplace=True)
+    helper_store_df_to_db(df_food_study, "df_food_study_1", "df_food_study_1")
 
 #------------------------------------------------------------------------------
-
-df_food_study_1.ingredients_text = df_food_study_1.ingredients_text.str.split()
-
+# ETUDE 1.1
+# 
+# Analyse de la fréquence d'apparition d'ingrédients dans les produits issus
+# de df_food_study
 #------------------------------------------------------------------------------
-# execute un extraction d'un échantillon aléatoire parmi tous les produits
-# de df_food_study_1
-#
-# retourne un df ("dictionnaire") contenant les colonnes (ingredient_name, occurrences); 
-# les ingrédients du dictionnaire sont triés par occurence et ils sont 
-# limités à "ingredient_size"
-#------------------------------------------------------------------------------
-def product_ingredient_sample(sample_size:int, population_size:int,ingredient_size:int):
+def analyze_ingredients_frequency():
 
-    dict_ingredients = {}
-    f_build_ingredient_dictionary = utilities.build_ingredient_dictionary(dict_ingredients)
+    # après relecture depuis la base de données, il faut rétablr l'index
+    df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_1")
 
-    i = 0
-    while i < sample_size :
-        try :
-            ingredients = df_food_study_1.iloc[random.randrange(population_size), df_food_study_1.columns.get_loc('ingredients_text')]
-            ser_ingredients = pd.Series(ingredients)
-            ser_ingredients = ser_ingredients.str.replace(r'[-|_|(|)|.|,|*|%|#|:|\'\]\[]','')
-            ser_ingredients = ser_ingredients[~ser_ingredients.apply(lambda x : x  == '')]
+    df_food_study.set_index(['product_name'], inplace=True)
+    df_food_study.sort_index(inplace=True)
+
+    #------------------------------------------------------------------------------
+
+    df_food_study.ingredients_text = df_food_study.ingredients_text.str.split()
+
+    #------------------------------------------------------------------------------
+    # execute un extraction d'un échantillon aléatoire parmi tous les produits
+    # de df_food_study
+    #
+    # retourne un df ("dictionnaire") contenant les colonnes (ingredient_name, occurrences); 
+    # les ingrédients du dictionnaire sont triés par occurence et ils sont 
+    # limités au nombre de "ingredient_count"
+    #------------------------------------------------------------------------------
+    def product_ingredient_sample(sample_size:int, population_size:int, ingredient_count:int):
+
+        dict_ingredients = {}
+        f_build_ingredient_dictionary = utilities.build_ingredient_dictionary(dict_ingredients)
+
+        i = 0
+        while i < sample_size :
+            try :
+                ingredients = df_food_study.iloc[random.randrange(population_size), 
+                                                 df_food_study.columns.get_loc('ingredients_text')]
+
+                ser_ingredients = pd.Series(ingredients)
+                ser_ingredients = ser_ingredients.str.replace(r'[-|_|(|)|.|,|*|%|#|:|\'\]\[]','')
+                ser_ingredients = ser_ingredients[~ser_ingredients.apply(lambda x : x  == '')]
  
-            f_build_ingredient_dictionary(ser_ingredients.to_json())
+                f_build_ingredient_dictionary(ser_ingredients.to_json())
 
-        except ValueError :
-            print(i)
-            print (ser_ingredients)
+            except ValueError :
+                print(i)
+                print (ser_ingredients)
   
-        i += 1
-        if i > sample_size :
-            break
+            i += 1
+            if i > sample_size :
+                break
 
-    # le dictionnaire de l'échantillon est trié par occurence décroissante
-    # est la taille limitée à limit_size
+        # le dictionnaire de l'échantillon est trié par occurence décroissante
+        # est la taille limitée à limit_size
 
-    df_sample = pd.DataFrame()
-    df_sample = df_sample.from_dict(dict_ingredients, orient="index", columns=['occurences'])
-    df_sample.sort_values('occurences', ascending=False, inplace=True)
-    df_sample = df_sample.iloc[0:ingredient_size,]
+        df_sample = pd.DataFrame()
+        df_sample = df_sample.from_dict(dict_ingredients, orient="index", columns=['occurences'])
+        df_sample.sort_values('occurences', ascending=False, inplace=True)
+        df_sample = df_sample.iloc[0:ingredient_size,]
 
-    return df_sample
+        return df_sample
 
-#------------------------------------------------------------------------------
-# ANALYSE de la fréquence des ingredients evaluées à partir de plusieurs échantillons 
-# de produits
-#
-# les "dictionnaires" produit par les échatillons sont consolidés 
-#------------------------------------------------------------------------------
+    #------------------------------------------------------------------------------
+    # ANALYSE de la fréquence des ingredients evaluées à partir de plusieurs échantillons 
+    # de produits
+    #
+    # les "dictionnaires" produit par les échatillons sont consolidés 
+    #------------------------------------------------------------------------------
 
-df_ingredient_ = pd.DataFrame()
+    df_dicts = pd.DataFrame()
 
-# les mots qui ne correspondent pas à des ingrédients et que l'on veut par conséquent exclure
-word_to_exclude = pd.Series(['FROM', 'AND', 'DE', 'ET'])
+    # les mots qui ne correspondent pas à des ingrédients et que l'on veut par conséquent exclure
+    word_to_exclude = pd.Series(['FROM', 'AND', 'DE', 'ET', 'IN', 'OF', 'AT'])
 
-sample_size = 100
-ingredient_size = 100
+    sample_size = 100
+    ingredient_count = 100
  
-nb_sample = 0
-while nb_sample < 10 : 
-    df_ingredients = product_ingredient_sample(sample_size, df_food_study_1.shape[0], ingredient_size)
+    nb_sample = 0
+    while nb_sample < 5 : 
+        df_dict = product_ingredient_sample(sample_size, df_food_study.shape[0], ingredient_count)
   
-    f_translate = utilities.translate_ingredient()
-    df_ingredients['ingredient_en'] = df_ingredients.index.to_series().apply(f_translate)
+        f_translate = utilities.translate_ingredient()
+        df_dict['ingredient_en'] = df_dict.index.to_series().apply(f_translate)
 
-    df_ingredients.reset_index(inplace=True)
-    df_ingredients.set_index('ingredient_en', inplace=True)
+        df_dict.reset_index(inplace=True)
+        df_dict.set_index('ingredient_en', inplace=True)
 
-    df_gr_ingredients = df_ingredients.groupby('ingredient_en').sum()
-    df_gr_ingredients.sort_values('occurences', ascending=False, inplace=True)
-    df_gr_ingredients = df_gr_ingredients.drop(word_to_exclude, errors="ignore")
+        df_gr_ingredients = df_dict.groupby('ingredient_en').sum()
+        df_gr_ingredients.sort_values('occurences', ascending=False, inplace=True)
+        df_gr_ingredients = df_gr_ingredients.drop(word_to_exclude, errors="ignore")
 
-    df_ingredient_ = pd.concat([df_ingredient_, df_gr_ingredients.transpose()], sort=False)
+        df_dicts = pd.concat([df_dicts, df_gr_ingredients.transpose()], sort=False)
 
-    nb_sample += 1
+        nb_sample += 1
 
-df_ingredient_ = df_ingredient_.transpose()
-df_ingredient_.fillna(0, inplace=True)
-df_ingredient_['occurences_mean'] = df_ingredient_.mean(axis=1)
-df_ingredient_.sort_values('occurences_mean', ascending=False, inplace=True)
+    df_dicts = df_dicts.transpose()
+    df_dicts.fillna(0, inplace=True)
+    df_dicts['occurences_mean'] = df_dicts.mean(axis=1)
+    df_dicts.sort_values('occurences_mean', ascending=False, inplace=True)
 
-# on ne retient que les 10 ingrédients les plus féquents
+    # on ne retient que les 10 ingrédients les plus féquents
 
-df_ingredient_ = df_ingredient_.iloc[0:10,] 
+    df_ingredient_l = df_dicts.iloc[0:30,] 
  
-fig, ax = plt.subplots()
-y_pos = np.arange(len(df_ingredient_))
-ax.barh(y_pos, df_ingredient_.occurences_mean, align='center', color='green')
-ax.set_yticks(y_pos)
-ax.set_yticklabels(df_ingredient_.index)
-ax.invert_yaxis() 
-ax.set_xlabel('Nombre d''occurences pour 100 produits')
-ax.set_xlabel('Ingrédients')
-ax.set_title('Nombre d''occurences des ingrédients')
+    fig, ax = plt.subplots()
+    y_pos = np.arange(len(df_ingredient_l))
+    ax.barh(y_pos, df_ingredient_l.occurences_mean, align='center', color='green')
+    ax.set_yticks(y_pos)
+    ax.set_yticklabels(df_ingredient_l.index)
+    ax.invert_yaxis() 
+    ax.set_xlabel('Nombre d''occurences pour 100 produits')
+    ax.set_title('Nombre d''occurences des ingrédients')
 
-plt.show()
+    plt.show()
+
+
+# analyze_ingredients_frequency()
+
+#------------------------------------------------------------------------------
+# Exercice 1.2
+#
+# mise en place d'une base de données normalisées 
+#------------------------------------------------------------------------------
+
+
+#------------------------------------------------------------------------------
+# Exercice 1.3
+#
+# identifier les produits les plus équilibrés selon la définition suivante :
+#
+# un produit équilibré est celui qui dans sa décomposition en macro-nutriments
+# est la plus proche de celle d'une alimentation équilibrée, soit une répartition
+# de 65% en glucides, 25% en protéines, 10% en lipides
+#------------------------------------------------------------------------------
+
+df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_1")
+df_food_study.set_index(['product_name'], inplace=True)
+df_food_study.sort_index(inplace=True)
+
+# columns_to_keep = set(['fat_100g','proteins_100g', 'carbohydrates_100g'])
+# df_food_study = df_food_study.drop(axis=1, columns=set(df_food_study.columns).difference(columns_to_keep))
+
+df_food_study_1 = df_food_study.copy()
+
+df_food_study_1.carbohydrates_100g = np.power(df_food_study_1.carbohydrates_100g - 65, 2)
+df_food_study_1.fat_100g = np.power(df_food_study_1.fat_100g - 15, 2)
+df_food_study_1.proteins_100g = np.power(df_food_study_1.proteins_100g - 25, 2)
+
+df_food_study['balanced_coefficient'] = np.power(df_food_study_1.sum(axis=1), 0.5)
+# df_food_study.sort_values(by = 'balanced_coefficient', inplace=True)
+df_food_study.sort_values(by = ['balanced_coefficient','nutrition_grade_fr'], inplace=True)
+df_food_study.groupby()
+
+
+
+
