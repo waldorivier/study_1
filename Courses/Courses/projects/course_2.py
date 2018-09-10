@@ -254,15 +254,7 @@ def clean_raw_data():
 def setup_db_study():
 
     df_food_study = helper_load_df_from_db("df_food_cl", "df_food_cl")
-
-    # le sous-ensemble comprenant les colonnes ci-dessous est conservé
-    columns_to_keep = set(['product_name', 'created_datetime', 'last_modified_datetime', 
-                          'countries','ingredients_text','nutrition_grade_fr','energy_100g',
-                          'fat_100g','proteins_100g', 'carbohydrates_100g'])
-
-    df_food_study = df_food_study.drop(axis=1, 
-                                       columns=set(df_food_study.columns).difference(columns_to_keep))
-
+                  
     # suppression de toutes les valeurs nulles
     df_food_study.dropna(inplace=True)
 
@@ -289,10 +281,10 @@ def setup_db_study():
     for col_name in utilities.select_column_label(df_food_study, float):
         df_food_study = utilities.remove_outliers(df_food_study,col_name)
     
-    helper_store_df_to_db(df_food_study, "df_food_study_1", "df_food_study_1")
+    helper_store_df_to_db(df_food_study, "df_food_study_1", "df_food_study_2")
 
 #------------------------------------------------------------------------------
-# ETUDE 1.1
+# ETUDE C
 # 
 # Analyse de la fréquence d'apparition d'ingrédients dans les produits issus
 # de df_food_study
@@ -300,7 +292,7 @@ def setup_db_study():
 def analyze_ingredients_frequency():
 
     # après relecture depuis la base de données, il faut rétablr l'index
-    df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_1")
+    df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
 
     df_food_study.set_index(['product_name'], inplace=True)
     df_food_study.sort_index(inplace=True)
@@ -343,12 +335,12 @@ def analyze_ingredients_frequency():
                 break
 
         # le dictionnaire de l'échantillon est trié par occurence décroissante
-        # est la taille limitée à limit_size
+        # est la taille limitée à ingredient_count
 
         df_sample = pd.DataFrame()
         df_sample = df_sample.from_dict(dict_ingredients, orient="index", columns=['occurences'])
         df_sample.sort_values('occurences', ascending=False, inplace=True)
-        df_sample = df_sample.iloc[0:ingredient_size,]
+        df_sample = df_sample.iloc[0:ingredient_count,]
 
         return df_sample
 
@@ -406,43 +398,82 @@ def analyze_ingredients_frequency():
     plt.show()
 
 
-# analyze_ingredients_frequency()
+analyze_ingredients_frequency()
 
+
+
+if 0:
+    #------------------------------------------------------------------------------
+    # ETUDE B
+    #------------------------------------------------------------------------------
+  
+    macro_nutrients = ['fat_100g','proteins_100g','carbohydrates_100g']
+
+    df_reference = pd.DataFrame(data = [(15,25,60), (9,4,4)], 
+                                columns = macro_nutrients,
+                                index = ['repartition', 'energy_g'])
+
+    #------------------------------------------------------------------------------
+    # un aliment équilibré est selon la définition qui suit,
+    # celui qui dans sa décomposition en macro-nutriments
+    # est la plus proche de celle d'une alimentation équilibrée, soit une répartition
+    # de 65% en glucides, 25% en protéines, 10% en lipides
+    # retourne une copie 
+    #------------------------------------------------------------------------------
+    def compute_repartition_score(df_food_study, df_reference):
+
+        df = df_food_study.copy()
+        df = df.loc[:,macro_nutrients]
+        df = df.sub(df_reference.loc['repartition'], axis=1)
+        df = np.power(df_food_study_1, 2)
+    
+        df_food_study['repartition_score'] = np.power(df.sum(axis=1), 0.5)
+        df_food_study.sort_values(by = 'repartition_score', inplace=True)
+        df_food_study.sort_values(by = ['repartition_score','nutrition_grade_fr'], inplace=True)
+        
+        # ... plot 
+
+        return df_food_study
+
+    #------------------------------------------------------------------------------
+    # pour chaque aliment, caluler la proportion de calories apportées par chacun 
+    # des macro-nutriments
+    # retourne une copie 
+    #------------------------------------------------------------------------------
+    def compute_nutrient_breakdown_ratio(df_food_study, df_reference):
+       
+        columns = macro_nutrients.copy()
+        columns.append('energy_100g')
+        
+        df = df_food_study.copy()
+        df = df.loc[:, columns]
+        df_reference = df_reference.reindex(columns, axis=1).fillna(1)
+
+        df = df.mul(df_reference.loc['energy_g'], axis=1)
+        
+        # plausibiler la valeur énergétique annoncée du produit 
+        energy_tot = df.iloc[:,3]
+        ser_plausibility = (df.iloc[:,0:3].sum(axis=1).mul(4.18) - energy_tot) / energy_tot
+        
+        # identifier et supprimer les valeurs infinies
+        inf_or_nan = ser_plausibility.isin([np.inf, -np.inf, np.nan])
+        ser_plausibility = ser_plausibility[~inf_or_nan]
+
+        # identifier et supprimer les valeurs extrêmes
+
+        ser_plausibility = utilities.remove_outliers(pd.DataFrame(ser_plausibility, columns=['variation']), 
+                                                     'variation').variation
+
+        return df[~inf_or_nan]
+    
+    df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
+    df_food_study.set_index(['product_name'], inplace=True)
+    df_food_study.sort_index(inplace=True)
+
+    compute_repartition_score(df_food_study, df_refercence)
+          
 #------------------------------------------------------------------------------
-# Exercice 1.2
+# ETUDE E
 #
 # mise en place d'une base de données normalisées 
 #------------------------------------------------------------------------------
-
-
-#------------------------------------------------------------------------------
-# Exercice 1.3
-#
-# identifier les produits les plus équilibrés selon la définition suivante :
-#
-# un produit équilibré est celui qui dans sa décomposition en macro-nutriments
-# est la plus proche de celle d'une alimentation équilibrée, soit une répartition
-# de 65% en glucides, 25% en protéines, 10% en lipides
-#------------------------------------------------------------------------------
-
-df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_1")
-df_food_study.set_index(['product_name'], inplace=True)
-df_food_study.sort_index(inplace=True)
-
-# columns_to_keep = set(['fat_100g','proteins_100g', 'carbohydrates_100g'])
-# df_food_study = df_food_study.drop(axis=1, columns=set(df_food_study.columns).difference(columns_to_keep))
-
-df_food_study_1 = df_food_study.copy()
-
-df_food_study_1.carbohydrates_100g = np.power(df_food_study_1.carbohydrates_100g - 65, 2)
-df_food_study_1.fat_100g = np.power(df_food_study_1.fat_100g - 15, 2)
-df_food_study_1.proteins_100g = np.power(df_food_study_1.proteins_100g - 25, 2)
-
-df_food_study['balanced_coefficient'] = np.power(df_food_study_1.sum(axis=1), 0.5)
-# df_food_study.sort_values(by = 'balanced_coefficient', inplace=True)
-df_food_study.sort_values(by = ['balanced_coefficient','nutrition_grade_fr'], inplace=True)
-df_food_study.groupby()
-
-
-
-
