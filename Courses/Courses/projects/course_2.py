@@ -398,19 +398,17 @@ def analyze_ingredients_frequency():
     plt.show()
 
 
-analyze_ingredients_frequency()
-
-
+# analyze_ingredients_frequency()
 
 if 0:
     #------------------------------------------------------------------------------
     # ETUDE B
     #------------------------------------------------------------------------------
   
-    macro_nutrients = ['fat_100g','proteins_100g','carbohydrates_100g']
+    col_macro_nutrients = ['fat_100g','proteins_100g','carbohydrates_100g']
 
     df_reference = pd.DataFrame(data = [(15,25,60), (9,4,4)], 
-                                columns = macro_nutrients,
+                                columns = col_macro_nutrients,
                                 index = ['repartition', 'energy_g'])
 
     #------------------------------------------------------------------------------
@@ -423,7 +421,7 @@ if 0:
     def compute_repartition_score(df_food_study, df_reference):
 
         df = df_food_study.copy()
-        df = df.loc[:,macro_nutrients]
+        df = df.loc[:,col_macro_nutrients]
         df = df.sub(df_reference.loc['repartition'], axis=1)
         df = np.power(df_food_study_1, 2)
     
@@ -442,16 +440,19 @@ if 0:
     #------------------------------------------------------------------------------
     def compute_nutrient_breakdown_ratio(df_food_study, df_reference):
        
-        columns = macro_nutrients.copy()
-        columns.append('energy_100g')
+        col = col_macro_nutrients.copy()
+        col.append('energy_100g')
         
         df = df_food_study.copy()
-        df = df.loc[:, columns]
-        df_reference = df_reference.reindex(columns, axis=1).fillna(1)
+        df = df.loc[:, col]
+        df_reference = df_reference.reindex(col, axis=1).fillna(1)
+
+        # muliplication des quantités par les calories correspondante
 
         df = df.mul(df_reference.loc['energy_g'], axis=1)
         
         # plausibiler la valeur énergétique annoncée du produit 
+        
         energy_tot = df.iloc[:,3]
         ser_plausibility = (df.iloc[:,0:3].sum(axis=1).mul(4.18) - energy_tot) / energy_tot
         
@@ -460,17 +461,24 @@ if 0:
         ser_plausibility = ser_plausibility[~inf_or_nan]
 
         # identifier et supprimer les valeurs extrêmes
+        # déclaration d'un espace pour stocker les ratios
 
-        ser_plausibility = utilities.remove_outliers(pd.DataFrame(ser_plausibility, columns=['variation']), 
-                                                     'variation').variation
+        df_ratios = utilities.remove_outliers(pd.DataFrame(ser_plausibility, columns=['variation']), 
+                                                           'variation')
 
-        return df[~inf_or_nan]
-    
+        col_ratios = ['ratio_cal_fats', 'ratio_cal_proteins', 'ratio_cal_glucides']
+        df_ratios = df_ratios.reindex(col_ratios, axis=1)
+        
+        # reindex provoque une suppresion de la variaton....A VOIR
+
+        d = pd.concat([df_food_study, df_ratios], sort=False, axis=1)
+        
+            
     df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
     df_food_study.set_index(['product_name'], inplace=True)
     df_food_study.sort_index(inplace=True)
 
-    compute_repartition_score(df_food_study, df_refercence)
+    compute_repartition_score(df_food_study, df_reference)
           
 #------------------------------------------------------------------------------
 # ETUDE E
