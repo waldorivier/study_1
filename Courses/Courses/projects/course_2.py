@@ -382,7 +382,7 @@ def analyze_ingredients_frequency():
     df_dicts['occurences_mean'] = df_dicts.mean(axis=1)
     df_dicts.sort_values('occurences_mean', ascending=False, inplace=True)
 
-    # on ne retient que les 10 ingrédients les plus féquents
+    # on ne retient que les 30 ingrédients les plus féquents
 
     df_ingredient_l = df_dicts.iloc[0:30,] 
  
@@ -400,88 +400,145 @@ def analyze_ingredients_frequency():
 
 # analyze_ingredients_frequency()
 
-if 0:
-    #------------------------------------------------------------------------------
-    # ETUDE B
-    #------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+# ETUDE B
+#------------------------------------------------------------------------------
   
-    col_macro_nutrients = ['fat_100g','proteins_100g','carbohydrates_100g']
+macro_nutrients = ['fat', 'carbohydrates', 'proteins'] 
+col_macro_nutrients = pd.Series(macro_nutrients).apply(lambda x : x + "_100g").tolist()
 
-    df_reference = pd.DataFrame(data = [(15,25,60), (9,4,4)], 
-                                columns = col_macro_nutrients,
-                                index = ['repartition', 'energy_g'])
+df_reference_value = pd.DataFrame(data = [(15,25,60), (9,4,4)], 
+                            columns = col_macro_nutrients,
+                            index = ['repartition', 'energy_g'])
 
-    #------------------------------------------------------------------------------
-    # un aliment équilibré est selon la définition qui suit,
-    # celui qui dans sa décomposition en macro-nutriments
-    # est la plus proche de celle d'une alimentation équilibrée, soit une répartition
-    # de 65% en glucides, 25% en protéines, 10% en lipides
-    # retourne une copie 
-    #------------------------------------------------------------------------------
-    def compute_repartition_score(df_food_study, df_reference):
+#------------------------------------------------------------------------------
+# un aliment équilibré est selon la définition qui suit,
+# celui qui dans sa décomposition en macro-nutriments
+# est la plus proche de celle d'une alimentation équilibrée, soit une répartition
+# de 65% en glucides, 25% en protéines, 10% en lipides
+# retourne une copie 
+#------------------------------------------------------------------------------
+def compute_repartition_score(df_food_study, df_reference):
 
-        df = df_food_study.copy()
-        df = df.loc[:,col_macro_nutrients]
-        df = df.sub(df_reference.loc['repartition'], axis=1)
-        df = np.power(df_food_study_1, 2)
+    df = df_food_study.copy()
+    df = df.loc[:,col_macro_nutrients]
+    df = df.sub(df_reference.loc['repartition'], axis=1)
+    df = np.power(df_food_study_1, 2)
     
-        df_food_study['repartition_score'] = np.power(df.sum(axis=1), 0.5)
-        df_food_study.sort_values(by = 'repartition_score', inplace=True)
-        df_food_study.sort_values(by = ['repartition_score','nutrition_grade_fr'], inplace=True)
+    df_food_study['repartition_score'] = np.power(df.sum(axis=1), 0.5)
+    df_food_study.sort_values(by = 'repartition_score', inplace=True)
+    df_food_study.sort_values(by = ['repartition_score','nutrition_grade_fr'], inplace=True)
         
-        # ... plot 
+    # ... plot 
 
-        return df_food_study
+    return df_food_study
 
+#------------------------------------------------------------------------------
+# pour chaque aliment, caluler la proportion de calories apportées par chacun 
+# des macro-nutriments
+# retourne une copie 
+#------------------------------------------------------------------------------
+
+def compute_nutrient_breakdown_ratio(col_macro_nutrients, df_reference_value):
+ 
     #------------------------------------------------------------------------------
-    # pour chaque aliment, caluler la proportion de calories apportées par chacun 
-    # des macro-nutriments
-    # retourne une copie 
+    # contrôle que la valeur énergétique annoncées des aliments est conforme
+    # à celle recalculée en tenant compte des quantités et du pouvoir 
+    # calorique de chaque macro-nutriment
+    # Les produits dont les données caloriques semblent incohérentes sont supprimées
+    #
+    # retourne un df qui contient la quantité de joules par macro-nutriments
     #------------------------------------------------------------------------------
-    def compute_nutrient_breakdown_ratio(df_food_study, df_reference):
-       
-        col = col_macro_nutrients.copy()
-        col.append('energy_100g')
+    def check_energy_tot(df_food_study, col_macro_nutrients, df_reference_value):
+
+        col_for_check = col_macro_nutrients.copy()
+        col_for_check.append('energy_100g')
         
         df = df_food_study.copy()
-        df = df.loc[:, col]
-        df_reference = df_reference.reindex(col, axis=1).fillna(1)
+        df = df.loc[:, col_for_check]
+        df_reference_value = df_reference_value.reindex(col_for_check, axis=1).fillna(1)
 
-        # muliplication des quantités par les calories correspondante
+        # muliplication des quantités de chaque macro-nutriments par les calories 
+        # qui leur correspond
+        df = df.mul(df_reference_value.loc['energy_g'], axis=1)
+           
+        # calcul du delta relatif par rapport aux valeurs annoncées
+        col_delta_energy = 'delta_energy'
 
-        df = df.mul(df_reference.loc['energy_g'], axis=1)
+        # convertir en joules 
+        df.iloc[:, 0:3] = df.iloc[:, 0:3] * 4.18
+
+        ser_energy_tot = df.loc[:, 'energy_100g']
+        df[col_delta_energy] = (df.iloc[:, 0:3].sum(axis=1) - ser_energy_tot) / ser_energy_tot
         
-        # plausibiler la valeur énergétique annoncée du produit 
-        
-        energy_tot = df.iloc[:,3]
-        ser_plausibility = (df.iloc[:,0:3].sum(axis=1).mul(4.18) - energy_tot) / energy_tot
-        
-        # identifier et supprimer les valeurs infinies
-        inf_or_nan = ser_plausibility.isin([np.inf, -np.inf, np.nan])
-        ser_plausibility = ser_plausibility[~inf_or_nan]
+        # ne conserver que les produits dont l'écart calorique entre valeur annoncée et calculée
+        # diffère de moins 5%
+        df = df[df[col_delta_energy].between(-0.05, 0.05)]
+ 
+        return df
 
-        # identifier et supprimer les valeurs extrêmes
-        # déclaration d'un espace pour stocker les ratios
-
-        df_ratios = utilities.remove_outliers(pd.DataFrame(ser_plausibility, columns=['variation']), 
-                                                           'variation')
-
-        col_ratios = ['ratio_cal_fats', 'ratio_cal_proteins', 'ratio_cal_glucides']
-        df_ratios = df_ratios.reindex(col_ratios, axis=1)
+    def compute_macro_nutrient_ratios(df_food_study, col_macro_nutrients, df_reference_value):
+    
+        df = check_energy_tot(df_food_study, col_macro_nutrients, df_reference_value)
         
-        # reindex provoque une suppresion de la variaton....A VOIR
+        df['ratio_cal_fat'] = df.fat_100g / df.energy_100g
+        df['ratio_cal_carbohydrates'] = df.carbohydrates_100g / df.energy_100g
+        df['ratio_cal_proteins'] = df.proteins_100g / df.energy_100g
 
-        d = pd.concat([df_food_study, df_ratios], sort=False, axis=1)
-        
-            
+        df = pd.concat([df_food_study, df], sort=False, axis=1)
+        df.dropna(inplace = True)
+     
+        return df
+                    
     df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
     df_food_study.set_index(['product_name'], inplace=True)
     df_food_study.sort_index(inplace=True)
 
-    compute_repartition_score(df_food_study, df_reference)
-          
+    df = compute_macro_nutrient_ratios(df_food_study, col_macro_nutrients, df_reference_value)
+    
+    return df
+
+def plot_nutrient_breakdown_ratio(df_food_study):
+
+    titles = pd.Series(macro_nutrients).apply(lambda x : str.upper(x)).tolist()
+    col_ratios = pd.Series(macro_nutrients).apply(lambda x : "ratio_cal_" + x).tolist()
+    labels = pd.Series(macro_nutrients).apply( lambda x : "Percentage of " + x)
+    
+    colors = ['red', 'blue', 'blue']
+
+    fig, axes = plt.subplots(nrows=3, ncols=1, sharey=True)
+  
+    for ratio in col_ratios : 
+
+        i_ratio = col_ratios.index(ratio)
+
+        df = df_food_study.copy()
+
+        # on s'affranchit des valeurs > 1
+        df = df[df.loc[:, ratio] <=1]
+        df.sort_values(by=ratio, ascending=False, inplace=True)  
+        df = df.loc[:, ratio]
+        df = df.iloc[:10,]
+
+        y_pos = np.arange(len(df))
+
+        axes[i_ratio].barh(y_pos, df, align='center', color=colors[i_ratio])
+        axes[i_ratio].set_yticks(y_pos)
+        axes[i_ratio].set_yticklabels(df.index)
+        axes[i_ratio].invert_yaxis() 
+
+        axes[i_ratio].set_xlabel(labels[i_ratio])
+        axes[i_ratio].set_title(titles[i_ratio])
+  
+    fig.tight_layout()
+    plt.show()
+
+df_food_study = compute_nutrient_breakdown_ratio(col_macro_nutrients, df_reference_value)
+plot_nutrient_breakdown_ratio(df_food_study)
+
 #------------------------------------------------------------------------------
 # ETUDE E
 #
 # mise en place d'une base de données normalisées 
 #------------------------------------------------------------------------------
+

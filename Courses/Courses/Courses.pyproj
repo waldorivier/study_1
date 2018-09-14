@@ -11,7 +11,7 @@
     <OutputPath>.</OutputPath>
     <Name>Courses</Name>
     <RootNamespace>Courses</RootNamespace>
-    <InterpreterId>MSBuild|env|$(MSBuildProjectFullPath)</InterpreterId>
+    <InterpreterId>CondaEnv|CondaEnv|env</InterpreterId>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -49,7 +49,6 @@
     <Content Include="Data\consumer_complaints.csv" />
     <Content Include="Data\data.xls" />
     <Content Include="projects\df_food_study_1.db" />
-    <Content Include="projects\food_study_1.db" />
     <Content Include="Data\financial_data.csv" />
     <Content Include="projects\food.db" />
     <Content Include="Data\module_2_data_1.xls" />
