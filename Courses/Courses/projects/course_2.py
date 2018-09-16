@@ -504,9 +504,10 @@ def plot_nutrient_breakdown_ratio(df_food_study):
     col_ratios = pd.Series(macro_nutrients).apply(lambda x : "ratio_cal_" + x).tolist()
     labels = pd.Series(macro_nutrients).apply( lambda x : "Percentage of " + x)
     
-    colors = ['red', 'blue', 'blue']
+    colors = ['red', 'blue', 'green']
 
-    fig, axes = plt.subplots(nrows=3, ncols=1, sharey=True)
+    fig, axes = plt.subplots(nrows=3, ncols=1, sharey=False)
+    fig.suptitle('For each macronutients, list of aliments with percentage in descending order')
   
     for ratio in col_ratios : 
 
@@ -522,10 +523,10 @@ def plot_nutrient_breakdown_ratio(df_food_study):
 
         y_pos = np.arange(len(df))
 
-        axes[i_ratio].barh(y_pos, df, align='center', color=colors[i_ratio])
-        axes[i_ratio].set_yticks(y_pos)
-        axes[i_ratio].set_yticklabels(df.index)
-        axes[i_ratio].invert_yaxis() 
+        axes[i_ratio].axes.barh(y_pos, df * 100, align='center', color=colors[i_ratio])
+        axes[i_ratio].axes.set_yticks(y_pos)
+        axes[i_ratio].axes.set_yticklabels(df.index.tolist(), minor=False)
+        axes[i_ratio].axes.invert_yaxis() 
 
         axes[i_ratio].set_xlabel(labels[i_ratio])
         axes[i_ratio].set_title(titles[i_ratio])
@@ -533,12 +534,18 @@ def plot_nutrient_breakdown_ratio(df_food_study):
     fig.tight_layout()
     plt.show()
 
+
+df = df_food_study.sample(1000)
 df_food_study = compute_nutrient_breakdown_ratio(col_macro_nutrients, df_reference_value)
-plot_nutrient_breakdown_ratio(df_food_study)
+
+df_sample_food_study  = df_food_study.sample(1000)
+plot_nutrient_breakdown_ratio(df_sample_food_study)
 
 #------------------------------------------------------------------------------
 # ETUDE E
 #
-# mise en place d'une base de données normalisées 
+# mise en place d'une base de données normalisées; les ingrédients sont 
+# extraits de la listes globales des aliments et stockés dans une table distinctes
+# 
 #------------------------------------------------------------------------------
 
