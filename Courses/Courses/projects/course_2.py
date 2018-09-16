@@ -288,6 +288,20 @@ def setup_db_study():
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
+# return series of ingredients ofrandomly aliment pick from df_food_study
+#------------------------------------------------------------------------------
+def get_ingredients(df_food_study):
+
+    aliment = df_food_study.sample(1)
+        
+    ingredients = aliment.ingredients_text.str.replace(r'[-|_|(|)|.|,|*|%|#|:|\'\]\[]','')
+    ingredients = ingredients.str.split()
+    ingredients = ingredients.get_values()[0]
+    ser_ingredients = pd.Series(ingredients)
+
+    return ser_ingredients
+
+#------------------------------------------------------------------------------
 # extrait un échantillon aléatoire parmi tous les aliments de df_food_study
 #
 # sur la base de cet échantillon, produit un df ("dictionnaire") 
@@ -302,20 +316,9 @@ def build_aliment_ingredient_dictionnary(df_food_study, sample_size:int, ingredi
     f_build_ingredient_dictionary = utilities.build_ingredient_dictionary(dict_ingredients)
 
     for i in np.arange(sample_size):
-        try :
-            aliment = df_food_study.sample(1)
+        ser_ingredients = get_ingredients(df_food_study)
+        f_build_ingredient_dictionary(ser_ingredients.to_json())
 
-            ingredients = aliment.ingredients_text.str.replace(r'[-|_|(|)|.|,|*|%|#|:|\'\]\[]','')
-            ingredients = ingredients.str.split()
-            ingredients = ingredients.get_values()[0]
-            ser_ingredients = pd.Series(ingredients)
-        
-            f_build_ingredient_dictionary(ser_ingredients.to_json())
-
-        except ValueError :
-            print(i)
-            print (ser_ingredients)
-  
     df_dict = pd.DataFrame()
     df_dict = df_dict.from_dict(dict_ingredients, orient="index", columns=['occurences'])
     df_dict.sort_values('occurences', ascending=False, inplace=True)
@@ -349,12 +352,12 @@ def analyze_ingredients_frequency():
     # les mots qui ne correspondent pas à des ingrédients et que l'on veut par conséquent exclure
     word_to_exclude = pd.Series(['FROM', 'AND', 'DE', 'ET', 'IN', 'OF', 'AT'])
 
-    sample_size = 100
+    sample_size = 8
     ingredient_count = 100
  
     nb_sample = 0
     for i in np.arange(sample_size):
-        df_dict = build_aliment_ingredient_dictionnary(df_food_study, sample_size, ingredient_count)
+        df_dict = build_aliment_ingredient_dictionnary(df_food_study, 100, ingredient_count)
   
         f_translate = utilities.translate_ingredient()
         df_dict['ingredient_en'] = df_dict.index.to_series().apply(f_translate)
@@ -445,8 +448,8 @@ def check_energy_tot(df_food_study, col_macro_nutrients, df_reference_value):
     ser_energy_tot = df.loc[:, 'energy_100g']
     df[col_delta_energy] = (df.iloc[:, 0:3].sum(axis=1) - ser_energy_tot) / ser_energy_tot
         
-    # ne conserver que les produits dont l'écart calorique entre valeur annoncée et calculée
-    # diffère de moins 5%
+    # ne conserver que les produits dont l'écart calorique entre la valeur annoncée et 
+    # celle calculée diffère de moins 5%
     df = df[df[col_delta_energy].between(-0.05, 0.05)]
  
     return df
@@ -537,12 +540,14 @@ def analyze_nutrients_breakdown():
 # 
 #------------------------------------------------------------------------------
 
+analyze_ingredients_frequency()
+
 #------------------------------------------------------------------------------
 # ingredient's dictionnary will be translate and cleaned 
 #------------------------------------------------------------------------------
 def clean_ingredient_dictionnary(df_dict):
 
-    words_to_exclude = pd.Series(['FROM', 'AND', 'DE', 'ET', 'IN', 'OF', 'AT', '&', 'ENRICHED', 'CONTAINS', 'LESS'])
+    words_to_exclude = pd.Series(['FROM', 'AND', 'DE', 'ET', 'IN', 'OF', 'TO','AT', '&', 'ENRICHED', 'CONTAINS', 'LESS'])
 
     f_translate = utilities.translate_ingredient()
     df_dict['ingredient_en'] = df_dict.index.to_series().apply(f_translate)
@@ -553,19 +558,11 @@ def clean_ingredient_dictionnary(df_dict):
 
     return df_dict    
 
-def get_ingredients(df_food_study):
-        aliment = df_food_study.sample(1)
-        
-        ingredients = aliment.ingredients_text.str.replace(r'[-|_|(|)|.|,|*|%|#|:|\'\]\[]','')
-        ingredients = ingredients.str.split()
-        ingredients = ingredients.get_values()[0]
-        ser_ingredients = pd.Series(ingredients)
+def build_normalized_database():
+ 
+    df_dict = build_aliment_ingredient_dictionnary(df_food_study, 1000, 100)
+    df_dict = clean_ingredient_dictionnary(df_dict)
 
-        return ser_ingredients
-
-df_dict = build_aliment_ingredient_dictionnary(df_food_study, 1000, 100)
-df_dict = clean_ingredient_dictionnary(df_dict)
-
-for i in np.arange(100):
-    ser_ingredients = get_ingredient(df_food_study)
+    for i in np.arange(100):
+        ser_ingredients = get_ingredient(df_food_study)
 
