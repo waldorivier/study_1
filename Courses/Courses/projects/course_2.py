@@ -301,8 +301,7 @@ def build_aliment_ingredient_dictionnary(df_food_study, sample_size:int, ingredi
     dict_ingredients = {}
     f_build_ingredient_dictionary = utilities.build_ingredient_dictionary(dict_ingredients)
 
-    i = 0
-    while i < sample_size :
+    for i in np.arange(sample_size):
         try :
             aliment = df_food_study.sample(1)
 
@@ -317,10 +316,6 @@ def build_aliment_ingredient_dictionnary(df_food_study, sample_size:int, ingredi
             print(i)
             print (ser_ingredients)
   
-        i += 1
-        if i > sample_size :
-            break
-
     df_dict = pd.DataFrame()
     df_dict = df_dict.from_dict(dict_ingredients, orient="index", columns=['occurences'])
     df_dict.sort_values('occurences', ascending=False, inplace=True)
@@ -336,9 +331,9 @@ def build_aliment_ingredient_dictionnary(df_food_study, sample_size:int, ingredi
 #------------------------------------------------------------------------------
 def analyze_ingredients_frequency():
 
-    # après relecture depuis la base de données, il faut rétablr l'index
     df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
 
+    # après relecture depuis la base de données, il faut rétablr l'index
     df_food_study.set_index(['product_name'], inplace=True)
     df_food_study.sort_index(inplace=True)
 
@@ -358,7 +353,7 @@ def analyze_ingredients_frequency():
     ingredient_count = 100
  
     nb_sample = 0
-    while nb_sample < 5 : 
+    for i in np.arange(sample_size):
         df_dict = build_aliment_ingredient_dictionnary(df_food_study, sample_size, ingredient_count)
   
         f_translate = utilities.translate_ingredient()
@@ -372,8 +367,6 @@ def analyze_ingredients_frequency():
         df_gr_ingredients = df_gr_ingredients.drop(word_to_exclude, errors="ignore")
 
         df_dicts = pd.concat([df_dicts, df_gr_ingredients.transpose()], sort=False)
-
-        nb_sample += 1
 
     df_dicts = df_dicts.transpose()
     df_dicts.fillna(0, inplace=True)
@@ -422,70 +415,59 @@ def compute_repartition_score(df_food_study, df_reference):
     return df_food_study
 
 #------------------------------------------------------------------------------
+# contrôle que la valeur énergétique annoncées des aliments est conforme
+# à celle recalculée en tenant compte des quantités et du pouvoir 
+# calorique de chaque macro-nutriment
+#
+# Les produits dont les données caloriques semblent incohérentes sont supprimés
+#
+# retourne un df qui contient la quantité de joules par macro-nutriments
+#------------------------------------------------------------------------------
+def check_energy_tot(df_food_study, col_macro_nutrients, df_reference_value):
+
+    col_delta_energy = 'delta_energy'
+
+    col_for_check = col_macro_nutrients.copy()
+    col_for_check.append('energy_100g')
+        
+    df = df_food_study.copy()
+    df = df.loc[:, col_for_check]
+    df_reference_value = df_reference_value.reindex(col_for_check, axis=1).fillna(1)
+
+    # muliplication des quantités de chaque macro-nutriments par les calories 
+    # qui leur correspond
+    df = df.mul(df_reference_value.loc['energy_g'], axis=1)
+    
+    # convertir en joules 
+    df.iloc[:, 0:3] = df.iloc[:, 0:3] * 4.18
+
+    # calcul du delta relatif par rapport aux valeurs annoncées
+    ser_energy_tot = df.loc[:, 'energy_100g']
+    df[col_delta_energy] = (df.iloc[:, 0:3].sum(axis=1) - ser_energy_tot) / ser_energy_tot
+        
+    # ne conserver que les produits dont l'écart calorique entre valeur annoncée et calculée
+    # diffère de moins 5%
+    df = df[df[col_delta_energy].between(-0.05, 0.05)]
+ 
+    return df
+
+#------------------------------------------------------------------------------
 # pour chaque aliment, caluler la proportion de calories apportées par chacun 
 # des macro-nutriments
 # retourne une copie 
 #------------------------------------------------------------------------------
 def compute_nutrient_breakdown_ratio(col_macro_nutrients, df_reference_value):
- 
-    #------------------------------------------------------------------------------
-    # contrôle que la valeur énergétique annoncées des aliments est conforme
-    # à celle recalculée en tenant compte des quantités et du pouvoir 
-    # calorique de chaque macro-nutriment
-    # Les produits dont les données caloriques semblent incohérentes sont supprimées
-    #
-    # retourne un df qui contient la quantité de joules par macro-nutriments
-    #------------------------------------------------------------------------------
-    def check_energy_tot(df_food_study, col_macro_nutrients, df_reference_value):
-
-        col_for_check = col_macro_nutrients.copy()
-        col_for_check.append('energy_100g')
-        
-        df = df_food_study.copy()
-        df = df.loc[:, col_for_check]
-        df_reference_value = df_reference_value.reindex(col_for_check, axis=1).fillna(1)
-
-        # muliplication des quantités de chaque macro-nutriments par les calories 
-        # qui leur correspond
-        df = df.mul(df_reference_value.loc['energy_g'], axis=1)
-           
-        # calcul du delta relatif par rapport aux valeurs annoncées
-        col_delta_energy = 'delta_energy'
-
-        # convertir en joules 
-        df.iloc[:, 0:3] = df.iloc[:, 0:3] * 4.18
-
-        ser_energy_tot = df.loc[:, 'energy_100g']
-        df[col_delta_energy] = (df.iloc[:, 0:3].sum(axis=1) - ser_energy_tot) / ser_energy_tot
-        
-        # ne conserver que les produits dont l'écart calorique entre valeur annoncée et calculée
-        # diffère de moins 5%
-        df = df[df[col_delta_energy].between(-0.05, 0.05)]
- 
-        return df
-
-    #------------------------------------------------------------------------------
-    # compute the ratios 
-    #------------------------------------------------------------------------------
-    def compute_macro_nutrient_ratios(df_food_study, col_macro_nutrients, df_reference_value):
     
-        df = check_energy_tot(df_food_study, col_macro_nutrients, df_reference_value)
-        
-        df['ratio_cal_fat'] = df.fat_100g / df.energy_100g
-        df['ratio_cal_carbohydrates'] = df.carbohydrates_100g / df.energy_100g
-        df['ratio_cal_proteins'] = df.proteins_100g / df.energy_100g
-
-        df = pd.concat([df_food_study, df], sort=False, axis=1)
-        df.dropna(inplace = True)
-     
-        return df
-                    
     df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
     df_food_study.set_index(['product_name'], inplace=True)
     df_food_study.sort_index(inplace=True)
-
-    df = compute_macro_nutrient_ratios(df_food_study, col_macro_nutrients, df_reference_value)
-    
+ 
+    df = check_energy_tot(df_food_study, col_macro_nutrients, df_reference_value)
+        
+    df['ratio_cal_fat'] = df.fat_100g / df.energy_100g
+    df['ratio_cal_carbohydrates'] = df.carbohydrates_100g / df.energy_100g
+    df['ratio_cal_proteins'] = df.proteins_100g / df.energy_100g
+     
     return df
 
 #------------------------------------------------------------------------------
@@ -500,10 +482,9 @@ def plot_nutrient_breakdown_ratio(df_food_study, macro_nutrients):
     colors = ['red', 'blue', 'green']
 
     fig, axes = plt.subplots(nrows=3, ncols=1, sharey=False)
-    fig.suptitle('For each macronutients, list of aliments with percentage in descending order')
+    fig.suptitle('For each macronutrients, list of aliments with percentage in descending order')
   
     for ratio in col_ratios : 
-
         i_ratio = col_ratios.index(ratio)
 
         df = df_food_study.copy()
@@ -539,7 +520,6 @@ def analyze_nutrients_breakdown():
                                       columns = col_macro_nutrients,
                                       index = ['repartition', 'energy_g'])
 
-
     df_food_study = compute_nutrient_breakdown_ratio(col_macro_nutrients, df_reference_value)
 
     # restricts to a sample of size 1000 
@@ -562,7 +542,7 @@ def analyze_nutrients_breakdown():
 #------------------------------------------------------------------------------
 def clean_ingredient_dictionnary(df_dict):
 
-    words_to_exclude = pd.Series(['FROM', 'AND', 'DE', 'ET', 'IN', 'OF', 'AT', '&', 'ENRICHED', 'CONTAINS'])
+    words_to_exclude = pd.Series(['FROM', 'AND', 'DE', 'ET', 'IN', 'OF', 'AT', '&', 'ENRICHED', 'CONTAINS', 'LESS'])
 
     f_translate = utilities.translate_ingredient()
     df_dict['ingredient_en'] = df_dict.index.to_series().apply(f_translate)
@@ -573,8 +553,6 @@ def clean_ingredient_dictionnary(df_dict):
 
     return df_dict    
 
-
-
 def get_ingredients(df_food_study):
         aliment = df_food_study.sample(1)
         
@@ -584,9 +562,10 @@ def get_ingredients(df_food_study):
         ser_ingredients = pd.Series(ingredients)
 
         return ser_ingredients
+
 df_dict = build_aliment_ingredient_dictionnary(df_food_study, 1000, 100)
 df_dict = clean_ingredient_dictionnary(df_dict)
 
-    for i in np.arange(100):
-        ser_ingredients get_ingredient(df_food_study)
+for i in np.arange(100):
+    ser_ingredients = get_ingredient(df_food_study)
 
