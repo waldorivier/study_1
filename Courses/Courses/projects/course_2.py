@@ -54,7 +54,7 @@ class utilities:
         return df
 
     #-------------------------------------------------------------------------
-    # traduction au moyen de googletrans
+    # translate an ingredient (one at a time) in english with googletrans
     #-------------------------------------------------------------------------
     def translate_ingredient():
 
@@ -74,7 +74,6 @@ class utilities:
 
             except ValueError:
                 print ("erreur dans la traduction", x)
-                
         
         return f
 
@@ -165,14 +164,14 @@ def export_null_columns(df, data_file) :
 #
 # différents "thresh" (par step de 10'000) sont appliqués aux données du df
 #------------------------------------------------------------------------------
-def define_thresh_value (df) :
+def define_thresh_value (df_food_study) :
 
+    df = df_food_study.copy()
+    
     null_values_max = df.isnull().sum().max()
     if null_values_max > 0:
         threshes = np.arange(0, null_values_max, 10000)
-
-        # construction d'un df à partir d'une liste de lignes construites
-        # sur la base d'un dictionnaire
+     
         rows = []
 
         def optimize_col_selection(thresh):
@@ -188,6 +187,8 @@ def define_thresh_value (df) :
         for thresh in threshes :
             optimize_col_selection (thresh)
     
+        # construction d'un df à partir d'une liste de lignes construites
+        # sur la base d'un dictionnaire
         df_result = pd.DataFrame(rows)  
         df_result.set_index('schape_', inplace=True)
     
@@ -276,7 +277,7 @@ def setup_db_study():
     df_food_study.drop_duplicates(inplace=True)
 
     # gérer les valeurs extrêmes
-    # parmi toutes les colonnes numériques, supprimer les valeurs extrêmes correspondantes
+    # parmi toutes les colonnes numériques, supprimer les valeurs extrêmes
 
     for col_name in utilities.select_column_label(df_food_study, float):
         df_food_study = utilities.remove_outliers(df_food_study,col_name)
@@ -288,9 +289,9 @@ def setup_db_study():
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
-# return series of ingredients ofrandomly aliment pick from df_food_study
+# return series of ingredients of randomly aliment pick from df_food_study
 #------------------------------------------------------------------------------
-def get_ingredients(df_food_study):
+def get_aliment_ingredients(df_food_study):
 
     aliment = df_food_study.sample(1)
         
@@ -299,7 +300,7 @@ def get_ingredients(df_food_study):
     ingredients = ingredients.get_values()[0]
     ser_ingredients = pd.Series(ingredients)
 
-    return ser_ingredients
+    return (aliment, ser_ingredients)
 
 #------------------------------------------------------------------------------
 # extrait un échantillon aléatoire parmi tous les aliments de df_food_study
@@ -316,7 +317,7 @@ def build_aliment_ingredient_dictionnary(df_food_study, sample_size:int, ingredi
     f_build_ingredient_dictionary = utilities.build_ingredient_dictionary(dict_ingredients)
 
     for i in np.arange(sample_size):
-        ser_ingredients = get_ingredients(df_food_study)
+        ser_ingredients = get_aliment_ingredients(df_food_study)[1]
         f_build_ingredient_dictionary(ser_ingredients.to_json())
 
     df_dict = pd.DataFrame()
@@ -365,7 +366,7 @@ def analyze_ingredients_frequency():
         df_dict.reset_index(inplace=True)
         df_dict.set_index('ingredient_en', inplace=True)
 
-        df_gr_ingredients = df_dict.groupby('ingredient_en').sum()
+        df_gr_ingredients = df_dict.groupby('ingredient_en')
         df_gr_ingredients.sort_values('occurences', ascending=False, inplace=True)
         df_gr_ingredients = df_gr_ingredients.drop(word_to_exclude, errors="ignore")
 
@@ -386,8 +387,8 @@ def analyze_ingredients_frequency():
     ax.set_yticks(y_pos)
     ax.set_yticklabels(df_ingredient_l.index)
     ax.invert_yaxis() 
-    ax.set_xlabel('Nombre d''occurences pour 100 produits')
-    ax.set_title('Nombre d''occurences des ingrédients')
+    ax.set_xlabel("TO DEFINE")
+    ax.set_title("Most common ingredients")
 
     plt.show()
 
@@ -536,18 +537,16 @@ def analyze_nutrients_breakdown():
 # mise en place d'une base de données normalisées; les ingrédients sont 
 # extraits de la listes globales des aliments et stockés dans une table distinctes
 #
-# a link table between aliments and ingredients is built
+# a table containing aliments and ingredients is built
 # 
 #------------------------------------------------------------------------------
-
-analyze_ingredients_frequency()
 
 #------------------------------------------------------------------------------
 # ingredient's dictionnary will be translate and cleaned 
 #------------------------------------------------------------------------------
 def clean_ingredient_dictionnary(df_dict):
 
-    words_to_exclude = pd.Series(['FROM', 'AND', 'DE', 'ET', 'IN', 'OF', 'TO','AT', '&', 'ENRICHED', 'CONTAINS', 'LESS'])
+    words_to_exclude = pd.Series(['FROM', 'AND', 'AND/OR', 'DE', 'ET', 'IN', 'OF', 'TO','AT', '&', 'ENRICHED', 'CONTAINS', 'LESS'])
 
     f_translate = utilities.translate_ingredient()
     df_dict['ingredient_en'] = df_dict.index.to_series().apply(f_translate)
@@ -560,9 +559,24 @@ def clean_ingredient_dictionnary(df_dict):
 
 def build_normalized_database():
  
-    df_dict = build_aliment_ingredient_dictionnary(df_food_study, 1000, 100)
-    df_dict = clean_ingredient_dictionnary(df_dict)
+    df_global_dict = build_aliment_ingredient_dictionnary(df_food_study, 1000, 100)
+    df_global_dict = clean_ingredient_dictionnary(df_global_dict)
 
-    for i in np.arange(100):
-        ser_ingredients = get_ingredient(df_food_study)
+    aliment_dict = {}
+    f_build_ingredient_dictionary = utilities.build_ingredient_dictionary(aliment_dict)
+
+    # for i in np.arange(100):
+        
+def perform_intersection():
+    (aliment, ser_ingredients) = get_aliment_ingredients(df_food_study)
+    f_build_ingredient_dictionary(ser_ingredients.to_json())
+        
+    df_aliment_dict = pd.DataFrame()
+    df_aliment_dict = df_aliment_dict.from_dict(aliment_dict, orient="index", columns=['occurences'])
+    idx_ingredients_in_dict = df_aliment_dict.index.intersection(df_global_dict.index)
+    idx_ingredients_in_dict = idx_ingredients_in_dict.drop_duplicates()
+
+    aliment_dict.clear()
+
+    return idx_ingredients_in_dict
 
