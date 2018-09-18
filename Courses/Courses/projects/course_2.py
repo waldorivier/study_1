@@ -336,59 +336,25 @@ def build_aliment_ingredient_dictionnary(df_food_study, sample_size:int, ingredi
 def analyze_ingredients_frequency():
 
     df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
-
-    # après relecture depuis la base de données, il faut rétablr l'index
     df_food_study.set_index(['product_name'], inplace=True)
-    df_food_study.sort_index(inplace=True)
 
-    #------------------------------------------------------------------------------
-    # ANALYSE de la fréquence des ingredients evaluées à partir de plusieurs échantillons 
-    # d'aliments 
-    #
-    # les "dictionnaires" produits par chaque échantillon sont consolidés
-    #------------------------------------------------------------------------------
-
-    df_dicts = pd.DataFrame()
-
-    # les mots qui ne correspondent pas à des ingrédients et que l'on veut par conséquent exclure
-    word_to_exclude = pd.Series(['FROM', 'AND', 'DE', 'ET', 'IN', 'OF', 'AT'])
-
-    sample_size = 8
-    ingredient_count = 100
+    aliment_sample_size = 1000
+    ingredient_sample_size = 100
  
-    nb_sample = 0
-    for i in np.arange(sample_size):
-        df_dict = build_aliment_ingredient_dictionnary(df_food_study, 100, ingredient_count)
-  
-        f_translate = utilities.translate_ingredient()
-        df_dict['ingredient_en'] = df_dict.index.to_series().apply(f_translate)
-
-        df_dict.reset_index(inplace=True)
-        df_dict.set_index('ingredient_en', inplace=True)
-
-        df_gr_ingredients = df_dict.groupby('ingredient_en')
-        df_gr_ingredients.sort_values('occurences', ascending=False, inplace=True)
-        df_gr_ingredients = df_gr_ingredients.drop(word_to_exclude, errors="ignore")
-
-        df_dicts = pd.concat([df_dicts, df_gr_ingredients.transpose()], sort=False)
-
-    df_dicts = df_dicts.transpose()
-    df_dicts.fillna(0, inplace=True)
-    df_dicts['occurences_mean'] = df_dicts.mean(axis=1)
-    df_dicts.sort_values('occurences_mean', ascending=False, inplace=True)
-
-    # on ne retient que les 30 ingrédients les plus féquents
-
-    df_ingredient_l = df_dicts.iloc[0:30,] 
+    df_dict = build_aliment_ingredient_dictionnary(df_food_study, aliment_sample_size, ingredient_sample_size)
+    df_dict = clean_ingredient_dictionnary(df_dict)
+    df_dict.sort_values('occurences', ascending=False, inplace=True)
+    
+    df_dict = df_dict.iloc[0:30,] 
  
     fig, ax = plt.subplots()
-    y_pos = np.arange(len(df_ingredient_l))
-    ax.barh(y_pos, df_ingredient_l.occurences_mean, align='center', color='green')
+    y_pos = np.arange(len(df_dict))
+    ax.barh(y_pos, df_dict.occurences, align='center', color='green')
     ax.set_yticks(y_pos)
-    ax.set_yticklabels(df_ingredient_l.index)
+    ax.set_yticklabels(df_dict.index)
     ax.invert_yaxis() 
-    ax.set_xlabel("TO DEFINE")
-    ax.set_title("Most common ingredients")
+    ax.set_xlabel("Occurrences")
+    ax.set_title("The 100 most common ingredients founded in " + str(aliment_sample_size) + " aliments")
 
     plt.show()
 
@@ -542,11 +508,13 @@ def analyze_nutrients_breakdown():
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
-# ingredient's dictionnary will be translate and cleaned 
+# translate all entry of the index in a column called 'ingredient_en' and set
+# the index on this one
 #------------------------------------------------------------------------------
 def clean_ingredient_dictionnary(df_dict):
 
-    words_to_exclude = pd.Series(['FROM', 'AND', 'AND/OR', 'DE', 'ET', 'IN', 'OF', 'TO','AT', '&', 'ENRICHED', 'CONTAINS', 'LESS'])
+    words_to_exclude = pd.Series(['A','FROM', 'AND', 'AND/OR', 'DE', 'ET', 'IN', 'OF', 
+                                  'TO','AT', '&', 'ENRICHED', 'CONTAINS', 'LESS'])
 
     f_translate = utilities.translate_ingredient()
     df_dict['ingredient_en'] = df_dict.index.to_series().apply(f_translate)
@@ -568,6 +536,10 @@ def build_normalized_database():
     # for i in np.arange(100):
         
 def perform_intersection():
+    
+    aliment_dict = {}
+    f_build_ingredient_dictionary = utilities.build_ingredient_dictionary(aliment_dict)
+
     (aliment, ser_ingredients) = get_aliment_ingredients(df_food_study)
     f_build_ingredient_dictionary(ser_ingredients.to_json())
         
