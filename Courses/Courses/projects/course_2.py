@@ -354,7 +354,7 @@ def analyze_ingredients_frequency():
     ax.set_yticklabels(df_dict.index)
     ax.invert_yaxis() 
     ax.set_xlabel("Occurrences")
-    ax.set_title("The 100 most common ingredients founded in " + str(aliment_sample_size) + " aliments")
+    ax.set_title("The 30 most common ingredients founded in " + str(aliment_sample_size) + " aliments")
 
     plt.show()
 
@@ -452,10 +452,11 @@ def plot_nutrient_breakdown_ratio(df_food_study, macro_nutrients):
     colors = ['red', 'blue', 'green']
 
     fig, axes = plt.subplots(nrows=3, ncols=1, sharey=False)
-    fig.suptitle('For each macronutrients, list of aliments with percentage in descending order')
+    fig.suptitle('For each macronutrients, list of aliments with percentage in descending order' +
+                 '(from a sample of size' + str(df_food_study.shape[0]))
   
     for ratio in col_ratios : 
-        i_ratio = col_ratios.index(ratio)
+        idx_ratio = col_ratios.index(ratio)
 
         df = df_food_study.copy()
 
@@ -467,13 +468,13 @@ def plot_nutrient_breakdown_ratio(df_food_study, macro_nutrients):
 
         y_pos = np.arange(len(df))
 
-        axes[i_ratio].axes.barh(y_pos, df * 100, align='center', color=colors[i_ratio])
-        axes[i_ratio].axes.set_yticks(y_pos)
-        axes[i_ratio].axes.set_yticklabels(df.index.tolist(), minor=False)
-        axes[i_ratio].axes.invert_yaxis() 
+        axes[idx_ratio].axes.barh(y_pos, df * 100, align='center', color=colors[i_ratio])
+        axes[idx_ratio].axes.set_yticks(y_pos)
+        axes[idx_ratio].axes.set_yticklabels(df.index.tolist(), minor=False)
+        axes[idx_ratio].axes.invert_yaxis() 
 
-        axes[i_ratio].set_xlabel(labels[i_ratio])
-        axes[i_ratio].set_title(titles[i_ratio])
+        axes[idx_ratio].set_xlabel(labels[i_ratio])
+        axes[idx_ratio].set_title(titles[i_ratio])
   
     fig.tight_layout()
     plt.show()
@@ -493,7 +494,7 @@ def analyze_nutrients_breakdown():
     df_food_study = compute_nutrient_breakdown_ratio(col_macro_nutrients, df_reference_value)
 
     # restricts to a sample of size 1000 
-    df_sample_food_study = df_food_study.sample(100)
+    df_sample_food_study = df_food_study.sample(1000)
     
     plot_nutrient_breakdown_ratio(df_sample_food_study, macro_nutrients)
 
@@ -513,8 +514,9 @@ def analyze_nutrients_breakdown():
 #------------------------------------------------------------------------------
 def clean_ingredient_dictionnary(df_dict):
 
-    words_to_exclude = pd.Series(['A','FROM', 'AND', 'AND/OR', 'DE', 'ET', 'IN', 'OF', 
-                                  'TO','AT', '&', 'ENRICHED', 'CONTAINS', 'LESS'])
+    words_to_exclude = pd.Series(['A','THE','FROM', 'AND', 'OR','AND/OR', 'DE', 'ET', 'IN', 'OF', 
+                                  'TO','AT', '&', 'PASTEURIZED', 'ENRICHED', 'MODIFIED',
+                                  'CONTAINS', 'MALTED', 'LESS'])
 
     f_translate = utilities.translate_ingredient()
     df_dict['ingredient_en'] = df_dict.index.to_series().apply(f_translate)
@@ -548,7 +550,9 @@ def perform_intersection():
     idx_ingredients_in_dict = df_aliment_dict.index.intersection(df_global_dict.index)
     idx_ingredients_in_dict = idx_ingredients_in_dict.drop_duplicates()
 
+    df = pd.DataFrame(index=idx_ingredients_in_dict, columns=['product'])
+    df = df.fillna(str(aliment.product_name.get_values()))
     aliment_dict.clear()
 
-    return idx_ingredients_in_dict
+    return df
 
