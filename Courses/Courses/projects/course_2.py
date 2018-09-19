@@ -313,15 +313,15 @@ def get_aliment_ingredients(df_food_study):
 #------------------------------------------------------------------------------
 def build_aliment_ingredient_dictionnary(df_food_study, sample_size:int, ingredient_count:int):
 
-    dict_ingredients = {}
-    f_build_ingredient_dictionary = utilities.build_ingredient_dictionary(dict_ingredients)
+    dict_ingredient = {}
+    f_build_ingredient_dictionary = utilities.build_ingredient_dictionary(dict_ingredient)
 
     for i in np.arange(sample_size):
         ser_ingredients = get_aliment_ingredients(df_food_study)[1]
         f_build_ingredient_dictionary(ser_ingredients.to_json())
 
     df_dict = pd.DataFrame()
-    df_dict = df_dict.from_dict(dict_ingredients, orient="index", columns=['occurences'])
+    df_dict = df_dict.from_dict(dict_ingredient, orient="index", columns=['occurences'])
     df_dict.sort_values('occurences', ascending=False, inplace=True)
     df_dict = df_dict.iloc[0:ingredient_count,]
 
@@ -526,33 +526,67 @@ def clean_ingredient_dictionnary(df_dict):
     df_dict.drop(words_to_exclude, errors="ignore", inplace=True)
 
     return df_dict    
+        
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
+def prepare_normalization():
+    
+    df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
 
-def build_normalized_database():
- 
+    df_all_aliment = pd.DataFrame()
+    df_all_aliment_ingredient = pd.DataFrame()
+
     df_global_dict = build_aliment_ingredient_dictionnary(df_food_study, 1000, 100)
     df_global_dict = clean_ingredient_dictionnary(df_global_dict)
 
-    aliment_dict = {}
-    f_build_ingredient_dictionary = utilities.build_ingredient_dictionary(aliment_dict)
-
-    # for i in np.arange(100):
-        
-def perform_intersection():
+    dict_aliment_ingredient = {}
+    f_build_ingredient_dictionary = utilities.build_ingredient_dictionary(dict_aliment_ingredient)
     
-    aliment_dict = {}
-    f_build_ingredient_dictionary = utilities.build_ingredient_dictionary(aliment_dict)
-
-    (aliment, ser_ingredients) = get_aliment_ingredients(df_food_study)
-    f_build_ingredient_dictionary(ser_ingredients.to_json())
+    for i in np.arange(100):
+        (df_aliment, ser_ingredients) = get_aliment_ingredients(df_food_study)
+        f_build_ingredient_dictionary(ser_ingredients.to_json())
         
-    df_aliment_dict = pd.DataFrame()
-    df_aliment_dict = df_aliment_dict.from_dict(aliment_dict, orient="index", columns=['occurences'])
-    idx_ingredients_in_dict = df_aliment_dict.index.intersection(df_global_dict.index)
-    idx_ingredients_in_dict = idx_ingredients_in_dict.drop_duplicates()
+        df_aliment_ingredient = pd.DataFrame().from_dict(dict_aliment_ingredient, orient="index", columns=['occurences'])
+    
+        idx_ingredients_in_dict = df_aliment_ingredient.index.intersection(df_global_dict.index)
+        idx_ingredients_in_dict = idx_ingredients_in_dict.drop_duplicates()
 
-    df = pd.DataFrame(index=idx_ingredients_in_dict, columns=['product'])
-    df = df.fillna(str(aliment.product_name.get_values()))
-    aliment_dict.clear()
+        df = pd.DataFrame(index=idx_ingredients_in_dict, columns=['product_name'])
+        df = df.fillna(str(df_aliment.product_name.values.item(0)))
+        df = df.reset_index()
+        df.columns = ['ingredient_name', 'product_name']
+         
+        df_all_aliment_ingredient = pd.concat([df_all_aliment_ingredient, df])
+        df_all_aliment = pd.concat([df_all_aliment, df_aliment])
 
-    return df
+        dict_aliment_ingredient.clear()
 
+    return (df_all_aliment, df_all_aliment_ingredient)
+
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
+def build_normalized_database():
+
+    (df_all_aliment, df_all_aliment_ingredient) = prepare_normalization()
+
+    helper_store_df_to_db(df_all_aliment, 'aliment_1', 'aliment')
+    helper_store_df_to_db(df_all_aliment_ingredient, 'aliment_1', 'aliment_ingredient')
+
+
+#------------------------------------------------------------------------------
+#
+#------------------------------------------------------------------------------
+def test_database():
+
+    db_file = PureWindowsPath(data_dir.joinpath('aliment_1.db'))
+    db = sqlite3.connect(db_file.as_posix())
+   
+    #-------------------------------------------------------------------------
+    # load du df à partir de la base de données
+    #-------------------------------------------------------------------------
+
+    # tous les aliments qui contiennent du sucr
+    df_q = pd.read_sql_query("select * from aliment as a, aliment_ingredient as ai where ai.product_name = a.product_name", con=db)
+    df_q = pd.read_sql_query("select * from aliment_ingredient ai where ai.ingredient_name = 'SALT' ", con=db)
