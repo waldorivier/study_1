@@ -499,12 +499,9 @@ def analyze_nutrients_breakdown():
     plot_nutrient_breakdown_ratio(df_sample_food_study, macro_nutrients)
 
 #------------------------------------------------------------------------------
-# ETUDE E : sub functions
-#
-# mise en place d'une base de données normalisées; les ingrédients sont 
-# extraits de la listes globales des aliments et stockés dans une table distinctes
-#
-# a table containing aliments and ingredients is built
+# ETUDE E : DATABASE 
+# 
+# sub functions
 # 
 #------------------------------------------------------------------------------
 
@@ -528,6 +525,14 @@ def clean_ingredient_dictionnary(df_dict):
     return df_dict    
         
 #------------------------------------------------------------------------------
+# prepare normalized data 
+#
+# build a dictionnary of ingredients
+# for 1000 aliments randomly selected from df_food_study_2, extract its ingredients 
+# and join them with those in dictionnary
+#
+# one table with aliment and one table with only product_name and ingredient_name
+# will be built
 #
 #------------------------------------------------------------------------------
 def prepare_normalization():
@@ -543,7 +548,7 @@ def prepare_normalization():
     dict_aliment_ingredient = {}
     f_build_ingredient_dictionary = utilities.build_ingredient_dictionary(dict_aliment_ingredient)
     
-    for i in np.arange(100):
+    for i in np.arange(1000):
         (df_aliment, ser_ingredients) = get_aliment_ingredients(df_food_study)
         f_build_ingredient_dictionary(ser_ingredients.to_json())
         
@@ -565,28 +570,34 @@ def prepare_normalization():
     return (df_all_aliment, df_all_aliment_ingredient)
 
 #------------------------------------------------------------------------------
-#
+# save normalized df to database df_food.db
 #------------------------------------------------------------------------------
 def build_normalized_database():
 
     (df_all_aliment, df_all_aliment_ingredient) = prepare_normalization()
 
-    helper_store_df_to_db(df_all_aliment, 'aliment_1', 'aliment')
-    helper_store_df_to_db(df_all_aliment_ingredient, 'aliment_1', 'aliment_ingredient')
+    helper_store_df_to_db(df_all_aliment, 'df_food', 'aliment')
+    helper_store_df_to_db(df_all_aliment_ingredient, 'df_food', 'aliment_ingredient')
 
-
-#------------------------------------------------------------------------------
-#
-#------------------------------------------------------------------------------
-def test_database():
-
-    db_file = PureWindowsPath(data_dir.joinpath('aliment_1.db'))
+    # set a primary key on table aliment
+    
+    db_file = PureWindowsPath(data_dir.joinpath('df_food.db'))
     db = sqlite3.connect(db_file.as_posix())
-   
-    #-------------------------------------------------------------------------
-    # load du df à partir de la base de données
-    #-------------------------------------------------------------------------
+    c = db.cursor()
 
-    # tous les aliments qui contiennent du sucr
-    df_q = pd.read_sql_query("select * from aliment as a, aliment_ingredient as ai where ai.product_name = a.product_name", con=db)
-    df_q = pd.read_sql_query("select * from aliment_ingredient ai where ai.ingredient_name = 'SALT' ", con=db)
+    # SQLLITE doesn't support ALTER ADD / DROP 
+    # c.execute("ALTER TABLE ALIMENT ADD PRIMARY KEY (product_name)")
+
+#------------------------------------------------------------------------------
+# test database queries on df_food.db
+#------------------------------------------------------------------------------
+def perform_database_queries():
+
+    db_file = PureWindowsPath(data_dir.joinpath('df_food.db'))
+    db = sqlite3.connect(db_file.as_posix())
+
+    # query all aliments which contains SALT
+    df_q = pd.read_sql_query("select distinct(a.product_name) from aliment as a, aliment_ingredient as ai where ai.product_name = " +
+                             " a.product_name and ai.ingredient_name = 'SALT'", con=db)
+
+    
