@@ -3,10 +3,11 @@ from pathlib import PureWindowsPath
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn
+import seaborn as sns
 import sqlite3
 import random
 import googletrans as translator
+from pandas.tseries.offsets import *
 
 #-------------------------------------------------------------------------
 # répertoire de travail
@@ -588,6 +589,8 @@ def build_normalized_database():
     # SQLLITE doesn't support ALTER ADD / DROP 
     # c.execute("ALTER TABLE ALIMENT ADD PRIMARY KEY (product_name)")
 
+    # retrieve ddl, modify it and replay
+
 #------------------------------------------------------------------------------
 # test database queries on df_food.db
 #------------------------------------------------------------------------------
@@ -629,3 +632,53 @@ def compute_mean_delta() :
 
         return mean_delta
 
+
+#------------------------------------------------------------------------------
+# plot created entries per years / monthes 
+#------------------------------------------------------------------------------
+
+df = pd.DataFrame(ser_create, columns = ['created_datetime', 'year', 'month'])
+
+df.set_index('created_datetime', inplace=True)
+df.year = df.index.year
+df.month = df.index.month
+
+df.reset_index(inplace=True)
+df.set_index(['year', 'month'], inplace=True)
+
+df_g = df.groupby(['year', 'month']).count()
+
+# df_g.loc[(2017, 3)] = 0
+
+df_g.unstack(level=0).plot.bar()
+
+plt.show()
+
+#------------------------------------------------------------------------------
+# plot created entries per years / monthes 
+#------------------------------------------------------------------------------
+
+df = pd.DataFrame(ser_create, columns = ['created_datetime', 'year', 'month'])
+
+df.set_index('created_datetime', inplace=True)
+df.year = df.index.year
+df.month = df.index.month
+
+df.reset_index(inplace=True)
+df.set_index(['year', 'month'], inplace=True)
+
+df_g = df.groupby(['month','year']).count().groupby('month').mean()
+df_g.plot.bar()
+plt.show()
+
+fig, ax = plt.subplots()
+
+
+
+x_pos = np.arange(len(month_of_year))
+ax.bar(x_pos, df_g, align='center', color='green')
+ax.set_yticks(y_pos)
+ax.set_yticklabels(df_dict.index)
+ax.invert_yaxis() 
+ax.set_xlabel("Occurrences")
+ax.set_title("The 30 most common ingredients founded in " + str(aliment_sample_size) + " aliments")
