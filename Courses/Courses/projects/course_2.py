@@ -110,7 +110,7 @@ def helper_store_df_to_db(df, db_name, table_name) :
     db_file = PureWindowsPath(data_dir.joinpath(db_name + ".db" ))
     db = sqlite3.connect(db_file.as_posix())
 
-    df.to_sql(table_name, db, chunksize=2000)
+    df.to_sql(table_name, db, chunksize=2000, if_exists=replace)
     db.close()
 
 def helper_load_df_from_db(db_name, table_name) :
@@ -593,6 +593,8 @@ def build_normalized_database():
 #------------------------------------------------------------------------------
 def perform_database_queries():
 
+    # build_normalized_database()
+
     db_file = PureWindowsPath(data_dir.joinpath('df_food.db'))
     db = sqlite3.connect(db_file.as_posix())
 
@@ -600,4 +602,30 @@ def perform_database_queries():
     df_q = pd.read_sql_query("select distinct(a.product_name) from aliment as a, aliment_ingredient as ai where ai.product_name = " +
                              " a.product_name and ai.ingredient_name = 'SALT'", con=db)
 
+    return df_q
     
+#------------------------------------------------------------------------------
+# ETUDE D : TIMESERIES 
+# 
+# 
+#------------------------------------------------------------------------------
+
+df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
+
+def compute_mean_delta() :
+
+    ser_create = pd.to_datetime(df_food_study.created_datetime)
+    ser_modify = pd.to_datetime(df_food_study.last_modified_datetime)
+
+    # verify that no null values in both series
+    if(ser_create.isnull().sum() == 0 and ser_modify.isnull().sum() == 0):
+
+        # compute difference
+        ser_delta = ser_modify - ser_create
+
+        # verify that no negative values in the difference
+        if(ser_delta.where(lambda x : x < pd.Timedelta(0)).count() == 0):
+            mean_delta = ser_delta.mean()
+
+        return mean_delta
+
