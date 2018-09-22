@@ -8,6 +8,7 @@ import sqlite3
 import random
 import googletrans as translator
 from pandas.tseries.offsets import *
+import calendar
 
 #-------------------------------------------------------------------------
 # répertoire de travail
@@ -610,13 +611,13 @@ def perform_database_queries():
 #------------------------------------------------------------------------------
 # ETUDE D : TIMESERIES 
 # 
+# sub fonctions
 # 
 #------------------------------------------------------------------------------
+def compute_mean_elapsed(df_food_study):
 
-df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
-
-def compute_mean_delta() :
-
+    df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
+      
     ser_create = pd.to_datetime(df_food_study.created_datetime)
     ser_modify = pd.to_datetime(df_food_study.last_modified_datetime)
 
@@ -630,55 +631,71 @@ def compute_mean_delta() :
         if(ser_delta.where(lambda x : x < pd.Timedelta(0)).count() == 0):
             mean_delta = ser_delta.mean()
 
-        return mean_delta
-
-
-#------------------------------------------------------------------------------
-# plot created entries per years / monthes 
-#------------------------------------------------------------------------------
-
-df = pd.DataFrame(ser_create, columns = ['created_datetime', 'year', 'month'])
-
-df.set_index('created_datetime', inplace=True)
-df.year = df.index.year
-df.month = df.index.month
-
-df.reset_index(inplace=True)
-df.set_index(['year', 'month'], inplace=True)
-
-df_g = df.groupby(['year', 'month']).count()
-
-# df_g.loc[(2017, 3)] = 0
-
-df_g.unstack(level=0).plot.bar()
-
-plt.show()
+    return mean_delta
 
 #------------------------------------------------------------------------------
-# plot created entries per years / monthes 
+# plot created entries per years / month
 #------------------------------------------------------------------------------
+def plot_years_month_entries(df_food_study):
 
-df = pd.DataFrame(ser_create, columns = ['created_datetime', 'year', 'month'])
+    ser_create = pd.to_datetime(df_food_study.created_datetime)
+    df = pd.DataFrame(ser_create, columns = ['created_datetime', 'year', 'month'])
 
-df.set_index('created_datetime', inplace=True)
-df.year = df.index.year
-df.month = df.index.month
+    df.set_index('created_datetime', inplace=True)
+    df.year = df.index.year
+    df.month = df.index.month
 
-df.reset_index(inplace=True)
-df.set_index(['year', 'month'], inplace=True)
+    df.reset_index(inplace=True)
+    df.set_index(['year', 'month'], inplace=True)
 
-df_g = df.groupby(['month','year']).count().groupby('month').mean()
-df_g.plot.bar()
-plt.show()
+    df_g = np.log(df.groupby(['year', 'month']).count())
+    
+    ax = df_g.unstack(level=0).plot.bar(width=0.8)
+    
+    month = calendar.month_name[1:]
+    x_pos = np.arange(len(month))
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(month, rotation=45)
+    ax.set_ylabel("number of created aliment's entries")
 
-fig, ax = plt.subplots()
+    ax.set_xlabel("Months")
+    ax.set_title("(logarithm of) number of created aliment's entries in the database")
+    ax.legend()
 
+    plt.show()
 
+#------------------------------------------------------------------------------
+# plot mean created entries per month over the timeline
+#------------------------------------------------------------------------------
+def plot_mean_month_entries(df_food_study):
 
-x_pos = np.arange(len(month_of_year))
-ax.bar(x_pos, df_g, align='center', color='green')
-ax.set_yticks(y_pos)
-ax.set_yticklabels(df_dict.index)
-ax.invert_yaxis() 
-ax.set_xlabel("Occurrences")
-ax.set_title("The 30 most common ingredients founded in " + str(aliment_sample_size) + " aliments")
+    ser_create = pd.to_datetime(df_food_study.created_datetime)
+    df = pd.DataFrame(ser_create, columns = ['created_datetime', 'year', 'month'])
+
+    df.set_index('created_datetime', inplace=True)
+    df.year = df.index.year
+    df.month = df.index.month
+
+    df.reset_index(inplace=True)
+    df.set_index(['year', 'month'], inplace=True)
+
+    df_g = df.groupby(['month','year']).count()
+    mean = np.log(df_g.groupby('month').mean())
+    std = np.log(df_g.groupby('month').std())
+    
+    fig, ax = plt.subplots()
+    month = calendar.month_name[1:]
+    x_pos = np.arange(len(month))
+    ax.bar(x_pos, mean['created_datetime'], align='center', 
+           color='blue', yerr=std['created_datetime'], ecolor='black')
+
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(month, rotation=45)
+    ax.set_ylabel("mean of created aliment's entries")
+
+    ax.set_xlabel("Months")
+    ax.set_title("(logarithm of) mean of created aliment's entries in the database")
+    ax.legend()
+
+    plt.show()
+        
