@@ -708,4 +708,34 @@ def analyze_time_series():
     plot_mean_month_entries(df_food_study)
     plot_years_month_entries(df_food_study)
 
-analyze_ingredients_frequency()
+
+#------------------------------------------------------------------------------
+# ETUDE F : CORRELATION 
+# 
+# sub fonctions
+# 
+#------------------------------------------------------------------------------
+
+result_col_fr = 'nutrition-score-fr_100g'
+#result_col_fr = 'nutrition_grade_fr'
+result_col_uk = 'nutrition-score-uk_100g'
+
+col_to_drop = ['additives_n', 'ingredients_from_palm_oil_n', 'ingredients_that_may_be_from_palm_oil_n']
+
+df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
+num_cols = utilities.select_column_label(df_food_study, float)
+
+comparison_cols = num_cols.copy()
+comparison_cols.remove(result_col_fr)
+comparison_cols.remove(result_col_uk)
+comparison_cols.remove('additives_n')
+comparison_cols.remove('ingredients_from_palm_oil_n')
+comparison_cols.remove('ingredients_that_may_be_from_palm_oil_n')
+comparison_cols.remove('code')
+
+df_food_study = df_food_study.sample(1000)
+
+g = sns.PairGrid(df_food_study, x_vars=comparison_cols, y_vars=[result_col_fr])
+g = g.map(plt.scatter)
+plt.show()
+
