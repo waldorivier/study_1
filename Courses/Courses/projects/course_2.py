@@ -24,7 +24,7 @@ class utilities:
     #-------------------------------------------------------------------------
     # retourne la liste des noms de colonne d'un type donné
     #-------------------------------------------------------------------------
-    def select_column_label(df, type):
+    def select_columns(df, type):
         columns = df.dtypes[df.dtypes.apply(lambda x : x == type)].index.tolist()
         return columns
 
@@ -122,6 +122,7 @@ def helper_load_df_from_db(db_name, table_name) :
 
     df = pd.read_sql_query("select * from " + table_name, con=db)
     db.close()
+
     return df
 
 def helper_store_csv_to_db(data_file, db_name, table_name) :
@@ -129,9 +130,6 @@ def helper_store_csv_to_db(data_file, db_name, table_name) :
     db_file = PureWindowsPath(data_dir.joinpath(db_name + ".db" ))
     db = sqlite3.connect(db_file.as_posix())
     
-    # lecture par bloc : chunksize correspond au nombre de lignes lues puis inserées en base
-    # de données
-
     for chunk in pd.read_csv(data_file, chunksize=2000):
         chunk.to_sql(name=table_name, con=db, if_exists="append", index=False)  
 
@@ -151,7 +149,6 @@ def read_raw_data():
 # exporter les colonnes d'un df dans un fichier csv avec le nombre 
 # de valeurs nulles afin de visualiser les caractéristiques qui ne sont 
 # pas relevantes / ou qui ne nous interesent tout simplement pas 
-
 #------------------------------------------------------------------------------
 def export_null_columns(df, data_file) : 
    
@@ -250,9 +247,8 @@ def clean_raw_data():
     helper_store_df_to_db(df_food_cl, "df_food_cl", "df_food_cl")
 
 #------------------------------------------------------------------------------
-# ETUDE 1.0
-# 
 # préparation de la base de données après une seconde passe d'épuration
+#
 #------------------------------------------------------------------------------
 def setup_db_study():
 
@@ -275,15 +271,16 @@ def setup_db_study():
     # et inversément (sans doublons selon l'index) à l'aide du ~...magique
     df_food_study = df_food_study.loc[~df_food_study.index.duplicated(),:]
 
-    # gestion des doublons 
+    # eliminates duplicates
     df_food_study.drop_duplicates(inplace=True)
 
     # gérer les valeurs extrêmes
     # parmi toutes les colonnes numériques, supprimer les valeurs extrêmes
 
-    for col_name in utilities.select_column_label(df_food_study, float):
+    for col_name in utilities.select_columns(df_food_study, float):
         df_food_study = utilities.remove_outliers(df_food_study,col_name)
     
+    # stores the resulting cleaned datas to database
     helper_store_df_to_db(df_food_study, "df_food_study_1", "df_food_study_2")
 
 #------------------------------------------------------------------------------
@@ -343,7 +340,10 @@ def analyze_ingredients_frequency():
     aliment_sample_size = 1000
     ingredient_sample_size = 100
  
-    df_dict = build_aliment_ingredient_dictionnary(df_food_study, aliment_sample_size, ingredient_sample_size)
+    df_dict = build_aliment_ingredient_dictionnary(df_food_study, 
+                                                   aliment_sample_size, 
+                                                   ingredient_sample_size)
+
     df_dict = clean_ingredient_dictionnary(df_dict)
     df_dict.sort_values('occurences', ascending=False, inplace=True)
     
@@ -356,7 +356,8 @@ def analyze_ingredients_frequency():
     ax.set_yticklabels(df_dict.index)
     ax.invert_yaxis() 
     ax.set_xlabel("Occurrences")
-    ax.set_title("The 30 most common ingredients founded in " + str(aliment_sample_size) + " aliments")
+    ax.set_title("The 30 most common ingredients founded in " + 
+                 str(aliment_sample_size) + " aliments")
 
     plt.show()
 
@@ -458,7 +459,7 @@ def plot_nutrient_breakdown_ratio(df_food_study, macro_nutrients):
                  '(from a sample of size' + str(df_food_study.shape[0]))
   
     for ratio in col_ratios : 
-        idx_ratio = col_ratios.index(ratio)
+        i_ratio = col_ratios.index(ratio)
 
         df = df_food_study.copy()
 
@@ -470,13 +471,13 @@ def plot_nutrient_breakdown_ratio(df_food_study, macro_nutrients):
 
         y_pos = np.arange(len(df))
 
-        axes[idx_ratio].axes.barh(y_pos, df * 100, align='center', color=colors[i_ratio])
-        axes[idx_ratio].axes.set_yticks(y_pos)
-        axes[idx_ratio].axes.set_yticklabels(df.index.tolist(), minor=False)
-        axes[idx_ratio].axes.invert_yaxis() 
+        axes[i_ratio].axes.barh(y_pos, df * 100, align='center', color=colors[i_ratio])
+        axes[i_ratio].axes.set_yticks(y_pos)
+        axes[i_ratio].axes.set_yticklabels(df.index.tolist(), minor=False)
+        axes[i_ratio].axes.invert_yaxis() 
 
-        axes[idx_ratio].set_xlabel(labels[i_ratio])
-        axes[idx_ratio].set_title(titles[i_ratio])
+        axes[i_ratio].set_xlabel(labels[i_ratio])
+        axes[i_ratio].set_title(titles[i_ratio])
   
     fig.tight_layout()
     plt.show()
@@ -556,10 +557,10 @@ def prepare_normalization():
         
         df_aliment_ingredient = pd.DataFrame().from_dict(dict_aliment_ingredient, orient="index", columns=['occurences'])
     
-        idx_ingredients_in_dict = df_aliment_ingredient.index.intersection(df_global_dict.index)
-        idx_ingredients_in_dict = idx_ingredients_in_dict.drop_duplicates()
+        i_ingredients_in_dict = df_aliment_ingredient.index.intersection(df_global_dict.index)
+        i_ingredients_in_dict = idx_ingredients_in_dict.drop_duplicates()
 
-        df = pd.DataFrame(index=idx_ingredients_in_dict, columns=['product_name'])
+        df = pd.DataFrame(index=i_ingredients_in_dict, columns=['product_name'])
         df = df.fillna(str(df_aliment.product_name.values.item(0)))
         df = df.reset_index()
         df.columns = ['ingredient_name', 'product_name']
@@ -636,6 +637,8 @@ def compute_mean_elapsed(df_food_study):
 #------------------------------------------------------------------------------
 def plot_years_month_entries(df_food_study):
 
+    month = calendar.month_name[1:]
+
     ser_create = pd.to_datetime(df_food_study.created_datetime)
     df = pd.DataFrame(ser_create, columns = ['created_datetime', 'year', 'month'])
 
@@ -648,9 +651,8 @@ def plot_years_month_entries(df_food_study):
 
     df_g = np.log(df.groupby(['year', 'month']).count())
     
+    # define plot parameters
     ax = df_g.unstack(level=0).plot.bar(width=0.8)
-    
-    month = calendar.month_name[1:]
     x_pos = np.arange(len(month))
     ax.set_xticks(x_pos)
     ax.set_xticklabels(month, rotation=45)
@@ -667,6 +669,8 @@ def plot_years_month_entries(df_food_study):
 #------------------------------------------------------------------------------
 def plot_mean_month_entries(df_food_study):
 
+    month = calendar.month_name[1:]
+
     ser_create = pd.to_datetime(df_food_study.created_datetime)
     df = pd.DataFrame(ser_create, columns = ['created_datetime', 'year', 'month'])
 
@@ -681,8 +685,8 @@ def plot_mean_month_entries(df_food_study):
     mean = df_g.groupby('month').mean()
     std = df_g.groupby('month').std()
     
+    # define plot parameters
     fig, ax = plt.subplots()
-    month = calendar.month_name[1:]
     x_pos = np.arange(len(month))
     ax.bar(x_pos, mean['created_datetime'], align='center', 
            color='blue', yerr=std['created_datetime'], ecolor='black')
@@ -707,35 +711,48 @@ def analyze_time_series():
 
     plot_mean_month_entries(df_food_study)
     plot_years_month_entries(df_food_study)
-
-
+    
 #------------------------------------------------------------------------------
 # ETUDE F : CORRELATION 
 # 
 # sub fonctions
-# 
 #------------------------------------------------------------------------------
+def analyze_correlations(): 
 
-result_col_fr = 'nutrition-score-fr_100g'
-#result_col_fr = 'nutrition_grade_fr'
-result_col_uk = 'nutrition-score-uk_100g'
+    score_col = 'nutrition-score-fr_100g'
+    cols_to_drop = set(['code', 'additives_n', 'ingredients_from_palm_oil_n', 'ingredients_that_may_be_from_palm_oil_n'])
+    cols_to_drop.add(score_col)
+    
+    df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
 
-col_to_drop = ['additives_n', 'ingredients_from_palm_oil_n', 'ingredients_that_may_be_from_palm_oil_n']
+    # retains only float columns
+    num_cols = utilities.select_columns(df_food_study, float)
+    
+    # eliminates all colums define above
+    predictors_cols = set(num_cols).difference(cols_to_drop)
 
-df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
-num_cols = utilities.select_column_label(df_food_study, float)
+    # sample of size 1000 is significant enough
+    df = df_food_study.sample(1000)
 
-comparison_cols = num_cols.copy()
-comparison_cols.remove(result_col_fr)
-comparison_cols.remove(result_col_uk)
-comparison_cols.remove('additives_n')
-comparison_cols.remove('ingredients_from_palm_oil_n')
-comparison_cols.remove('ingredients_that_may_be_from_palm_oil_n')
-comparison_cols.remove('code')
+    sns.pairplot(df, 
+                 x_vars=predictors_cols, 
+                 y_vars=[score_col], 
+                 kind="reg",
+                 plot_kws={'line_kws':{'color':'red'}})
+    plt.show()
 
-df_food_study = df_food_study.sample(1000)
+    df_corr = df.corr()
+    
+    cols_to_drop.add('index')
+    df_corr.drop(cols_to_drop, inplace=True)
+ 
+    df_corr = df_corr[score_col].copy()
+    df_corr.sort_values(ascending=False, inplace=True)
 
-g = sns.PairGrid(df_food_study, x_vars=comparison_cols, y_vars=[result_col_fr])
-g = g.map(plt.scatter)
-plt.show()
+    return df_corr
+
+
+def check_nutrition_score_grade_relation(df_food_study):
+
+    df = df_food_study.loc[:,['nutrition_grade_fr', 'nutrition-score-fr_100g']]
 
