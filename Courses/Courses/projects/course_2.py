@@ -616,8 +616,6 @@ def perform_database_queries():
 #------------------------------------------------------------------------------
 def compute_mean_elapsed(df_food_study):
 
-    df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
-      
     ser_create = pd.to_datetime(df_food_study.created_datetime)
     ser_modify = pd.to_datetime(df_food_study.last_modified_datetime)
 
@@ -660,7 +658,7 @@ def plot_years_month_entries(df_food_study):
 
     ax.set_xlabel("Months")
     ax.set_title("(logarithm of) number of created aliment's entries in the database")
-    ax.legend()
+    ax.legend(labels=df_g.index.levels[0])
 
     plt.show()
 
@@ -679,9 +677,9 @@ def plot_mean_month_entries(df_food_study):
     df.reset_index(inplace=True)
     df.set_index(['year', 'month'], inplace=True)
 
-    df_g = df.groupby(['month','year']).count()
-    mean = np.log(df_g.groupby('month').mean())
-    std = np.log(df_g.groupby('month').std())
+    df_g = np.log(df.groupby(['month','year']).count())
+    mean = df_g.groupby('month').mean()
+    std = df_g.groupby('month').std()
     
     fig, ax = plt.subplots()
     month = calendar.month_name[1:]
@@ -695,7 +693,19 @@ def plot_mean_month_entries(df_food_study):
 
     ax.set_xlabel("Months")
     ax.set_title("(logarithm of) mean of created aliment's entries in the database")
-    ax.legend()
-
+  
     plt.show()
         
+#------------------------------------------------------------------------------
+# ETUDE D : main function
+#------------------------------------------------------------------------------
+def analyze_time_series():
+
+    df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
+
+    print(compute_mean_elapsed(df_food_study))
+
+    plot_mean_month_entries(df_food_study)
+    plot_years_month_entries(df_food_study)
+
+analyze_ingredients_frequency()
