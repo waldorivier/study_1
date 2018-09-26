@@ -71,8 +71,10 @@ class utilities:
                     return "SALT"
 
                 else :
-                    t = trans.translate(x)
-                    return t.text
+                    # t = trans.translate(x)
+                    # return t.text
+
+                    return x
 
             except ValueError:
                 print ("erreur dans la traduction", x)
@@ -755,4 +757,7 @@ def analyze_correlations():
 def check_nutrition_score_grade_relation(df_food_study):
 
     df = df_food_study.loc[:,['nutrition_grade_fr', 'nutrition-score-fr_100g']]
+
+
+
 
