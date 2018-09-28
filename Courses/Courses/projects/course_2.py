@@ -56,9 +56,9 @@ class utilities:
         return df
 
     #-------------------------------------------------------------------------
-    # translate an ingredient (one at a time) in english with googletrans
+    # translate a word (one at a time) in english with googletrans
     #-------------------------------------------------------------------------
-    def translate_ingredient():
+    def translate_word():
 
         trans = translator.Translator()
 
@@ -82,22 +82,22 @@ class utilities:
         return f
 
     #-------------------------------------------------------------------------
-    # alimente un dictionnaire de tous les ingrédients rencontrés
-    # et en compte les occurences
+    # fill a dictionnary with all word and count occurences
+    # dict_words : dictionnary filled
     #-------------------------------------------------------------------------
-    def build_ingredient_dictionary(dict_ingredients):
-        assert type(dict_ingredients) is dict
+    def build_word_dictionary(dict_words):
+        assert type(dict_words) is dict
    
         def f(x : str):
             try :
-                ser_ingredients = pd.read_json(x, typ="records")
-                for item in ser_ingredients.iteritems():
-                    ingredient = item[1].upper()
+                ser_words = pd.read_json(x, typ="records")
+                for item in ser_words.iteritems():
+                    word = item[1].upper()
 
-                    if (dict_ingredients.get(ingredient) is not None) :
-                        dict_ingredients[ingredient] += 1
+                    if (dict_words.get(word) is not None) :
+                        dict_words[word] += 1
                     else :
-                        dict_ingredients[ingredient] = 1
+                        dict_words[word] = 1
         
             except Exception:   
                 print ("build dictionary error")
@@ -114,7 +114,7 @@ def helper_store_df_to_db(df, db_name, table_name) :
     db_file = PureWindowsPath(data_dir.joinpath(db_name + ".db" ))
     db = sqlite3.connect(db_file.as_posix())
 
-    df.to_sql(table_name, db, chunksize=2000, if_exists=replace)
+    df.to_sql(table_name, db, chunksize=2000, if_exists='replace')
     db.close()
 
 def helper_load_df_from_db(db_name, table_name) :
@@ -159,13 +159,12 @@ def export_null_columns(df, data_file) :
     ser_column_null.to_csv(data_file)
 
 #------------------------------------------------------------------------------
-# la motivation de la fonction ci-dessous est de définir un sous-ensemble 
-# de critères aussi large que possible en recherchant à réduire au 
-# maximum les valeurs non nulles
+# analyze columns 
 #
-# différents "thresh" (par step de 10'000) sont appliqués aux données du df
+# applies different threshes (by step 10000) on the df and mesures the number
+# of remaining columns 
 #------------------------------------------------------------------------------
-def define_thresh_value (df_food_study) :
+def analyze_columns(df_food_study) :
 
     df = df_food_study.copy()
     
@@ -178,10 +177,10 @@ def define_thresh_value (df_food_study) :
         def optimize_col_selection(thresh):
             df = df.dropna(thresh=thresh, axis=1)
         
-            dict = {'thresh_' : 0, 'schape_':0, 'mean_':0}
-            dict['thresh_'] = thresh
-            dict['schape_'] = df.shape[1]
-            dict['mean_']   = df.isnull().sum().mean()
+            dict = {'_thresh' : 0, '_schape':0, '_mean':0}
+            dict['_thresh'] = thresh
+            dict['_schape'] = df.shape[1]
+            dict['_mean']   = df.isnull().sum().mean()
 
             rows.append(dict)
         
@@ -191,7 +190,7 @@ def define_thresh_value (df_food_study) :
         # construction d'un df à partir d'une liste de lignes construites
         # sur la base d'un dictionnaire
         df_result = pd.DataFrame(rows)  
-        df_result.set_index('schape_', inplace=True)
+        df_result.set_index('_schape', inplace=True)
     
         # le tableau ci-dessous indique le nombre de critères conservés et 
         # la moyenne des valeurs nulles des colonnes résiduelles conservées
@@ -205,9 +204,12 @@ def define_thresh_value (df_food_study) :
         plt.show()
 
 #------------------------------------------------------------------------------
-# première étape de nettoyage des données
-# produit un df qui contient un premier ensemble de données épuréees
-# qui sont sauvegardées en base de données 
+# First step of data cleaning
+#
+# Columns will be reduced to a level that minimize the lost of relevant 
+# data 
+#
+# resulting df will be store in database 
 #------------------------------------------------------------------------------
 def clean_raw_data():
 
@@ -220,12 +222,12 @@ def clean_raw_data():
 
     # gérer les doublons 
     # en l'occurence, pour les colonnes selectionnées, il n'y a pas de doublon
-    # Cepedant, si l'on réduit à nouveau les critères, il est probable que 
+    # Cependant, si l'on réduit à nouveau les critères, il est probable que 
     # des doublons apparaissent à nouveau (cf. plus loin)
     if df_food.drop_duplicates().shape == df_food.shape :
         print ("le tableau ne contient aucune ligne dupliquée")
         
-    define_thresh_value(df_food)
+    analyze_columns(df_food)
 
     # le niveau de 150'000 définit une sélection de 36 critères (comprenant 
     # tous les critères nécessaires à nos analyses)
@@ -245,12 +247,14 @@ def clean_raw_data():
     df_food_cl = df_food_cl.drop([col for col in df_food_cl.columns if "states" in col], axis=1)
     df_food_cl = df_food_cl.drop([col for col in df_food_cl.columns if "tags" in col], axis=1)
 
-    # sauvegarde en base de données
     helper_store_df_to_db(df_food_cl, "df_food_cl", "df_food_cl")
 
 #------------------------------------------------------------------------------
-# préparation de la base de données après une seconde passe d'épuration
+# Second step of data cleaning
 #
+# The dataset is based on that previously cleaned
+# 
+# Mainly eliminates all null values, duplicated  and numerical outliers
 #------------------------------------------------------------------------------
 def setup_db_study():
 
@@ -280,7 +284,7 @@ def setup_db_study():
     # parmi toutes les colonnes numériques, supprimer les valeurs extrêmes
 
     for col_name in utilities.select_columns(df_food_study, float):
-        df_food_study = utilities.remove_outliers(df_food_study,col_name)
+        df_food_study = utilities.remove_outliers(df_food_study, col_name)
     
     # stores the resulting cleaned datas to database
     helper_store_df_to_db(df_food_study, "df_food_study_1", "df_food_study_2")
@@ -290,7 +294,7 @@ def setup_db_study():
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
-# return series of ingredients of randomly aliment pick from df_food_study
+# return a series of ingredients of randomly aliment retrieve from df_food_study
 #------------------------------------------------------------------------------
 def get_aliment_ingredients(df_food_study):
 
@@ -304,25 +308,26 @@ def get_aliment_ingredients(df_food_study):
     return (aliment, ser_ingredients)
 
 #------------------------------------------------------------------------------
-# extrait un échantillon aléatoire parmi tous les aliments de df_food_study
+# retrieve a sample of aliments from df_food_study 
+# based on this sample, a dictionnary of ingredients with columns (ingredient_name, occurrences),
+# will be build 
 #
-# sur la base de cet échantillon, produit un df ("dictionnaire") 
-# contenant les colonnes (ingredient_name, occurrences)
-# 
-# les ingrédients du dictionnaire sont triés par occurence décroissante et  
-# limités au nombre de "ingredient_count"
+# în this dictionnary, ingredients will be sorted by 'occurences' and the shape will be limited to
+# ingredient_count
+#
+# return a df containing a dictionnary of ingredients
 #------------------------------------------------------------------------------
 def build_aliment_ingredient_dictionnary(df_food_study, sample_size:int, ingredient_count:int):
 
-    dict_ingredient = {}
-    f_build_ingredient_dictionary = utilities.build_ingredient_dictionary(dict_ingredient)
+    dict_ingredients = {}
+    f_build_ingredient_dictionary = utilities.build_word_dictionary(dict_ingredients)
 
     for i in np.arange(sample_size):
         ser_ingredients = get_aliment_ingredients(df_food_study)[1]
         f_build_ingredient_dictionary(ser_ingredients.to_json())
 
     df_dict = pd.DataFrame()
-    df_dict = df_dict.from_dict(dict_ingredient, orient="index", columns=['occurences'])
+    df_dict = df_dict.from_dict(dict_ingredients, orient="index", columns=['occurences'])
     df_dict.sort_values('occurences', ascending=False, inplace=True)
     df_dict = df_dict.iloc[0:ingredient_count,]
 
@@ -331,8 +336,7 @@ def build_aliment_ingredient_dictionnary(df_food_study, sample_size:int, ingredi
 #------------------------------------------------------------------------------
 # ETUDE C : main functions
 #
-# Analyse de la fréquence d'apparition des ingrédients dans les produits issus
-# de df_food_study
+# Analyze ingredient's frequency of ingredients used in aliments of df_food_study
 #------------------------------------------------------------------------------
 def analyze_ingredients_frequency():
 
@@ -346,7 +350,7 @@ def analyze_ingredients_frequency():
                                                    aliment_sample_size, 
                                                    ingredient_sample_size)
 
-    df_dict = clean_ingredient_dictionnary(df_dict)
+    df_dict = clean_word_dictionnary(df_dict)
     df_dict.sort_values('occurences', ascending=False, inplace=True)
     
     df_dict = df_dict.iloc[0:30,] 
@@ -368,10 +372,10 @@ def analyze_ingredients_frequency():
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
-# un aliment équilibré est selon la définition qui suit,
-# celui qui dans sa décomposition en macro-nutriments
-# est la plus proche de celle d'une alimentation équilibrée, soit une répartition
-# de 65% en glucides, 25% en protéines, 10% en lipides
+# A balanced aliment is defined as follow :
+# Aliments which repartition approximante a balanced alimentation, i.e 
+#
+# 65% glucides, 25% proteins, 10% fats
 # retourne une copie 
 #------------------------------------------------------------------------------
 def compute_repartition_score(df_food_study, df_reference):
@@ -427,9 +431,10 @@ def check_energy_tot(df_food_study, col_macro_nutrients, df_reference_value):
     return df
 
 #------------------------------------------------------------------------------
-# pour chaque aliment, caluler la proportion de calories apportées par chacun 
-# des macro-nutriments
-# retourne une copie 
+# for each aliment, compute the percentage of calories provided from 
+# each macronutrients
+# 
+# return a df with ratio added columns
 #------------------------------------------------------------------------------
 def compute_nutrient_breakdown_ratio(col_macro_nutrients, df_reference_value):
     
@@ -457,7 +462,7 @@ def plot_nutrient_breakdown_ratio(df_food_study, macro_nutrients):
     colors = ['red', 'blue', 'green']
 
     fig, axes = plt.subplots(nrows=3, ncols=1, sharey=False)
-    fig.suptitle('For each macronutrients, list of aliments with percentage in descending order' +
+    fig.suptitle('Proportion of calories from macronutrients' +
                  '(from a sample of size' + str(df_food_study.shape[0]))
   
     for ratio in col_ratios : 
@@ -475,7 +480,7 @@ def plot_nutrient_breakdown_ratio(df_food_study, macro_nutrients):
 
         axes[i_ratio].axes.barh(y_pos, df * 100, align='center', color=colors[i_ratio])
         axes[i_ratio].axes.set_yticks(y_pos)
-        axes[i_ratio].axes.set_yticklabels(df.index.tolist(), minor=False)
+        axes[i_ratio].axes.set_yticklabels(df.index.str[0:30].tolist(), minor=False)
         axes[i_ratio].axes.invert_yaxis() 
 
         axes[i_ratio].set_xlabel(labels[i_ratio])
@@ -514,13 +519,13 @@ def analyze_nutrients_breakdown():
 # translate all entry of the index in a column called 'ingredient_en' and set
 # the index on this one
 #------------------------------------------------------------------------------
-def clean_ingredient_dictionnary(df_dict):
+def clean_word_dictionnary(df_dict):
 
     words_to_exclude = pd.Series(['A','THE','FROM', 'AND', 'OR','AND/OR', 'DE', 'ET', 'IN', 'OF', 
                                   'TO','AT', '&', 'PASTEURIZED', 'ENRICHED', 'MODIFIED',
                                   'CONTAINS', 'MALTED', 'LESS'])
 
-    f_translate = utilities.translate_ingredient()
+    f_translate = utilities.translate_word()
     df_dict['ingredient_en'] = df_dict.index.to_series().apply(f_translate)
 
     df_dict.reset_index(inplace=True)
@@ -548,7 +553,7 @@ def prepare_normalization():
     df_all_aliment_ingredient = pd.DataFrame()
 
     df_global_dict = build_aliment_ingredient_dictionnary(df_food_study, 1000, 100)
-    df_global_dict = clean_ingredient_dictionnary(df_global_dict)
+    df_global_dict = clean_word_dictionnary(df_global_dict)
 
     dict_aliment_ingredient = {}
     f_build_ingredient_dictionary = utilities.build_ingredient_dictionary(dict_aliment_ingredient)
@@ -560,7 +565,7 @@ def prepare_normalization():
         df_aliment_ingredient = pd.DataFrame().from_dict(dict_aliment_ingredient, orient="index", columns=['occurences'])
     
         i_ingredients_in_dict = df_aliment_ingredient.index.intersection(df_global_dict.index)
-        i_ingredients_in_dict = idx_ingredients_in_dict.drop_duplicates()
+        i_ingredients_in_dict = i_ingredients_in_dict.drop_duplicates()
 
         df = pd.DataFrame(index=i_ingredients_in_dict, columns=['product_name'])
         df = df.fillna(str(df_aliment.product_name.values.item(0)))
@@ -588,7 +593,7 @@ def build_normalized_database():
     
     db_file = PureWindowsPath(data_dir.joinpath('df_food.db'))
     db = sqlite3.connect(db_file.as_posix())
-    c = db.cursor()
+    c  = db.cursor()
 
     # SQLLITE doesn't support ALTER ADD / DROP 
     # c.execute("ALTER TABLE ALIMENT ADD PRIMARY KEY (product_name)")
