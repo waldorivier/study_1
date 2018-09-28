@@ -17,6 +17,8 @@ working_dir = PureWindowsPath(os.getcwd())
 data_dir = PureWindowsPath(working_dir.joinpath('projects'))
 data_result_name = 'result.csv'
 
+pd.set_option('display.max_columns', 30)
+
 #-------------------------------------------------------------------------
 #
 #-------------------------------------------------------------------------
@@ -138,9 +140,8 @@ def helper_store_csv_to_db(data_file, db_name, table_name) :
     db.close()
  
 #-------------------------------------------------------------------------
-# le fichier contenant les données brutes 
-# "en.openfoodfacts.org.products.tsv" est chargé dans une base 
-# de données food.db qui comporte une seule table "data"
+# original file "en.openfoodfacts.org.products.tsv" est chargé dans une base 
+# will be loaded and stored in a database name 'food.db' table name  'data' 
 #-------------------------------------------------------------------------
 def read_raw_data():
 
@@ -148,9 +149,7 @@ def read_raw_data():
     helper_store_csv_to_db(data_file, "food", "data")
 
 #------------------------------------------------------------------------------
-# exporter les colonnes d'un df dans un fichier csv avec le nombre 
-# de valeurs nulles afin de visualiser les caractéristiques qui ne sont 
-# pas relevantes / ou qui ne nous interesent tout simplement pas 
+# export to csv file all the columns containing null values
 #------------------------------------------------------------------------------
 def export_null_columns(df, data_file) : 
    
@@ -161,8 +160,10 @@ def export_null_columns(df, data_file) :
 #------------------------------------------------------------------------------
 # analyze columns 
 #
-# applies different threshes (by step 10000) on the df and mesures the number
-# of remaining columns 
+# applies series of threshes (by step 10000) on the df and mesures the number
+# of remaining columns
+# 
+# plot the result  
 #------------------------------------------------------------------------------
 def analyze_columns(df_food_study) :
 
@@ -174,32 +175,28 @@ def analyze_columns(df_food_study) :
      
         rows = []
 
-        def optimize_col_selection(thresh):
+        def select_columns(df, thresh):
             df = df.dropna(thresh=thresh, axis=1)
         
-            dict = {'_thresh' : 0, '_schape':0, '_mean':0}
+            dict = {'_thresh' : 0, '_schape' : 0}
             dict['_thresh'] = thresh
             dict['_schape'] = df.shape[1]
-            dict['_mean']   = df.isnull().sum().mean()
-
+    
             rows.append(dict)
         
         for thresh in threshes :
-            optimize_col_selection (thresh)
+            select_columns (df, thresh)
     
-        # construction d'un df à partir d'une liste de lignes construites
-        # sur la base d'un dictionnaire
+        # build a dataframe based on dict of rows
         df_result = pd.DataFrame(rows)  
         df_result.set_index('_schape', inplace=True)
     
-        # le tableau ci-dessous indique le nombre de critères conservés et 
-        # la moyenne des valeurs nulles des colonnes résiduelles conservées
-        # par niveau (thresh) en fonction duquel une colonne est supprimée.   
         df_result.to_csv(data_dir.joinpath(data_result_name))
 
-        df_result.plot(figsize=(16,12))
-        plt.xlabel('nombre de colonnes')
-        plt.legend(labels=['moyenne du nombre de valeur nulle','niveau'])
+        df_result.plot(figsize=(16,12), title="numbers of remaining columns in terms of 'threshes' for a df of shape (" +  
+                                               str(df_food_study.shape[0]) + "," + str(df_food_study.shape[1]) + ")")
+        plt.xlabel('numbers of remaining columns')
+        plt.ylabel('thresh')
 
         plt.show()
 
@@ -215,17 +212,13 @@ def clean_raw_data():
 
     df_food = helper_load_df_from_db("food", "data")
 
-    # nettoyage des données
-    # suppression de toutes les colonnes qui n'ont pas de données
-    # réduction du tableau à 147 colonnes (initialement 163)
+    # eliminates all columns with all null values
+    # df will be reduced from 163 columns to 147
     df_food.dropna(axis=1, how="all", inplace=True)
 
-    # gérer les doublons 
-    # en l'occurence, pour les colonnes selectionnées, il n'y a pas de doublon
-    # Cependant, si l'on réduit à nouveau les critères, il est probable que 
-    # des doublons apparaissent à nouveau (cf. plus loin)
-    if df_food.drop_duplicates().shape == df_food.shape :
-        print ("le tableau ne contient aucune ligne dupliquée")
+    # check for duplicated 
+    if food.drop_duplicates().shape == df_food.shape:
+        print ("df doesn't contain duplicated data")
         
     analyze_columns(df_food)
 
@@ -237,13 +230,11 @@ def clean_raw_data():
     pd.set_option('display.max_columns', df_food_cl.shape[1]) 
     df_food_cl.head()
 
-    # suppression de toutes les colonnes qui contiennent les mots "completed"
-    # par exemple la colonne "states_tags" contient en grand nombre le texte "completed"
-    # qui n'est pas relevant pour notre étude
+    # eliminates columns containing word 'completed' which seems not to be relevant
+    # example : counting  occurrences  for column 'tags' 
     df_food_cl.states_tags.where(lambda x : x.str.contains("completed")).count()
 
-    # suppression de toutes les colonnes dont le nom contient "states" et "tags" 
-    # et qui contiennent "completed" en grand nombre
+    # eliminates columns whose name contains 'states' or 'tags
     df_food_cl = df_food_cl.drop([col for col in df_food_cl.columns if "states" in col], axis=1)
     df_food_cl = df_food_cl.drop([col for col in df_food_cl.columns if "tags" in col], axis=1)
 
@@ -373,34 +364,41 @@ def analyze_ingredients_frequency():
 
 #------------------------------------------------------------------------------
 # A balanced aliment is defined as follow :
-# Aliments which repartition approximante a balanced alimentation, i.e 
 #
+# aliments which repartition approximate a balanced alimentation that is:
 # 65% glucides, 25% proteins, 10% fats
-# retourne une copie 
+#
+# compute the distance between each aliment repartition and reference's aliment
+# repartition define in df_reference_value
+# 
+# return df with added repartition_score colum
 #------------------------------------------------------------------------------
-def compute_repartition_score(df_food_study, df_reference):
+def compute_balanced_score(df_food_study, col_macro_nutrients, df_reference_value):
+
+    col_repartition_score = 'repartition_score'
 
     df = df_food_study.copy()
     df = df.loc[:,col_macro_nutrients]
-    df = df.sub(df_reference.loc['repartition'], axis=1)
-    df = np.power(df_food_study_1, 2)
-    
-    df_food_study['repartition_score'] = np.power(df.sum(axis=1), 0.5)
-    df_food_study.sort_values(by = 'repartition_score', inplace=True)
-    df_food_study.sort_values(by = ['repartition_score','nutrition_grade_fr'], inplace=True)
-        
-    # ... plot 
 
-    return df_food_study
+    # calculate distance
+    df = df.sub(df_reference_value.loc[col_repartition_score], axis=1)
+    df = np.power(df, 2)
+    df[col_repartition_score] = np.power(df.sum(axis=1), 0.5)
+
+    df = df_food_study.merge(df, left_index=True, right_index=True)
+
+    # sort  
+    df.sort_values(by = [col_repartition_score], inplace=True)
+        
+    return df
 
 #------------------------------------------------------------------------------
-# contrôle que la valeur énergétique annoncées des aliments est conforme
-# à celle recalculée en tenant compte des quantités et du pouvoir 
-# calorique de chaque macro-nutriment
+# checks that energetic value announced in the data is comform to that which 
+# is re-calculated 
 #
-# Les produits dont les données caloriques semblent incohérentes sont supprimés
+# aliments whose energetic value seems inconsistent will be removed 
 #
-# retourne un df qui contient la quantité de joules par macro-nutriments
+# return df containing calories per macronutrients
 #------------------------------------------------------------------------------
 def check_energy_tot(df_food_study, col_macro_nutrients, df_reference_value):
 
@@ -413,19 +411,17 @@ def check_energy_tot(df_food_study, col_macro_nutrients, df_reference_value):
     df = df.loc[:, col_for_check]
     df_reference_value = df_reference_value.reindex(col_for_check, axis=1).fillna(1)
 
-    # muliplication des quantités de chaque macro-nutriments par les calories 
-    # qui leur correspond
+    # multiply macronutrients quantities with correponding calories / gramm
     df = df.mul(df_reference_value.loc['energy_g'], axis=1)
     
-    # convertir en joules 
+    # conversion to joules
     df.iloc[:, 0:3] = df.iloc[:, 0:3] * 4.18
 
-    # calcul du delta relatif par rapport aux valeurs annoncées
+    # calculate delta energy compared to annouced value
     ser_energy_tot = df.loc[:, 'energy_100g']
     df[col_delta_energy] = (df.iloc[:, 0:3].sum(axis=1) - ser_energy_tot) / ser_energy_tot
         
-    # ne conserver que les produits dont l'écart calorique entre la valeur annoncée et 
-    # celle calculée diffère de moins 5%
+    # retains only aliments which delta lies below 5% (in absolute value)
     df = df[df[col_delta_energy].between(-0.05, 0.05)]
  
     return df
@@ -436,12 +432,8 @@ def check_energy_tot(df_food_study, col_macro_nutrients, df_reference_value):
 # 
 # return a df with ratio added columns
 #------------------------------------------------------------------------------
-def compute_nutrient_breakdown_ratio(col_macro_nutrients, df_reference_value):
+def compute_nutrient_breakdown_ratio(df_food_study, col_macro_nutrients, df_reference_value):
     
-    df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
-    df_food_study.set_index(['product_name'], inplace=True)
-    df_food_study.sort_index(inplace=True)
- 
     df = check_energy_tot(df_food_study, col_macro_nutrients, df_reference_value)
         
     df['ratio_cal_fat'] = df.fat_100g / df.energy_100g
@@ -470,7 +462,7 @@ def plot_nutrient_breakdown_ratio(df_food_study, macro_nutrients):
 
         df = df_food_study.copy()
 
-        # on s'affranchit des valeurs > 1
+        # the (few) values greater than 1 will be removed
         df = df[df.loc[:, ratio] <=1]
         df.sort_values(by=ratio, ascending=False, inplace=True)  
         df = df.loc[:, ratio]
@@ -480,6 +472,8 @@ def plot_nutrient_breakdown_ratio(df_food_study, macro_nutrients):
 
         axes[i_ratio].axes.barh(y_pos, df * 100, align='center', color=colors[i_ratio])
         axes[i_ratio].axes.set_yticks(y_pos)
+
+        # limits product name to 30 lexical characters
         axes[i_ratio].axes.set_yticklabels(df.index.str[0:30].tolist(), minor=False)
         axes[i_ratio].axes.invert_yaxis() 
 
@@ -489,24 +483,62 @@ def plot_nutrient_breakdown_ratio(df_food_study, macro_nutrients):
     fig.tight_layout()
     plt.show()
 
+def plot_nutrient_repartition_score(df, macro_nutrients):
+
+    col_repartition_score = 'repartition_score'
+
+    fig, axes = plt.subplots(nrows=1, ncols=1)
+    fig.suptitle('More balanced aliments according definition ' 
+                 + '(from a sample of size' + str(df.shape[0]))
+  
+
+    df = df.loc[:,col_repartition_score]
+    df = df.iloc[:10,]
+
+    y_pos = np.arange(len(df))
+    axes.barh(y_pos, df, align='center', color='blue')
+    axes.set_yticks(y_pos)
+
+    # limits product name to 30 lexical characters
+    axes.set_yticklabels(df.index.str[0:30].tolist())
+    axes.invert_yaxis() 
+
+    # set_xlabel()
+    # set_title(titles[0])
+    
+    plt.show()
+
 #------------------------------------------------------------------------------
 # ETUDE B : main function
 #------------------------------------------------------------------------------
-def analyze_nutrients_breakdown():
+def analyze_data():
 
     macro_nutrients = ['fat', 'carbohydrates', 'proteins'] 
     col_macro_nutrients = pd.Series(macro_nutrients).apply(lambda x : x + "_100g").tolist()
 
-    df_reference_value = pd.DataFrame(data = [(15,25,60), (9,4,4)], 
+    df_reference_value = pd.DataFrame(data = [(15,60,25), (9,4,4)], 
                                       columns = col_macro_nutrients,
                                       index = ['repartition', 'energy_g'])
 
-    df_food_study = compute_nutrient_breakdown_ratio(col_macro_nutrients, df_reference_value)
+    df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
+    df_food_study.set_index(['product_name'], inplace=True)
+    df_food_study.sort_index(inplace=True)
+
+    # 1 . nutrient breakdown
+    df = compute_nutrient_breakdown_ratio(df_food_study, col_macro_nutrients, df_reference_value)
 
     # restricts to a sample of size 1000 
-    df_sample_food_study = df_food_study.sample(1000)
+    df = df.sample(1000)
     
-    plot_nutrient_breakdown_ratio(df_sample_food_study, macro_nutrients)
+    plot_nutrient_breakdown_ratio(df, macro_nutrients)
+
+    # 2 . repartition score
+    df = compute_repartition_score(df_food_study, col_macro_nutrients, df_reference_value)
+
+    # restricts to a sample of size 1000 
+    df = df.sample(1000)
+
+    plot_nutrient_repartition_score(df, macro_nutrients)
 
 #------------------------------------------------------------------------------
 # ETUDE E : DATABASE 
@@ -516,8 +548,10 @@ def analyze_nutrients_breakdown():
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
-# translate all entry of the index in a column called 'ingredient_en' and set
+# translate all entry of the df_dict index in a column called 'ingredient_en' and set
 # the index on this one
+#
+# return a df with added columns 'ingredient_en'
 #------------------------------------------------------------------------------
 def clean_word_dictionnary(df_dict):
 
@@ -543,7 +577,6 @@ def clean_word_dictionnary(df_dict):
 #
 # one table with aliment and one table with only product_name and ingredient_name
 # will be built
-#
 #------------------------------------------------------------------------------
 def prepare_normalization():
     
@@ -740,24 +773,24 @@ def analyze_correlations():
 
     # sample of size 1000 is significant enough
     df = df_food_study.sample(1000)
-
-    sns.pairplot(df, 
-                 x_vars=predictors_cols, 
+   
+    df_corr = df.corr()
+    df_corr = df_corr.sort_values(by=score_col, ascending = False)
+    
+    sns.pairplot(df_corr, 
+                 x_vars=predictors_cols,
                  y_vars=[score_col], 
                  kind="reg",
                  plot_kws={'line_kws':{'color':'red'}})
     plt.show()
 
-    df_corr = df.corr()
-    
-    cols_to_drop.add('index')
-    df_corr.drop(cols_to_drop, inplace=True)
- 
-    df_corr = df_corr[score_col].copy()
-    df_corr.sort_values(ascending=False, inplace=True)
+    return df_corr[score_col]
 
-    return df_corr
-
+#------------------------------------------------------------------------------
+# ETUDE F : CORRELATION 
+# 
+# sub fonctions
+#------------------------------------------------------------------------------
 
 def check_nutrition_score_grade_relation(df_food_study):
 
