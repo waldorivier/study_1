@@ -140,6 +140,11 @@ def helper_store_csv_to_db(data_file, db_name, table_name) :
     db.close()
  
 #-------------------------------------------------------------------------
+# ETUDE A : analyse meta-data and clean-up
+# 
+#-------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------
 # original file "en.openfoodfacts.org.products.tsv" est chargé dans une base 
 # will be loaded and stored in a database name 'food.db' table name  'data' 
 #-------------------------------------------------------------------------
@@ -280,10 +285,196 @@ def setup_db_study():
     # stores the resulting cleaned datas to database
     helper_store_df_to_db(df_food_study, "df_food_study_1", "df_food_study_2")
 
+
+
 #------------------------------------------------------------------------------
-# ETUDE C : sub functions 
+# ETUDE B : nutrient repartition
+# sub functions
 #------------------------------------------------------------------------------
 
+#------------------------------------------------------------------------------
+# A balanced aliment is defined as follow :
+#
+# aliments which repartition approximate a balanced alimentation that is:
+# 65% glucides, 25% proteins, 10% fats
+#
+# compute the distance between each aliment repartition and reference's aliment
+# repartition define in df_reference_value
+# 
+# return df with added repartition_score colum
+#------------------------------------------------------------------------------
+def compute_repartition_score(df_food_study, col_macro_nutrients, df_reference_value):
+
+    col_repartition_score = 'repartition_score'
+
+    df = df_food_study.copy()
+    df = df.loc[:,col_macro_nutrients]
+
+    # calculate distance
+    df = df.sub(df_reference_value.loc['repartition'], axis=1)
+    df = np.power(df, 2)
+    df[col_repartition_score] = np.power(df.sum(axis=1), 0.5)
+
+    df = df_food_study.merge(df, left_index=True, right_index=True)
+
+    # sort  
+    df.sort_values(by = [col_repartition_score], inplace=True)
+        
+    return df
+
+#------------------------------------------------------------------------------
+# checks that energetic value announced in the data is comform to that which 
+# is re-calculated 
+#
+# aliments whose energetic value seems inconsistent will be removed 
+#
+# return df containing calories per macronutrients
+#------------------------------------------------------------------------------
+def check_energy_tot(df_food_study, col_macro_nutrients, df_reference_value):
+
+    col_delta_energy = 'delta_energy'
+
+    col_for_check = col_macro_nutrients.copy()
+    col_for_check.append('energy_100g')
+        
+    df = df_food_study.copy()
+    df = df.loc[:, col_for_check]
+    df_reference_value = df_reference_value.reindex(col_for_check, axis=1).fillna(1)
+
+    # multiply macronutrients quantities with correponding calories / gramm
+    df = df.mul(df_reference_value.loc['energy_g'], axis=1)
+    
+    # conversion to joules
+    df.iloc[:, 0:3] = df.iloc[:, 0:3] * 4.18
+
+    # calculate delta energy compared to annouced value
+    ser_energy_tot = df.loc[:, 'energy_100g']
+    df[col_delta_energy] = (df.iloc[:, 0:3].sum(axis=1) - ser_energy_tot) / ser_energy_tot
+        
+    # retains only aliments which delta lies below 5% (in absolute value)
+    df = df[df[col_delta_energy].between(-0.05, 0.05)]
+ 
+    return df
+
+#------------------------------------------------------------------------------
+# for each aliment, compute the percentage of calories provided from 
+# each macronutrients
+# 
+# return a df with ratio added columns
+#------------------------------------------------------------------------------
+def compute_nutrient_breakdown_ratio(df_food_study, col_macro_nutrients, df_reference_value):
+    
+    df = check_energy_tot(df_food_study, col_macro_nutrients, df_reference_value)
+        
+    df['ratio_cal_fat'] = df.fat_100g / df.energy_100g
+    df['ratio_cal_carbohydrates'] = df.carbohydrates_100g / df.energy_100g
+    df['ratio_cal_proteins'] = df.proteins_100g / df.energy_100g
+     
+    return df
+
+#------------------------------------------------------------------------------
+# ETUDE B : plot the result
+#------------------------------------------------------------------------------
+def plot_nutrient_breakdown_ratio(df_food_study, macro_nutrients):
+
+    titles = pd.Series(macro_nutrients).apply(lambda x : str.upper(x)).tolist()
+    col_ratios = pd.Series(macro_nutrients).apply(lambda x : "ratio_cal_" + x).tolist()
+    labels = pd.Series(macro_nutrients).apply( lambda x : "Calories percentage of " + x)
+    
+    colors = ['red', 'blue', 'green']
+
+    fig, axes = plt.subplots(nrows=3, ncols=1, sharey=False)
+    fig.suptitle("Proportion of calories from macronutrients " 
+                 + "(10 aliments from a sample of size " + str(df_food_study.shape[0]) + ")")
+  
+    for ratio in col_ratios : 
+        i_ratio = col_ratios.index(ratio)
+
+        df = df_food_study.copy()
+
+        # the (few) values greater than 1 will be removed
+        df = df[df.loc[:, ratio] <=1]
+        df.sort_values(by=ratio, ascending=False, inplace=True)  
+        df = df.loc[:, ratio]
+        df = df.iloc[:10,]
+
+        y_pos = np.arange(len(df))
+
+        axes[i_ratio].axes.barh(y_pos, df * 100, align='center', color=colors[i_ratio])
+        axes[i_ratio].axes.set_yticks(y_pos)
+
+        # limits product name to 30 lexical characters
+        axes[i_ratio].axes.set_yticklabels(df.index.str[0:30].tolist(), minor=False)
+        axes[i_ratio].axes.invert_yaxis() 
+
+        axes[i_ratio].set_xlabel(labels[i_ratio])
+        axes[i_ratio].set_title(titles[i_ratio])
+  
+    fig.tight_layout()
+    plt.show()
+
+def plot_nutrient_repartition_score(df_food_study):
+
+    col_repartition_score = 'repartition_score'
+
+    fig, ax = plt.subplots(nrows=1, ncols=1)
+    fig.suptitle(str(df_food_study.shape[0]) + " more balanced aliments according definition")
+  
+    df = df_food_study.loc[:,col_repartition_score]
+    df = df.iloc[:30,]
+
+    y_pos = np.arange(len(df))
+    ax.barh(y_pos, df, align='center', color='green')
+    ax.set_yticks(y_pos)
+
+    # limits product name to 30 lexical characters
+    ax.set_yticklabels(df.index.str[0:30].tolist())
+    ax.invert_yaxis() 
+
+    ax.set_xlabel("Score (distance to aliment's reference repartition)")
+    
+    fig.tight_layout()
+    plt.show()
+
+#------------------------------------------------------------------------------
+# ETUDE B : nutrient repartition
+#
+# main function
+#------------------------------------------------------------------------------
+def analyze_data():
+
+    macro_nutrients = ['fat', 'carbohydrates', 'proteins'] 
+    col_macro_nutrients = pd.Series(macro_nutrients).apply(lambda x : x + "_100g").tolist()
+
+    df_reference_value = pd.DataFrame(data = [(15,60,25), (9,4,4)], 
+                                      columns = col_macro_nutrients,
+                                      index = ['repartition', 'energy_g'])
+
+    df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
+    df_food_study.set_index(['product_name'], inplace=True)
+    df_food_study.sort_index(inplace=True)
+
+    # 1 . nutrient breakdown
+    df = compute_nutrient_breakdown_ratio(df_food_study, col_macro_nutrients, df_reference_value)
+
+    # restricts to a sample of size 1000 
+    df = df.sample(1000)
+    
+    plot_nutrient_breakdown_ratio(df, macro_nutrients)
+
+    # 2 . repartition score
+    df = compute_repartition_score(df_food_study, col_macro_nutrients, df_reference_value)
+
+    # restricts to a sample of size 30 
+    df = df.iloc[0:30,]
+
+    plot_nutrient_repartition_score(df)
+
+#------------------------------------------------------------------------------
+# ETUDE C :  Analyze ingredient's frequency
+# 
+# sub functions 
+#------------------------------------------------------------------------------
 #------------------------------------------------------------------------------
 # return a series of ingredients of randomly aliment retrieve from df_food_study
 #------------------------------------------------------------------------------
@@ -354,191 +545,112 @@ def analyze_ingredients_frequency():
     ax.invert_yaxis() 
     ax.set_xlabel("Occurrences")
     ax.set_title("The 30 most common ingredients founded in " + 
-                 str(aliment_sample_size) + " aliments")
+                 str(aliment_sample_size) + ") aliments")
 
     plt.show()
 
 #------------------------------------------------------------------------------
-# ETUDE B : sub functions
-#------------------------------------------------------------------------------
-
-#------------------------------------------------------------------------------
-# A balanced aliment is defined as follow :
-#
-# aliments which repartition approximate a balanced alimentation that is:
-# 65% glucides, 25% proteins, 10% fats
-#
-# compute the distance between each aliment repartition and reference's aliment
-# repartition define in df_reference_value
+# ETUDE D : TIMESERIES 
 # 
-# return df with added repartition_score colum
-#------------------------------------------------------------------------------
-def compute_balanced_score(df_food_study, col_macro_nutrients, df_reference_value):
-
-    col_repartition_score = 'repartition_score'
-
-    df = df_food_study.copy()
-    df = df.loc[:,col_macro_nutrients]
-
-    # calculate distance
-    df = df.sub(df_reference_value.loc[col_repartition_score], axis=1)
-    df = np.power(df, 2)
-    df[col_repartition_score] = np.power(df.sum(axis=1), 0.5)
-
-    df = df_food_study.merge(df, left_index=True, right_index=True)
-
-    # sort  
-    df.sort_values(by = [col_repartition_score], inplace=True)
-        
-    return df
-
-#------------------------------------------------------------------------------
-# checks that energetic value announced in the data is comform to that which 
-# is re-calculated 
-#
-# aliments whose energetic value seems inconsistent will be removed 
-#
-# return df containing calories per macronutrients
-#------------------------------------------------------------------------------
-def check_energy_tot(df_food_study, col_macro_nutrients, df_reference_value):
-
-    col_delta_energy = 'delta_energy'
-
-    col_for_check = col_macro_nutrients.copy()
-    col_for_check.append('energy_100g')
-        
-    df = df_food_study.copy()
-    df = df.loc[:, col_for_check]
-    df_reference_value = df_reference_value.reindex(col_for_check, axis=1).fillna(1)
-
-    # multiply macronutrients quantities with correponding calories / gramm
-    df = df.mul(df_reference_value.loc['energy_g'], axis=1)
-    
-    # conversion to joules
-    df.iloc[:, 0:3] = df.iloc[:, 0:3] * 4.18
-
-    # calculate delta energy compared to annouced value
-    ser_energy_tot = df.loc[:, 'energy_100g']
-    df[col_delta_energy] = (df.iloc[:, 0:3].sum(axis=1) - ser_energy_tot) / ser_energy_tot
-        
-    # retains only aliments which delta lies below 5% (in absolute value)
-    df = df[df[col_delta_energy].between(-0.05, 0.05)]
- 
-    return df
-
-#------------------------------------------------------------------------------
-# for each aliment, compute the percentage of calories provided from 
-# each macronutrients
+# sub fonctions
 # 
-# return a df with ratio added columns
 #------------------------------------------------------------------------------
-def compute_nutrient_breakdown_ratio(df_food_study, col_macro_nutrients, df_reference_value):
+def compute_mean_elapsed(df_food_study):
+
+    ser_create = pd.to_datetime(df_food_study.created_datetime)
+    ser_modify = pd.to_datetime(df_food_study.last_modified_datetime)
+
+    # verify that no null values in both series
+    if(ser_create.isnull().sum() == 0 and ser_modify.isnull().sum() == 0):
+
+        # compute difference
+        ser_delta = ser_modify - ser_create
+
+        # verify that no negative values in the difference
+        if(ser_delta.where(lambda x : x < pd.Timedelta(0)).count() == 0):
+            mean_delta = ser_delta.mean()
+
+    return mean_delta
+
+#------------------------------------------------------------------------------
+# plot created entries per years / month
+#------------------------------------------------------------------------------
+def plot_years_month_entries(df_food_study):
+
+    month = calendar.month_name[1:]
+
+    ser_create = pd.to_datetime(df_food_study.created_datetime)
+    df = pd.DataFrame(ser_create, columns = ['created_datetime', 'year', 'month'])
+
+    df.set_index('created_datetime', inplace=True)
+    df.year = df.index.year
+    df.month = df.index.month
+
+    df.reset_index(inplace=True)
+    df.set_index(['year', 'month'], inplace=True)
+
+    df_g = np.log(df.groupby(['year', 'month']).count())
     
-    df = check_energy_tot(df_food_study, col_macro_nutrients, df_reference_value)
+    # define plot parameters
+    ax = df_g.unstack(level=0).plot.bar(width=0.8)
+    x_pos = np.arange(len(month))
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(month, rotation=45)
+    ax.set_ylabel("number of created aliment's entries")
+
+    ax.set_xlabel("Months")
+    ax.set_title("(logarithm of) number of created aliment's entries in the database")
+    ax.legend(labels=df_g.index.levels[0])
+
+    plt.show()
+
+#------------------------------------------------------------------------------
+# plot mean created entries per month over the timeline
+#------------------------------------------------------------------------------
+def plot_mean_month_entries(df_food_study):
+
+    month = calendar.month_name[1:]
+
+    ser_create = pd.to_datetime(df_food_study.created_datetime)
+    df = pd.DataFrame(ser_create, columns = ['created_datetime', 'year', 'month'])
+
+    df.set_index('created_datetime', inplace=True)
+    df.year = df.index.year
+    df.month = df.index.month
+
+    df.reset_index(inplace=True)
+    df.set_index(['year', 'month'], inplace=True)
+
+    df_g = np.log(df.groupby(['month','year']).count())
+    mean = df_g.groupby('month').mean()
+    std = df_g.groupby('month').std()
+    
+    # define plot parameters
+    fig, ax = plt.subplots()
+    x_pos = np.arange(len(month))
+    ax.bar(x_pos, mean['created_datetime'], align='center', 
+           color='blue', yerr=std['created_datetime'], ecolor='black')
+
+    ax.set_xticks(x_pos)
+    ax.set_xticklabels(month, rotation=45)
+    ax.set_ylabel("mean of created aliment's entries")
+
+    ax.set_xlabel("Months")
+    ax.set_title("(logarithm of) mean of created aliment's entries in the database")
+  
+    plt.show()
         
-    df['ratio_cal_fat'] = df.fat_100g / df.energy_100g
-    df['ratio_cal_carbohydrates'] = df.carbohydrates_100g / df.energy_100g
-    df['ratio_cal_proteins'] = df.proteins_100g / df.energy_100g
-     
-    return df
-
 #------------------------------------------------------------------------------
-# ETUDE B : plot the result
+# ETUDE D : main function
 #------------------------------------------------------------------------------
-def plot_nutrient_breakdown_ratio(df_food_study, macro_nutrients):
-
-    titles = pd.Series(macro_nutrients).apply(lambda x : str.upper(x)).tolist()
-    col_ratios = pd.Series(macro_nutrients).apply(lambda x : "ratio_cal_" + x).tolist()
-    labels = pd.Series(macro_nutrients).apply( lambda x : "Percentage of " + x)
-    
-    colors = ['red', 'blue', 'green']
-
-    fig, axes = plt.subplots(nrows=3, ncols=1, sharey=False)
-    fig.suptitle('Proportion of calories from macronutrients' +
-                 '(from a sample of size' + str(df_food_study.shape[0]))
-  
-    for ratio in col_ratios : 
-        i_ratio = col_ratios.index(ratio)
-
-        df = df_food_study.copy()
-
-        # the (few) values greater than 1 will be removed
-        df = df[df.loc[:, ratio] <=1]
-        df.sort_values(by=ratio, ascending=False, inplace=True)  
-        df = df.loc[:, ratio]
-        df = df.iloc[:10,]
-
-        y_pos = np.arange(len(df))
-
-        axes[i_ratio].axes.barh(y_pos, df * 100, align='center', color=colors[i_ratio])
-        axes[i_ratio].axes.set_yticks(y_pos)
-
-        # limits product name to 30 lexical characters
-        axes[i_ratio].axes.set_yticklabels(df.index.str[0:30].tolist(), minor=False)
-        axes[i_ratio].axes.invert_yaxis() 
-
-        axes[i_ratio].set_xlabel(labels[i_ratio])
-        axes[i_ratio].set_title(titles[i_ratio])
-  
-    fig.tight_layout()
-    plt.show()
-
-def plot_nutrient_repartition_score(df, macro_nutrients):
-
-    col_repartition_score = 'repartition_score'
-
-    fig, axes = plt.subplots(nrows=1, ncols=1)
-    fig.suptitle('More balanced aliments according definition ' 
-                 + '(from a sample of size' + str(df.shape[0]))
-  
-
-    df = df.loc[:,col_repartition_score]
-    df = df.iloc[:10,]
-
-    y_pos = np.arange(len(df))
-    axes.barh(y_pos, df, align='center', color='blue')
-    axes.set_yticks(y_pos)
-
-    # limits product name to 30 lexical characters
-    axes.set_yticklabels(df.index.str[0:30].tolist())
-    axes.invert_yaxis() 
-
-    # set_xlabel()
-    # set_title(titles[0])
-    
-    plt.show()
-
-#------------------------------------------------------------------------------
-# ETUDE B : main function
-#------------------------------------------------------------------------------
-def analyze_data():
-
-    macro_nutrients = ['fat', 'carbohydrates', 'proteins'] 
-    col_macro_nutrients = pd.Series(macro_nutrients).apply(lambda x : x + "_100g").tolist()
-
-    df_reference_value = pd.DataFrame(data = [(15,60,25), (9,4,4)], 
-                                      columns = col_macro_nutrients,
-                                      index = ['repartition', 'energy_g'])
+def analyze_time_series():
 
     df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
-    df_food_study.set_index(['product_name'], inplace=True)
-    df_food_study.sort_index(inplace=True)
 
-    # 1 . nutrient breakdown
-    df = compute_nutrient_breakdown_ratio(df_food_study, col_macro_nutrients, df_reference_value)
+    print(compute_mean_elapsed(df_food_study))
 
-    # restricts to a sample of size 1000 
-    df = df.sample(1000)
-    
-    plot_nutrient_breakdown_ratio(df, macro_nutrients)
-
-    # 2 . repartition score
-    df = compute_repartition_score(df_food_study, col_macro_nutrients, df_reference_value)
-
-    # restricts to a sample of size 1000 
-    df = df.sample(1000)
-
-    plot_nutrient_repartition_score(df, macro_nutrients)
+    plot_mean_month_entries(df_food_study)
+    plot_years_month_entries(df_food_study)
 
 #------------------------------------------------------------------------------
 # ETUDE E : DATABASE 
@@ -648,109 +760,6 @@ def perform_database_queries():
                              " a.product_name and ai.ingredient_name = 'SALT'", con=db)
 
     return df_q
-    
-#------------------------------------------------------------------------------
-# ETUDE D : TIMESERIES 
-# 
-# sub fonctions
-# 
-#------------------------------------------------------------------------------
-def compute_mean_elapsed(df_food_study):
-
-    ser_create = pd.to_datetime(df_food_study.created_datetime)
-    ser_modify = pd.to_datetime(df_food_study.last_modified_datetime)
-
-    # verify that no null values in both series
-    if(ser_create.isnull().sum() == 0 and ser_modify.isnull().sum() == 0):
-
-        # compute difference
-        ser_delta = ser_modify - ser_create
-
-        # verify that no negative values in the difference
-        if(ser_delta.where(lambda x : x < pd.Timedelta(0)).count() == 0):
-            mean_delta = ser_delta.mean()
-
-    return mean_delta
-
-#------------------------------------------------------------------------------
-# plot created entries per years / month
-#------------------------------------------------------------------------------
-def plot_years_month_entries(df_food_study):
-
-    month = calendar.month_name[1:]
-
-    ser_create = pd.to_datetime(df_food_study.created_datetime)
-    df = pd.DataFrame(ser_create, columns = ['created_datetime', 'year', 'month'])
-
-    df.set_index('created_datetime', inplace=True)
-    df.year = df.index.year
-    df.month = df.index.month
-
-    df.reset_index(inplace=True)
-    df.set_index(['year', 'month'], inplace=True)
-
-    df_g = np.log(df.groupby(['year', 'month']).count())
-    
-    # define plot parameters
-    ax = df_g.unstack(level=0).plot.bar(width=0.8)
-    x_pos = np.arange(len(month))
-    ax.set_xticks(x_pos)
-    ax.set_xticklabels(month, rotation=45)
-    ax.set_ylabel("number of created aliment's entries")
-
-    ax.set_xlabel("Months")
-    ax.set_title("(logarithm of) number of created aliment's entries in the database")
-    ax.legend(labels=df_g.index.levels[0])
-
-    plt.show()
-
-#------------------------------------------------------------------------------
-# plot mean created entries per month over the timeline
-#------------------------------------------------------------------------------
-def plot_mean_month_entries(df_food_study):
-
-    month = calendar.month_name[1:]
-
-    ser_create = pd.to_datetime(df_food_study.created_datetime)
-    df = pd.DataFrame(ser_create, columns = ['created_datetime', 'year', 'month'])
-
-    df.set_index('created_datetime', inplace=True)
-    df.year = df.index.year
-    df.month = df.index.month
-
-    df.reset_index(inplace=True)
-    df.set_index(['year', 'month'], inplace=True)
-
-    df_g = np.log(df.groupby(['month','year']).count())
-    mean = df_g.groupby('month').mean()
-    std = df_g.groupby('month').std()
-    
-    # define plot parameters
-    fig, ax = plt.subplots()
-    x_pos = np.arange(len(month))
-    ax.bar(x_pos, mean['created_datetime'], align='center', 
-           color='blue', yerr=std['created_datetime'], ecolor='black')
-
-    ax.set_xticks(x_pos)
-    ax.set_xticklabels(month, rotation=45)
-    ax.set_ylabel("mean of created aliment's entries")
-
-    ax.set_xlabel("Months")
-    ax.set_title("(logarithm of) mean of created aliment's entries in the database")
-  
-    plt.show()
-        
-#------------------------------------------------------------------------------
-# ETUDE D : main function
-#------------------------------------------------------------------------------
-def analyze_time_series():
-
-    df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
-
-    print(compute_mean_elapsed(df_food_study))
-
-    plot_mean_month_entries(df_food_study)
-    plot_years_month_entries(df_food_study)
     
 #------------------------------------------------------------------------------
 # ETUDE F : CORRELATION 
