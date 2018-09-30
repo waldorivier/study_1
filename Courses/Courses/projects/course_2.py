@@ -1,4 +1,4 @@
-import os
+﻿import os
 from pathlib import PureWindowsPath
 import numpy as np
 import pandas as pd
@@ -20,11 +20,14 @@ data_result_name = 'result.csv'
 pd.set_option('display.max_columns', 30)
 
 #-------------------------------------------------------------------------
-#
+# Class utilities
+# - translation 
+# - outliers
+# - words dictionnary
 #-------------------------------------------------------------------------
 class utilities:
     #-------------------------------------------------------------------------
-    # retourne la liste des noms de colonne d'un type donné
+    # retourne la liste des noms de colonne d'un type 
     #-------------------------------------------------------------------------
     def select_columns(df, type):
         columns = df.dtypes[df.dtypes.apply(lambda x : x == type)].index.tolist()
@@ -183,9 +186,9 @@ def analyze_columns(df_food_study) :
         def select_columns(df, thresh):
             df = df.dropna(thresh=thresh, axis=1)
         
-            dict = {'_thresh' : 0, '_schape' : 0}
+            dict = {'_thresh' : 0, '_shape' : 0}
             dict['_thresh'] = thresh
-            dict['_schape'] = df.shape[1]
+            dict['_shape'] = df.shape[1]
     
             rows.append(dict)
         
@@ -194,14 +197,21 @@ def analyze_columns(df_food_study) :
     
         # build a dataframe based on dict of rows
         df_result = pd.DataFrame(rows)  
-        df_result.set_index('_schape', inplace=True)
+        df_result.set_index('_shape', inplace=True)
     
         df_result.to_csv(data_dir.joinpath(data_result_name))
+ 
+        fig, ax = plt.subplots(nrows=1, ncols=1)
+        fig.suptitle("numbers of remaining columns in terms of thresh for a df of shape (" +  
+                        str(df_food_study.shape[0]) + "," + str(df_food_study.shape[1]) + ")")
+        
+        x_pos = np.arange(len(df_result))
+        ax.bar(x_pos, df_result._shape, align='center', color='green')
+        ax.set_xticks(x_pos)
+        ax.set_xticklabels(df_result._thresh, rotation=45)
 
-        df_result.plot(figsize=(16,12), title="numbers of remaining columns in terms of 'threshes' for a df of shape (" +  
-                                               str(df_food_study.shape[0]) + "," + str(df_food_study.shape[1]) + ")")
-        plt.xlabel('numbers of remaining columns')
-        plt.ylabel('thresh')
+        ax.set_ylabel("remaining columns")
+        ax.set_xlabel("thresh")
 
         plt.show()
 
@@ -222,11 +232,11 @@ def clean_raw_data():
     df_food.dropna(axis=1, how="all", inplace=True)
 
     # check for duplicated 
-    if food.drop_duplicates().shape == df_food.shape:
+    if df_food.drop_duplicates().shape == df_food.shape:
         print ("df doesn't contain duplicated data")
         
     analyze_columns(df_food)
-
+   
     # le niveau de 150'000 définit une sélection de 36 critères (comprenant 
     # tous les critères nécessaires à nos analyses)
     df_food_cl = df_food.dropna(thresh=150000, axis=1)
@@ -285,9 +295,7 @@ def setup_db_study():
     # stores the resulting cleaned datas to database
     helper_store_df_to_db(df_food_study, "df_food_study_1", "df_food_study_2")
 
-
-
-#------------------------------------------------------------------------------
+#-----------------------------------------------------------------------------
 # ETUDE B : nutrient repartition
 # sub functions
 #------------------------------------------------------------------------------
@@ -418,7 +426,7 @@ def plot_nutrient_repartition_score(df_food_study):
     col_repartition_score = 'repartition_score'
 
     fig, ax = plt.subplots(nrows=1, ncols=1)
-    fig.suptitle(str(df_food_study.shape[0]) + " more balanced aliments according definition")
+    fig.suptitle("The " * str(df_food_study.shape[0]) + " more balanced aliments according definition")
   
     df = df_food_study.loc[:,col_repartition_score]
     df = df.iloc[:30,]
