@@ -794,7 +794,7 @@ def analyze_correlations():
     df_corr = df.corr()
     df_corr = df_corr.sort_values(by=score_col, ascending = False)
     
-    sns.pairplot(df_corr, 
+    sns.pairplot(df, 
                  x_vars=predictors_cols,
                  y_vars=[score_col], 
                  kind="reg",
@@ -808,11 +808,18 @@ def analyze_correlations():
 # 
 # sub fonctions
 #------------------------------------------------------------------------------
+def check_nutrition_score_grade_relation():
 
-def check_nutrition_score_grade_relation(df_food_study):
+    df_food_study = helper_load_df_from_db("df_food_study_1", "df_food_study_2")
 
     df = df_food_study.loc[:,['nutrition_grade_fr', 'nutrition-score-fr_100g']]
-
-
-
-
+    
+    grade_convertion  = {'a':'1', 'b' : '2', 'c' : '3','d' : '4', 'e' : '5'}
+    df.nutrition_grade_fr = df.nutrition_grade_fr.apply(lambda x : grade_convertion.get(x))
+    df = df.astype(float)    
+    sns.pairplot(df, 
+                 x_vars=['nutrition_grade_fr'],
+                 y_vars=['nutrition-score-fr_100g'], 
+                 kind="reg",
+                 plot_kws={'line_kws':{'color':'red'}})
+    plt.show()
