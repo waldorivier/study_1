@@ -426,7 +426,7 @@ def plot_nutrient_repartition_score(df_food_study):
     col_repartition_score = 'repartition_score'
 
     fig, ax = plt.subplots(nrows=1, ncols=1)
-    fig.suptitle("The " * str(df_food_study.shape[0]) + " more balanced aliments according definition")
+    fig.suptitle("The " + str(df_food_study.shape[0]) + " more balanced aliments according definition")
   
     df = df_food_study.loc[:,col_repartition_score]
     df = df.iloc[:30,]
