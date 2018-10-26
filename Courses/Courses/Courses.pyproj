@@ -11,7 +11,7 @@
     <OutputPath>.</OutputPath>
     <Name>Courses</Name>
     <RootNamespace>Courses</RootNamespace>
-    <InterpreterId>CondaEnv|CondaEnv|env</InterpreterId>
+    <InterpreterId>MSBuild|env|$(MSBuildProjectFullPath)</InterpreterId>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -22,6 +22,9 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="others\exercices_module_3.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="projects\course_1.py">
       <SubType>Code</SubType>
     </Compile>
@@ -34,12 +37,10 @@
     <Compile Include="others\utilities.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="others\others.py" />
-    <Compile Include="others\plot.py" />
-    <Compile Include="projects\utilities.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Data\" />
+    <Folder Include="Data\module_3\" />
     <Folder Include="others\" />
     <Folder Include="others\" />
     <Folder Include="projects\" />
@@ -48,7 +49,6 @@
     <Content Include="projects\Course_1.ipynb" />
     <Content Include="Data\consumer_complaints.csv" />
     <Content Include="Data\data.xls" />
-    <Content Include="projects\Course_2.ipynb" />
     <Content Include="projects\df_food_study_1.db" />
     <Content Include="Data\financial_data.csv" />
     <Content Include="projects\food.db" />
@@ -57,9 +57,6 @@
     <Content Include="Data\songs.csv" />
     <Content Include="Data\tmdb_5000_movies.csv" />
     <Content Include="Data\webscraping.html" />
-  </ItemGroup>
-  <ItemGroup>
-    <InterpreterReference Include="CondaEnv|CondaEnv|env" />
   </ItemGroup>
   <ItemGroup>
     <Interpreter Include="env\">
