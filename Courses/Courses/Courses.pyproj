@@ -11,7 +11,7 @@
     <OutputPath>.</OutputPath>
     <Name>Courses</Name>
     <RootNamespace>Courses</RootNamespace>
-    <InterpreterId>CondaEnv|CondaEnv|env</InterpreterId>
+    <InterpreterId>MSBuild|env|$(MSBuildProjectFullPath)</InterpreterId>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
