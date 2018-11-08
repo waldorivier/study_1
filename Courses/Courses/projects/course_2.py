@@ -81,7 +81,7 @@ class utilities:
 
                     return x
 
-            except ValueError:
+            except  :
                 print ("erreur dans la traduction", x)
         
         return f

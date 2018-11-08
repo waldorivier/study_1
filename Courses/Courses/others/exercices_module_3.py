@@ -9,6 +9,10 @@ import random
 import googletrans as translator
 from pandas.tseries.offsets import *
 import calendar
+from sklearn.linear_model import SGDRegressor
+from sklearn.linear_model import HuberRegressor
+from sklearn.dummy import DummyRegressor
+
 
 #-------------------------------------------------------------------------
 # répertoire de travail
@@ -155,12 +159,8 @@ RSS(y, y_values)
 # 3.2.8
 #-------------------------------------------------------------------------
 
-def MSE(y, y_pred):
-    assert y.size == y_pred.size
-
+def mse(y, y_pred):
     return np.mean(np.square(y - y_pred))
-
-    return mse
     
 data_file =  data_dir.joinpath('bike-sharing-simple.csv')
 data_df = pd.read_csv(data_file)
@@ -238,4 +238,290 @@ sns.pairplot(data_df,
              kind="reg",
              plot_kws={'line_kws':{'color':'red'}})
 plt.show()
+
+x = data_df.tv.values
+y = data_df.sales.values
+
+plt.scatter(x[-5:], y[-5:]) # outliers
+plt.scatter(x[:-5], y[:-5]) # other points
+plt.show()
+
+# Fit a linear regression
+coefs = np.polyfit(x, y, deg=1)
+print('coefs:', coefs) # [ 0.20613307  2.76540858]
+
+# Fit a linear regression without the 5 outliers
+coefs2 = np.polyfit(x[:-5], y[:-5], deg=1)
+print('coefs2:', coefs2) # [ 0.42063597  1.27867727]
+
+# filter outliers in order to extract them
+# définit un tableau de boolean
+idx = (((x < 4) & (y > 6)) | ((x > 10) & (y < 2)))
+
+# wo outliers
+x1, y1 = x[~idx], y[~idx]
+plt.scatter(x1, y1) # outliers
+plt.show()
+
+# only outliers
+x1, y1 = x[idx], y[idx]
+plt.scatter(x1, y1) # outliers
+plt.show()
+
+# metric to remove outliers
+z_scores = (y - y.mean()) / y.std()
+plt.scatter(x, y, c = z_scores, cmap=plt.cm.coolwarm)
+plt.colorbar()
+plt.show()
+
+pd.Series(z_scores).hist()
+plt.show()
+
+idx = (np.abs(z_scores) > 2)
+idx
+
+# wo outliers
+x1, y1 = x[~idx], y[~idx]
+plt.scatter(x1, y1) # outliers
+plt.show()
+
+#-------------------------------------------------------------------------
+# 3.3.3 SURFACES
+#-------------------------------------------------------------------------
+
+def mae(x, y_pred):
+    return np.mean(np.abs(y-y_pred))
+
+points = np.array([[1, 2], [0, 1], [-1.5, 0]])
+x, y = points[:, 0], points[:, 1]
+
+plt.scatter(x, y)
+plt.show()
+
+#-------------------------------------------------------------------------
+# 3.3.4 HUBERT LOSS
+#-------------------------------------------------------------------------
+
+data_file =  data_dir.joinpath('marketing-campaign-with-outliers.csv')
+data_df = pd.read_csv(data_file)
+
+x = data_df.tv.values
+y = data_df.sales.values
+
+lr_huber = SGDRegressor(loss='huber', penalty='none', epsilon=1, max_iter=10000)
+
+# transfom vector to matrix of (x, 1)
+x = x[:, np.newaxis]
+lr_huber.fit(x, y)
+
+lr_huber.coef_
+lr_huber.intercept_
+
+x_values = np.linspace(min(x), max(x), num=100) # Shape (100,)
+y_values_huber = lr_huber.predict(
+    x_values[:, np.newaxis] # Shape (100,1)
+)
+
+blue, green, red = sns.color_palette()[:3]
+
+plt.scatter(x, y, color=blue)
+plt.plot(x_values, y_values_huber, color=red)
+plt.show()
+
+lr_squared = SGDRegressor(loss='squared_loss', penalty='none', max_iter=10000)
+
+lr_huber = HuberRegressor(epsilon=1.35)
+lr_huber.fit(x, y)
+y_values_huber = lr_huber.predict(
+    x_values[:, np.newaxis] # Shape (100,1)
+)
+plt.scatter(x, y, color=blue)
+plt.plot(x_values, y_values_huber, color=red)
+plt.show()
+
+#-------------------------------------------------------------------------
+# 3.3.5 EXERCICES
+#-------------------------------------------------------------------------
+
+data_file = data_dir.joinpath('brain-and-body-weights.csv')
+data_df = pd.read_csv(data_file)
+
+# linear regression
+
+data_df_ = data_df.copy()
+data_df_.body = np.log(data_df_.body)
+data_df_.brain = np.log(data_df_.brain)
+
+# helper function to plot with labels'point with seaborn
+def plot_(data_df : pd.DataFrame):
+
+    pl = sns.regplot(data=data_df, x='body', y='brain') 
+
+    # prints labels in front of each points
+    for i in range(0, data_df.shape[0]):
+        pl.text(data_df.body[i] + 0.2, data_df.brain[i], data_df.label[i], 
+                horizontalalignment='left', size='small', color='black')
+
+# plot all datas 
+plot_(data_df_)
+
+# define outliers
+# a, b = np.polyfit(data_df_.body.values, data_df_.brain.values, deg=1)
+# i_outliers = data_df_.brain < (data_df_.body * a - 3.6)
+i_outlier = data_df_.body > 16
+
+# remove outliers
+df_wo_outliers = data_df_[~i_outliers]
+
+# reindex the df
+df_wo_outliers.index = pd.RangeIndex(len(df_wo_outliers.index))
+
+# plot wo outliers
+plot_(df_wo_outliers)
+plt.show()
+
+#------------------------------------------------------------------------------
+# linear regression with Huber loss
+#------------------------------------------------------------------------------
+
+data_file =  data_dir.joinpath('brain-and-body-weights.csv')
+data_df = pd.read_csv(data_file)
+
+# linear regression
+
+data_df_ = data_df.copy()
+data_df_.body = np.log(data_df_.body)
+data_df_.brain = np.log(data_df_.brain)
+
+x = data_df_.body.values
+y = data_df_.brain.values
+
+x_values = np.linspace(data_df_.body.min(), data_df_.body.max(), 100)
+
+ar_lr_huber_coef = []
+
+plt.scatter(x, y)
+i = 0
+
+# ep increase => the regression line get closer the outliers
+
+try:
+    for ep in np.linspace(1.1, 1.5, 8):
+    
+        lr_huber = HuberRegressor(epsilon=ep)
+        lr_huber.fit(x[:, np.newaxis], y)
+        y_values_huber = lr_huber.predict(
+            x_values[:, np.newaxis] 
+        )
+
+        t_hr = (ep, lr_huber.coef_, lr_huber.intercept_)
+        ar_lr_huber_coef.append(t_hr)
+    
+        plt.plot(x_values, y_values_huber, 
+                 color=sns.color_palette()[np.mod(i,6)], 
+                 label=t_hr)
+        i = i + 1
+
+    plt.legend()        
+    plt.show()
+ 
+except ValueError :
+    print (i)
+
+ar_lr_huber_coef
+pd.DataFrame(ar_lr_huber_coef, columns=[''])
+            
+#-------------------------------------------------------------------------
+# 3.3.8 
+#-------------------------------------------------------------------------
+
+data_file =  data_dir.joinpath('bike-sharing-three-models.csv')
+data_df = pd.read_csv(data_file)
+
+# Extract variables
+x = data_df.temp.values
+y = data_df.users.values
+
+# Plot the models
+plt.scatter(x, y)
+plt.plot(x, data_df.pred_lr, label='linear regression')
+plt.plot(x, data_df.pred_poly3, label='polyfit(deg=3)')
+plt.plot(x, data_df.pred_huber3, label='with Huber loss')
+plt.legend()
+plt.show()
+
+y=[]
+
+a = [1, 2, 3, 5, 6, 25]
+x = pd.Series(a)
+
+for i in np.arange(0, 25):
+    y.append(np.mean(np.abs(x-i)))
+
+plt.plot(y, label='mae')
+plt.legend()
+plt.show()
+
+dummy = DummyRegressor(strategy='mean')
+dummy.fit(x[:, np.newaxis], y)
+        
+pred_baseline = dummy.predict(x[:, np.newaxis])
+
+#-------------------------------------------------------------------------
+# 3.3.8
+#-------------------------------------------------------------------------
+
+data_file =  data_dir.joinpath('bike-sharing-test.csv')
+df_test = pd.read_csv(data_file)
+
+data_file = data_dir.joinpath('bike-sharing-train.csv')
+df_train = pd.read_csv(data_file)
+
+x_train = df_train.temp.values
+y_train = df_train.users.values
+
+# remove outliers on train set
+
+def z_score (x):
+    return (x - x.mean()) / x.std()
+
+z_scores = z_score(y_train)
+
+plt.scatter(x_train, y_train, c=z_scores, cmap=plt.cm.coolwarm)
+plt.colorbar()
+plt.show()
+
+# remove all values with z_score > 1.5
+
+outliers = z_scores > 1.5
+
+df_train_wo_outliers = df_train[~outliers]
+df_train_wo_outliers.index = pd.RangeIndex(len(df_train_wo_outliers.index))
+
+x_train = df_train_wo_outliers.temp.values
+y_train = df_train_wo_outliers.users.values
+
+# fill an array with identical value
+a_mean = np.full(x_train.size, y_train.mean())
+
+# trace a line at the mean
+df_train_wo_outliers.users.hist()
+plt.plot([y_train.mean(), y_train.mean()], 
+         [0, 50], color='red')
+plt.show()
+
+plt.scatter(x_train, y_train)
+for i in np.arange(1, 10):
+    coefs = np.polyfit(x_train, y_train, deg = i)
+    y_pred = np.polyval(coefs, x_train)
+
+    plt.scatter(x_train, y_pred, marker='o',
+                label=(np.sqrt(mse(y_train, y_pred)), i))
+
+plt.legend()
+plt.show()
+
+
+
+
 

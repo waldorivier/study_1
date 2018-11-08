@@ -1,0 +1,66 @@
+body,brain,label
+5.0,0.1,Lesser short-tailed shrew
+10.0,0.2,Little brown bat
+23.0,0.3,Big brown bat
+23.0,0.4,Mouse
+48.0,0.3,Musk shrew
+60.0,1.0,Star-nosed mole
+75.0,1.2,E. American mole
+101.0,4.0,Ground squirrel
+104.0,2.5,Tree shrew
+120.0,1.0,Golden hamster
+122.0,3.0,Mole
+200.0,5.0,Galago
+280.0,1.9,Rat
+425.0,6.4,Chinchilla
+480.0,15.5,Owl monkey
+550.0,2.4,Desert hedgehog
+750.0,12.3,Rock hyrax-a
+785.0,3.5,European hedgehog
+900.0,2.6,Tenrec
+920.0,5.7,Artic ground squirrel
+1000.0,6.6,African giant pouched rat
+1040.0,5.5,Guinea pig
+1350.0,8.1,Mountain beaver
+1400.0,12.5,Slow loris
+1410.0,17.5,Genet
+1620.0,11.4,Phalanger
+1700.0,6.3,N.A. opossum
+2000.0,12.3,Tree hyrax
+2500.0,12.1,Rabbit
+3000.0,25.0,Echidna
+3300.0,25.6,Cat
+3385.0,44.5,Artic fox
+3500.0,3.9,Water opossum
+3500.0,10.8,Nine-banded armadillo
+3600.0,21.0,Rock hyrax-b
+4050.0,17.0,Yellow-bellied marmot
+4190.0,58.0,Verbet
+4235.0,50.4,Red fox
+4288.0,39.2,Raccoon
+6800.0,179.0,Rhesus monkey
+10000.0,115.0,Potar monkey
+10550.0,179.5,Baboon
+14830.0,98.2,Roe deer
+27660.0,115.0,Goat
+35000.0,56.0,Kangaroo
+36330.0,119.5,Grey wolf
+52160.0,440.0,Chimpanzee
+55500.0,175.0,Sheep
+60000.0,81.0,Giant armadillo
+62000.0,1320.0,Human
+85000.0,325.0,Grey seal
+100000.0,157.0,Jaguar
+160000.0,169.0,Brazilian tapir
+187100.0,419.0,Donkey
+192000.0,180.0,Pig
+207000.0,406.0,Gorilla
+250000.0,490.0,Okapi
+465000.0,423.0,Cow
+521000.0,655.0,Horse
+529000.0,680.0,Giraffe
+2547000.0,4603.0,Asian elephant
+6654000.0,5712.0,African elephant
+9400000.0,70.0,Triceratops
+11700000.0,50.0,Dipliodocus
+87000000.0,154.5,Brachiosaurus
