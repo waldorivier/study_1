@@ -13,7 +13,6 @@ from sklearn.linear_model import SGDRegressor
 from sklearn.linear_model import HuberRegressor
 from sklearn.dummy import DummyRegressor
 
-
 #-------------------------------------------------------------------------
 # répertoire de travail
 #-------------------------------------------------------------------------
@@ -189,9 +188,9 @@ y_test_pred1 = np.array([1, 2, 3])
 y_test_pred2 = np.array([1, 5, 3])
 y_test_pred3 = np.array([1, 5, 6])
 
-assert_almost_equal(MSE(y_test, y_test_pred1), 0, decimal=5)
-assert_almost_equal(MSE(y_test, y_test_pred2), 3 , decimal=5)
-assert_almost_equal(MSE(y_test, y_test_pred3), 6, decimal=5)
+assert_almost_equal(mse(y_test, y_test_pred1), 0, decimal=5)
+assert_almost_equal(mse(y_test, y_test_pred2), 3 , decimal=5)
+assert_almost_equal(mse(y_test, y_test_pred3), 6, decimal=5)
 
 print('tests passed!')
 
@@ -208,7 +207,7 @@ for i in np.arange(1, 10, 1):
    
     plt.plot(x_values, y_values, label="polyfit de degré (" + str(i) + ")" )
   
-    ar_rmse.append(np.sqrt(MSE(y, y_values)))
+    ar_rmse.append(np.sqrt(mse(y, y_values)))
 
 plt.legend()
 plt.show() 
@@ -289,7 +288,7 @@ plt.show()
 # 3.3.3 SURFACES
 #-------------------------------------------------------------------------
 
-def mae(x, y_pred):
+def mae(y, y_pred):
     return np.mean(np.abs(y-y_pred))
 
 points = np.array([[1, 2], [0, 1], [-1.5, 0]])
@@ -326,7 +325,7 @@ blue, green, red = sns.color_palette()[:3]
 
 plt.scatter(x, y, color=blue)
 plt.plot(x_values, y_values_huber, color=red)
-plt.show()
+# plt.show()
 
 lr_squared = SGDRegressor(loss='squared_loss', penalty='none', max_iter=10000)
 
@@ -337,7 +336,7 @@ y_values_huber = lr_huber.predict(
 )
 plt.scatter(x, y, color=blue)
 plt.plot(x_values, y_values_huber, color=red)
-plt.show()
+# plt.show()
 
 #-------------------------------------------------------------------------
 # 3.3.5 EXERCICES
@@ -378,7 +377,7 @@ df_wo_outliers.index = pd.RangeIndex(len(df_wo_outliers.index))
 
 # plot wo outliers
 plot_(df_wo_outliers)
-plt.show()
+# plt.show()
 
 #------------------------------------------------------------------------------
 # linear regression with Huber loss
@@ -423,13 +422,16 @@ try:
         i = i + 1
 
     plt.legend()        
-    plt.show()
+    # plt.show()
  
 except ValueError :
     print (i)
 
 ar_lr_huber_coef
 pd.DataFrame(ar_lr_huber_coef, columns=[''])
+
+#------------------------------------------------------------------------------
+
             
 #-------------------------------------------------------------------------
 # 3.3.8 
@@ -468,7 +470,7 @@ dummy.fit(x[:, np.newaxis], y)
 pred_baseline = dummy.predict(x[:, np.newaxis])
 
 #-------------------------------------------------------------------------
-# 3.3.8
+# 3.3.8 Exercices
 #-------------------------------------------------------------------------
 
 data_file =  data_dir.joinpath('bike-sharing-test.csv')
@@ -476,6 +478,9 @@ df_test = pd.read_csv(data_file)
 
 data_file = data_dir.joinpath('bike-sharing-train.csv')
 df_train = pd.read_csv(data_file)
+
+df_test.sort_values(by=['temp'], inplace=True)
+df_train.sort_values(by=['temp'], inplace=True)
 
 x_train = df_train.temp.values
 y_train = df_train.users.values
@@ -510,18 +515,188 @@ plt.plot([y_train.mean(), y_train.mean()],
          [0, 50], color='red')
 plt.show()
 
-plt.scatter(x_train, y_train)
-for i in np.arange(1, 10):
-    coefs = np.polyfit(x_train, y_train, deg = i)
-    y_pred = np.polyval(coefs, x_train)
 
-    plt.scatter(x_train, y_pred, marker='o',
-                label=(np.sqrt(mse(y_train, y_pred)), i))
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+def fit_dummy(x, y):
+    params = []
+    param = {'id_fit' : 0, 'coefs' : (), 'rmse' : 0, 'mae' : 0, 'typ' : "", 'fit_step' : ""}
 
-plt.legend()
+    plt.scatter(x, y)
+
+    dummy = DummyRegressor(strategy='median')
+    dummy.fit(x[:, np.newaxis], y)
+
+    y_pred = dummy.predict(x[:, np.newaxis])
+
+    rmse = np.sqrt(mse(y, y_pred))
+    res_mae = mae(y, y_pred)
+
+    param['typ'] = 'dummy'
+    param['fit_step'] = 'train'
+    param['id_fit'] = i
+    param['coefs'] = ''
+    param['rmse'] = rmse
+    param['mae'] = res_mae
+
+
+    params.append(param)
+
+    plt.plot(x, y_pred, label = param)
+    plt.show()
+
+    return pd.DataFrame(params)
+
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+def fit_huber(x, y):
+    
+    params = []
+    
+    plt.scatter(x, y)
+    i = 0
+    
+    try:
+        for ep in np.linspace(1.1, 1.5, 8):
+            param = {'id_fit' : 0, 'coefs' : (), 'rmse' : 0, 'mae' : 0, 'typ' : "", 'fit_step' : ""}
+            
+            lr_huber = HuberRegressor(epsilon=ep)
+            lr_huber.fit(x[:, np.newaxis], y)
+            y_pred = lr_huber.predict(
+                x[:, np.newaxis] 
+            )
+
+            coefs = (ep, lr_huber.coef_, lr_huber.intercept_)
+              
+            rmse = np.sqrt(mse(y, y_pred))
+            res_mae = mae(y, y_pred)
+            
+            param['typ'] = 'huber'
+            param['fit_step'] = 'train'
+            param['id_fit'] = i
+            param['coefs'] = coefs
+            param['rmse'] = rmse
+            param['mae'] = res_mae
+
+            params.append(param)
+
+            plt.plot(x, y_pred, 
+                     color=sns.color_palette()[np.mod(i,6)], 
+                     label=param)
+            i = i + 1
+
+        plt.legend()        
+        plt.show()
+ 
+    except ValueError :
+        print (i)
+
+    return pd.DataFrame(params)
+
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+def fit_poly(x, y):
+
+    params = []
+    plt.scatter(x, y)
+    for i in (1, 3, 5):
+        param = {'id_fit' : 0, 'coefs' : (), 'rmse' : 0, 'mae' : 0, 'typ' : "", 'fit_step' : ""}
+
+        coefs = np.polyfit(x, y, deg = i)
+        y_pred = np.polyval(coefs, x)
+
+        rmse = np.sqrt(mse(y, y_pred))
+        res_mae = mae(y, y_pred)
+
+        param['typ'] = 'poly'
+        param['fit_step'] = 'train'
+        param['id_fit'] = i
+        param['coefs'] = coefs
+        param['rmse'] = rmse
+        param['mae'] = res_mae
+
+        params.append(param)
+        
+        plt.plot(x, y_pred, label=param, linewidth=1)
+
+    plt.legend()
+    plt.show()
+
+    return pd.DataFrame(params)
+
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+def fit_compare():
+    
+    data_file = data_dir.joinpath('bike-sharing-train.csv')
+    df_train = pd.read_csv(data_file)
+
+    df_train.sort_values(by=['temp'], inplace=True)
+
+    x_train = df_train.temp.values
+    y_train = df_train.users.values
+
+    df_poly = fit_poly (x_train, y_train)
+    df_huber = fit_huber (x_train, y_train)
+    df_dummy = fit_dummy (x_train, y_train)
+
+    df_compare = pd.concat([x, y, z])
+    df_compare.index = pd.RangeIndex(len(df_compare.index))
+
+    return df_compare
+
+df_fit = fit_compare()
+plt.bar(df_fit.index, df.mae)
+plt.xticks(df_fit.index, df.typ)
 plt.show()
 
+#------------------------------------------------------------------------------
+# Apply fit selection on test data
+#------------------------------------------------------------------------------
+# def evaluate_fit(df_fit):
 
+data_file =  data_dir.joinpath('bike-sharing-test.csv')
+df_test = pd.read_csv(data_file)
 
+df_test.sort_values(by=['temp'], inplace=True)
+x_test = df_test.temp.values
+y_test = df_test.users.values
+   
+params = []
+for row in df_fit.iterrows():
+    
+    y_pred = None;
 
+    if row['typ'] == 'poly':
+        y_pred = np.polyval(row['coefs'], x_test)
+    
+    if row['typ'] == 'huber':
+               
+        ep = row['coefs'].values[0][0]
+        coef = row['coefs'].values[0][1][0]
+        intercept = row['coefs'].values[0][1][1]
+        
+        lr_huber = HuberRegressor(epsilon=ep)
+        lr_huber.coef_ = coef
+        lr_huber.intercept_ = intercept
 
+        y_pred = lr_huber.predict(
+                x_test[:, np.newaxis] 
+        )
+
+    if row['typ'] == 'dummy':
+        dummy = DummyRegressor(strategy='median')
+        y_pred = dummy.predict(x_test[:, np.newaxis])
+
+    rmse = np.sqrt(mse(y_test, y_pred))
+    res_mae = mae(y_test, y_pred)
+
+    param['typ'] = row['typ']
+    param['fit_step'] = 'test'
+    param['id_fit'] = row['id_fit']
+    param['coefs'] = row['coefs']
+    param['rmse'] = rmse
+    param['mae'] = res_mae
+
+    params.append(params)
+           
