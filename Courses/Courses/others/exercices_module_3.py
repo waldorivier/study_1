@@ -11,6 +11,8 @@ from pandas.tseries.offsets import *
 import calendar
 from sklearn.linear_model import SGDRegressor
 from sklearn.linear_model import HuberRegressor
+from sklearn.dummy import DummyRegressor
+
 
 #-------------------------------------------------------------------------
 # répertoire de travail
@@ -157,8 +159,7 @@ RSS(y, y_values)
 # 3.2.8
 #-------------------------------------------------------------------------
 
-def MSE(y, y_pred):
-    assert y.size == y_pred.size
+def mse(y, y_pred):
     return np.mean(np.square(y - y_pred))
     
 data_file =  data_dir.joinpath('bike-sharing-simple.csv')
@@ -342,12 +343,10 @@ plt.show()
 # 3.3.5 EXERCICES
 #-------------------------------------------------------------------------
 
-data_file =  data_dir.joinpath('brain-and-body-weights.csv')
+data_file = data_dir.joinpath('brain-and-body-weights.csv')
 data_df = pd.read_csv(data_file)
 
 # linear regression
-
-x_values = np.linspace(log_body_values.min(), log_body_values.max(), 1000)
 
 data_df_ = data_df.copy()
 data_df_.body = np.log(data_df_.body)
@@ -385,26 +384,53 @@ plt.show()
 # linear regression with Huber loss
 #------------------------------------------------------------------------------
 
-blue, green, red = sns.color_palette()[:3]
+data_file =  data_dir.joinpath('brain-and-body-weights.csv')
+data_df = pd.read_csv(data_file)
+
+# linear regression
+
+data_df_ = data_df.copy()
+data_df_.body = np.log(data_df_.body)
+data_df_.brain = np.log(data_df_.brain)
 
 x = data_df_.body.values
 y = data_df_.brain.values
 
 x_values = np.linspace(data_df_.body.min(), data_df_.body.max(), 100)
 
-plt.scatter(x, y, color=blue)
-for ep in np.linspace(1.30, 1.35, 8):
+ar_lr_huber_coef = []
 
-    lr_huber = HuberRegressor(epsilon = 1.35)
-    lr_huber.fit(x[:, np.newaxis], y)
-    y_values_huber = lr_huber.predict(
-        x_values[:, np.newaxis] 
-    )
+plt.scatter(x, y)
+i = 0
 
-    plt.plot(x_values, y_values_huber, color=red)
+# ep increase => the regression line get closer the outliers
 
-plt.show()
+try:
+    for ep in np.linspace(1.1, 1.5, 8):
+    
+        lr_huber = HuberRegressor(epsilon=ep)
+        lr_huber.fit(x[:, np.newaxis], y)
+        y_values_huber = lr_huber.predict(
+            x_values[:, np.newaxis] 
+        )
 
+        t_hr = (ep, lr_huber.coef_, lr_huber.intercept_)
+        ar_lr_huber_coef.append(t_hr)
+    
+        plt.plot(x_values, y_values_huber, 
+                 color=sns.color_palette()[np.mod(i,6)], 
+                 label=t_hr)
+        i = i + 1
+
+    plt.legend()        
+    plt.show()
+ 
+except ValueError :
+    print (i)
+
+ar_lr_huber_coef
+pd.DataFrame(ar_lr_huber_coef, columns=[''])
+            
 #-------------------------------------------------------------------------
 # 3.3.8 
 #-------------------------------------------------------------------------
@@ -423,3 +449,79 @@ plt.plot(x, data_df.pred_poly3, label='polyfit(deg=3)')
 plt.plot(x, data_df.pred_huber3, label='with Huber loss')
 plt.legend()
 plt.show()
+
+y=[]
+
+a = [1, 2, 3, 5, 6, 25]
+x = pd.Series(a)
+
+for i in np.arange(0, 25):
+    y.append(np.mean(np.abs(x-i)))
+
+plt.plot(y, label='mae')
+plt.legend()
+plt.show()
+
+dummy = DummyRegressor(strategy='mean')
+dummy.fit(x[:, np.newaxis], y)
+        
+pred_baseline = dummy.predict(x[:, np.newaxis])
+
+#-------------------------------------------------------------------------
+# 3.3.8
+#-------------------------------------------------------------------------
+
+data_file =  data_dir.joinpath('bike-sharing-test.csv')
+df_test = pd.read_csv(data_file)
+
+data_file = data_dir.joinpath('bike-sharing-train.csv')
+df_train = pd.read_csv(data_file)
+
+x_train = df_train.temp.values
+y_train = df_train.users.values
+
+# remove outliers on train set
+
+def z_score (x):
+    return (x - x.mean()) / x.std()
+
+z_scores = z_score(y_train)
+
+plt.scatter(x_train, y_train, c=z_scores, cmap=plt.cm.coolwarm)
+plt.colorbar()
+plt.show()
+
+# remove all values with z_score > 1.5
+
+outliers = z_scores > 1.5
+
+df_train_wo_outliers = df_train[~outliers]
+df_train_wo_outliers.index = pd.RangeIndex(len(df_train_wo_outliers.index))
+
+x_train = df_train_wo_outliers.temp.values
+y_train = df_train_wo_outliers.users.values
+
+# fill an array with identical value
+a_mean = np.full(x_train.size, y_train.mean())
+
+# trace a line at the mean
+df_train_wo_outliers.users.hist()
+plt.plot([y_train.mean(), y_train.mean()], 
+         [0, 50], color='red')
+plt.show()
+
+plt.scatter(x_train, y_train)
+for i in np.arange(1, 10):
+    coefs = np.polyfit(x_train, y_train, deg = i)
+    y_pred = np.polyval(coefs, x_train)
+
+    plt.scatter(x_train, y_pred, marker='o',
+                label=(np.sqrt(mse(y_train, y_pred)), i))
+
+plt.legend()
+plt.show()
+
+
+
+
+
