@@ -514,5 +514,17 @@ plt.show()
 # 3.4.5 
 #-------------------------------------------------------------------------
 
+lr = LinearRegression()
+lr.fit(X, y)
+print('Coefficients:', lr.coef_)
 
+#-------------------------------------------------------------------------
+# 3.4.7
+#-------------------------------------------------------------------------
 
+data_file =  data_dir.joinpath('bike-sharing-simple.csv')
+data_df = pd.read_csv(data_file)
+
+temp = data_df.temp.values
+users = data_df.users.values
+temp_C = 47*temp - 8
