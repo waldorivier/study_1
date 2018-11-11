@@ -236,3 +236,4 @@ plt.bar(df_test.index, df_test.rmse, color='blue')
 plt.show() 
 
 df_fit.mae
+

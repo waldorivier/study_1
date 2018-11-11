@@ -12,6 +12,9 @@ import calendar
 from sklearn.linear_model import SGDRegressor
 from sklearn.linear_model import HuberRegressor
 from sklearn.dummy import DummyRegressor
+from scipy.linalg import lstsq
+from sklearn.linear_model import LinearRegression
+
 
 #-------------------------------------------------------------------------
 # répertoire de travail
@@ -470,233 +473,46 @@ dummy.fit(x[:, np.newaxis], y)
 pred_baseline = dummy.predict(x[:, np.newaxis])
 
 #-------------------------------------------------------------------------
-# 3.3.8 Exercices
+# 3.3.9 Multivariables
 #-------------------------------------------------------------------------
 
-data_file =  data_dir.joinpath('bike-sharing-test.csv')
-df_test = pd.read_csv(data_file)
+data_file =  data_dir.joinpath('marketing-campaign-with-outliers.csv')
+data_df = pd.read_csv(data_file)
 
-data_file = data_dir.joinpath('bike-sharing-train.csv')
-df_train = pd.read_csv(data_file)
+target = 'sales'
+features = data_df.columns.tolist()
+features.remove(target)
 
-df_test.sort_values(by=['temp'], inplace=True)
-df_train.sort_values(by=['temp'], inplace=True)
-
-x_train = df_train.temp.values
-y_train = df_train.users.values
-
-# remove outliers on train set
-
-def z_score (x):
-    return (x - x.mean()) / x.std()
-
-z_scores = z_score(y_train)
-
-plt.scatter(x_train, y_train, c=z_scores, cmap=plt.cm.coolwarm)
-plt.colorbar()
+sns.pairplot(data_df, 
+             x_vars=features,
+             y_vars=[target], 
+             kind="reg",
+             plot_kws={'line_kws':{'color':'red'}})
 plt.show()
 
-# remove all values with z_score > 1.5
+X = data_df.drop('sales', axis=1).values
+print('X:', X.shape) # Prints: (50, 3)
 
-outliers = z_scores > 1.5
+y = data_df.sales.values
 
-df_train_wo_outliers = df_train[~outliers]
-df_train_wo_outliers.index = pd.RangeIndex(len(df_train_wo_outliers.index))
+w, rss, _, _ = lstsq(X, y)
 
-x_train = df_train_wo_outliers.temp.values
-y_train = df_train_wo_outliers.users.values
+X1 = np.c_[
+    np.ones(X.shape[0]), # Vector of ones of shape (n,)
+    X # X matrix of shape (n,p)
+]
 
-# fill an array with identical value
-a_mean = np.full(x_train.size, y_train.mean())
+w, rss, _, _ = lstsq(X1, y)
 
-# trace a line at the mean
-df_train_wo_outliers.users.hist()
-plt.plot([y_train.mean(), y_train.mean()], 
-         [0, 50], color='red')
+y_pred = np.matmul(X1, w)
+print('y_pred:', y_pred.shape) # Prints: (50,)
+
+plt.scatter(y, y_pred, color = ['red', 'blue'])
 plt.show()
 
-
-#------------------------------------------------------------------------------
-#------------------------------------------------------------------------------
-def fit_dummy(x, y):
-    params = []
-    param = {'id_fit' : 0, 'coefs' : (), 'rmse' : 0, 'mae' : 0, 'typ' : "", 'fit_step' : ""}
-
-    plt.scatter(x, y)
-
-    dummy = DummyRegressor(strategy='median')
-    dummy.fit(x[:, np.newaxis], y)
-
-    y_pred = dummy.predict(x[:, np.newaxis])
-
-    rmse = np.sqrt(mse(y, y_pred))
-    res_mae = mae(y, y_pred)
-
-    param['typ'] = 'dummy'
-    param['fit_step'] = 'train'
-    param['id_fit'] = i
-    param['coefs'] = ''
-    param['rmse'] = rmse
-    param['mae'] = res_mae
+#-------------------------------------------------------------------------
+# 3.4.5 
+#-------------------------------------------------------------------------
 
 
-    params.append(param)
 
-    plt.plot(x, y_pred, label = param)
-    plt.show()
-
-    return pd.DataFrame(params)
-
-#------------------------------------------------------------------------------
-#------------------------------------------------------------------------------
-def fit_huber(x, y):
-    
-    params = []
-    
-    plt.scatter(x, y)
-    i = 0
-    
-    try:
-        for ep in np.linspace(1.1, 1.5, 8):
-            param = {'id_fit' : 0, 'coefs' : (), 'rmse' : 0, 'mae' : 0, 'typ' : "", 'fit_step' : ""}
-            
-            lr_huber = HuberRegressor(epsilon=ep)
-            lr_huber.fit(x[:, np.newaxis], y)
-            y_pred = lr_huber.predict(
-                x[:, np.newaxis] 
-            )
-
-            coefs = (ep, lr_huber.coef_, lr_huber.intercept_)
-              
-            rmse = np.sqrt(mse(y, y_pred))
-            res_mae = mae(y, y_pred)
-            
-            param['typ'] = 'huber'
-            param['fit_step'] = 'train'
-            param['id_fit'] = i
-            param['coefs'] = coefs
-            param['rmse'] = rmse
-            param['mae'] = res_mae
-
-            params.append(param)
-
-            plt.plot(x, y_pred, 
-                     color=sns.color_palette()[np.mod(i,6)], 
-                     label=param)
-            i = i + 1
-
-        plt.legend()        
-        plt.show()
- 
-    except ValueError :
-        print (i)
-
-    return pd.DataFrame(params)
-
-#------------------------------------------------------------------------------
-#------------------------------------------------------------------------------
-def fit_poly(x, y):
-
-    params = []
-    plt.scatter(x, y)
-    for i in (1, 3, 5):
-        param = {'id_fit' : 0, 'coefs' : (), 'rmse' : 0, 'mae' : 0, 'typ' : "", 'fit_step' : ""}
-
-        coefs = np.polyfit(x, y, deg = i)
-        y_pred = np.polyval(coefs, x)
-
-        rmse = np.sqrt(mse(y, y_pred))
-        res_mae = mae(y, y_pred)
-
-        param['typ'] = 'poly'
-        param['fit_step'] = 'train'
-        param['id_fit'] = i
-        param['coefs'] = coefs
-        param['rmse'] = rmse
-        param['mae'] = res_mae
-
-        params.append(param)
-        
-        plt.plot(x, y_pred, label=param, linewidth=1)
-
-    plt.legend()
-    plt.show()
-
-    return pd.DataFrame(params)
-
-#------------------------------------------------------------------------------
-#------------------------------------------------------------------------------
-def fit_compare():
-    
-    data_file = data_dir.joinpath('bike-sharing-train.csv')
-    df_train = pd.read_csv(data_file)
-
-    df_train.sort_values(by=['temp'], inplace=True)
-
-    x_train = df_train.temp.values
-    y_train = df_train.users.values
-
-    df_poly = fit_poly (x_train, y_train)
-    df_huber = fit_huber (x_train, y_train)
-    df_dummy = fit_dummy (x_train, y_train)
-
-    df_compare = pd.concat([x, y, z])
-    df_compare.index = pd.RangeIndex(len(df_compare.index))
-
-    return df_compare
-
-df_fit = fit_compare()
-plt.bar(df_fit.index, df.mae)
-plt.xticks(df_fit.index, df.typ)
-plt.show()
-
-#------------------------------------------------------------------------------
-# Apply fit selection on test data
-#------------------------------------------------------------------------------
-# def evaluate_fit(df_fit):
-
-data_file =  data_dir.joinpath('bike-sharing-test.csv')
-df_test = pd.read_csv(data_file)
-
-df_test.sort_values(by=['temp'], inplace=True)
-x_test = df_test.temp.values
-y_test = df_test.users.values
-   
-params = []
-for row in df_fit.iterrows():
-    
-    y_pred = None;
-
-    if row['typ'] == 'poly':
-        y_pred = np.polyval(row['coefs'], x_test)
-    
-    if row['typ'] == 'huber':
-               
-        ep = row['coefs'].values[0][0]
-        coef = row['coefs'].values[0][1][0]
-        intercept = row['coefs'].values[0][1][1]
-        
-        lr_huber = HuberRegressor(epsilon=ep)
-        lr_huber.coef_ = coef
-        lr_huber.intercept_ = intercept
-
-        y_pred = lr_huber.predict(
-                x_test[:, np.newaxis] 
-        )
-
-    if row['typ'] == 'dummy':
-        dummy = DummyRegressor(strategy='median')
-        y_pred = dummy.predict(x_test[:, np.newaxis])
-
-    rmse = np.sqrt(mse(y_test, y_pred))
-    res_mae = mae(y_test, y_pred)
-
-    param['typ'] = row['typ']
-    param['fit_step'] = 'test'
-    param['id_fit'] = row['id_fit']
-    param['coefs'] = row['coefs']
-    param['rmse'] = rmse
-    param['mae'] = res_mae
-
-    params.append(params)
-           

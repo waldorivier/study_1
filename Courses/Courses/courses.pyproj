@@ -4,14 +4,14 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>025b859f-91ae-4c8a-a47a-428b2d610a26</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>projects\course_2.py</StartupFile>
+    <StartupFile>others\exercices_module_3_3_8.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
     <Name>Courses</Name>
     <RootNamespace>Courses</RootNamespace>
-    <InterpreterId>CondaEnv|CondaEnv|env</InterpreterId>
+    <InterpreterId>MSBuild|env|$(MSBuildProjectFullPath)</InterpreterId>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -22,6 +22,10 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="others\exercices_module_3_3_8.py" />
+    <Compile Include="others\exercices_module_3.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="projects\course_1.py">
       <SubType>Code</SubType>
     </Compile>
@@ -34,11 +38,10 @@
     <Compile Include="others\utilities.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="others\others.py" />
-    <Compile Include="others\plot.py" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Data\" />
+    <Folder Include="Data\module_3\" />
     <Folder Include="others\" />
     <Folder Include="others\" />
     <Folder Include="projects\" />
@@ -55,9 +58,6 @@
     <Content Include="Data\songs.csv" />
     <Content Include="Data\tmdb_5000_movies.csv" />
     <Content Include="Data\webscraping.html" />
-  </ItemGroup>
-  <ItemGroup>
-    <InterpreterReference Include="CondaEnv|CondaEnv|env" />
   </ItemGroup>
   <ItemGroup>
     <Interpreter Include="env\">
