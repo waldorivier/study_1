@@ -14,7 +14,7 @@ from sklearn.linear_model import HuberRegressor
 from sklearn.dummy import DummyRegressor
 from scipy.linalg import lstsq
 from sklearn.linear_model import LinearRegression
-
+import itertools
 
 #-------------------------------------------------------------------------
 # répertoire de travail
@@ -519,8 +519,11 @@ lr.fit(X, y)
 print('Coefficients:', lr.coef_)
 
 #-------------------------------------------------------------------------
-# 3.4.7
+# 3.4.7 Collinearity
 #-------------------------------------------------------------------------
+
+# Collinearity :  si la matrice possède des dépendances linéaire, par conséquent n'est
+# pas inversible 
 
 data_file =  data_dir.joinpath('bike-sharing-simple.csv')
 data_df = pd.read_csv(data_file)
@@ -528,3 +531,75 @@ data_df = pd.read_csv(data_file)
 temp = data_df.temp.values
 users = data_df.users.values
 temp_C = 47*temp - 8
+
+X = np.c_[temp, temp_C]
+X1 = np.c_[np.ones(X.shape[0]), X]
+
+w, rss, rank, _ = lstsq(X1, users)
+
+from sklearn.metrics import r2_score
+
+coefs = np.polyfit(temp, users, deg=1)
+y_pred_normal = np.polyval(coefs, temp)
+r2_normal = r2_score(users, y_pred_normal)
+
+plt.scatter(temp, y_pred_normal)
+plt.show()
+
+plt.scatter(temp, users)
+plt.show()
+
+temp_F = 1.8*temp_C + 32
+
+# ajouter du bruit
+noise = np.random.normal(loc=0, scale=0.01, size=temp_F.shape)
+temp_F = temp_F + noise
+
+X = np.c_[temp_C, temp_F]
+X1 = np.c_[np.ones(X.shape[0]), X] # Create X1 matrix
+w, rss, rank, _ = lstsq(X1, users) # OLS
+
+#-------------------------------------------------------------------------
+# 3.4.8 Exercices
+#-------------------------------------------------------------------------
+
+data_file =  data_dir.joinpath('bike-sharing-train.csv')
+data_df = pd.read_csv(data_file)
+
+target = 'casual'
+features = data_df.columns.tolist()
+features.remove(target)
+
+# enumerates all combinaisons from features
+
+results = []
+
+def compute_combination(data_df, target, features):
+
+    res = {'features' : [], 'w' : 0, 'rss' : 0, 'cn' : 0}
+
+    target_values = data_df[target].values
+    
+    data_df.drop([target], axis=1)
+    data_df = data_df[features]
+  
+    X = data_df.values
+    X1 = np.c_[np.ones(X.shape[0]), X]
+
+    w, rss, _, _ = lstsq(X1, target_values)
+    cn = np.linalg.cond(X1)
+
+    res['features'] = features
+    res['w'] = w
+    res['rss'] = rss
+    res['cn'] = cn
+    results.append(res)
+
+
+combs = []
+for i in np.arange(1, len(features)+1):
+    combs.append(i)
+    els = [list(x) for x in itertools.combinations(features, i)]
+    combs.append(els)
+
+
