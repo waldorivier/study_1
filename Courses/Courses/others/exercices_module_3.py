@@ -15,6 +15,8 @@ from sklearn.dummy import DummyRegressor
 from scipy.linalg import lstsq
 from sklearn.linear_model import LinearRegression
 import itertools
+from sklearn.metrics import r2_score
+
 
 #-------------------------------------------------------------------------
 # répertoire de travail
@@ -593,13 +595,52 @@ def compute_combination(data_df, target, features):
     res['w'] = w
     res['rss'] = rss
     res['cn'] = cn
-    results.append(res)
+
+    return res
 
 
 combs = []
 for i in np.arange(1, len(features)+1):
-    combs.append(i)
     els = [list(x) for x in itertools.combinations(features, i)]
-    combs.append(els)
+
+    for el in els:
+        res = compute_combination(data_df, target, el)
+        results.append(res)
+
+# removes all rss = [] which signifies that rank is defficient
+
+df_results = pd.DataFrame(results)
+df_results = df_result[df_results.rss > 0]
+
+# re-index
+df_results.index=np.arange(len(df_results.index))
+df_results.sort_values(['rss', 'cn'], ascending=[True, True], inplace = True)
+
+# keep [temp, hum, windspeed, yr, workingday]
+df_results.loc[258]
+
+#------------------------------------------------------------------------------
+# apply to test data
+#------------------------------------------------------------------------------
+
+data_file =  data_dir.joinpath('bike-sharing-test.csv')
+data_df = pd.read_csv(data_file)
+
+y = data_df['casual'].values
+
+train_parameters = df_results.loc[258]
+
+data_df = data_df[train_parameters.features]
+X = data_df.values
+X1 = np.c_[np.ones(X.shape[0]), X]
+
+y_pred = np.matmul(X1, train_parameters.w)
+r2_score(y, y_pred) 
+
+mae(y, y_pred) 
+
+
+
+
 
 
