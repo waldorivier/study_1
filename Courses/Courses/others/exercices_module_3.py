@@ -18,8 +18,6 @@ import itertools
 from sklearn.metrics import r2_score
 from sklearn.preprocessing import scale
 
-
-
 #-------------------------------------------------------------------------
 # répertoire de travail
 #-------------------------------------------------------------------------
@@ -767,13 +765,15 @@ y_test = np.c_[y_test]
 data_df = data_df[features]
 X_te = data_df.values
  
-X_te_st = (X_te - X_tr.mean()) / X_tr.std()
+X_te_st = (X_te - X_tr.mean(axis=0)) / X_tr.std(axis=0)
 X_te_st = np.c_[np.ones(X_te_st.shape[0]), X_te_st]
 
 y_pred = np.matmul(X_te_st, w_opt)
 np.sqrt(mse(y_test, y_pred))    
 
-
+plt.scatter(y_test, y_test - y_pred, color=['red', 'blue'], label=['Test data','Test prediction data'])
+plt.legend()
+plt.show()
 
 
 
