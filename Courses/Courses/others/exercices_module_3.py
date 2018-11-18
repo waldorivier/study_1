@@ -16,6 +16,8 @@ from scipy.linalg import lstsq
 from sklearn.linear_model import LinearRegression
 import itertools
 from sklearn.metrics import r2_score
+from sklearn.preprocessing import scale
+
 
 
 #-------------------------------------------------------------------------
@@ -610,7 +612,7 @@ for i in np.arange(1, len(features)+1):
 # removes all rss = [] which signifies that rank is defficient
 
 df_results = pd.DataFrame(results)
-df_results = df_result[df_results.rss > 0]
+df_results = df_results[df_results.rss > 0]
 
 # re-index
 df_results.index=np.arange(len(df_results.index))
@@ -638,6 +640,138 @@ y_pred = np.matmul(X1, train_parameters.w)
 r2_score(y, y_pred) 
 
 mae(y, y_pred) 
+
+
+#------------------------------------------------------------------------------
+# 3.5.5 Gradient descent
+#------------------------------------------------------------------------------
+
+data_file =  data_dir.joinpath('bike-sharing-simple.csv')
+data_df = pd.read_csv(data_file)
+
+data_df.head()
+
+#------------------------------------------------------------------------------
+# 3.5.6 error surface
+#------------------------------------------------------------------------------
+
+def visualize_steps(log_a, log_b, x, y):
+    # Define a grid of a,b parameters
+    min_ab = min(min(log_a), min(log_b))
+    max_ab = max(max(log_a), max(log_b))
+
+    d = max_ab - min_ab
+    min_ab -= d * 0.1
+    max_ab += d * 0.1
+
+    a = np.linspace(min_ab, max_ab, num=40)
+    b = np.linspace(min_ab, max_ab, num=40)
+    a_grid, b_grid = np.meshgrid(a, b)
+
+    # Compute the RMSE score for each a,b pair on that grid
+    rmse_grid = np.zeros_like(a_grid)
+
+    for i in range(40):
+        for j in range(40):
+            a, b = a_grid[i, j], b_grid[i, j]
+            rmse_grid[i, j] = rmse(a*x+b, y)
+
+    # RMSE surface
+    plt.gca().set_aspect('equal', adjustable='box')
+    plt.contourf(a_grid, b_grid, rmse_grid, 20, cmap=plt.cm.coolwarm)
+    plt.colorbar(label='RMSE')
+
+    # Plot the GD steps
+    plt.plot(log_a, log_b, c='#00abe9')
+    plt.scatter(log_a, log_b, c='#00abe9')
+
+    # Set titles and labels
+    plt.xlabel('parameter a')
+    plt.ylabel('parameter b')
+
+    plt.xlim(min_ab, max_ab)
+    plt.ylim(min_ab, max_ab)
+    plt.show()
+
+
+#------------------------------------------------------------------------------
+# 3.5.7 Exercices Gradient Descent for multilinear
+#------------------------------------------------------------------------------
+
+# a, b > w
+# w = 0
+
+data_file =  data_dir.joinpath('bike-sharing-train.csv')
+data_df = pd.read_csv(data_file)
+
+target = 'casual'
+features = ['windspeed', 'atemp_C', 'yr', 'workingday', 'holiday']
+
+y_train = data_df[target].values
+y_train = np.c_[y_train]
+    
+data_df = data_df[features]
+X_tr = data_df.values
+X_tr_st = scale(data_df)
+X_tr_st = np.c_[np.ones(X_tr_st.shape[0]), X_tr_st]
+
+# lambda function to compute gradient
+def f_gradient(X, y):
+    
+    _X = X
+    _y = y
+    _N = X.shape[0]
+  
+    def compute_gradient(w) :
+        res = {'gradient' : None, 'rmse' :0}
+
+        y_pred =  np.matmul(_X, w)
+        e = _y - y_pred
+                
+        res['gradient'] = np.matmul(np.transpose(_X), e) * -2 / _N
+        res['rmse'] = np.sqrt(mse(_y, y_pred)) 
+  
+        return res
+
+    return compute_gradient
+
+results = []
+n_steps = 400
+lr = 0.01
+
+gradient = f_gradient(X_tr_st, y_train)
+
+w0 = np.zeros(X_tr_st.shape[1])
+w0 = np.c_[w0]
+res = gradient (w0)
+
+w = w0
+for step in range(n_steps):
+   
+    res = gradient(w)
+    w -= lr * res['gradient']
+    results.append((w, res['rmse']))
+    
+    res = gradient(w)
+
+w_opt, rmse_opt = results[-1]
+
+# apply to test data 
+
+data_file =  data_dir.joinpath('bike-sharing-train.csv')
+data_df = pd.read_csv(data_file)
+
+y_test = data_df[target].values
+y_test = np.c_[y_test]
+
+data_df = data_df[features]
+X_te = data_df.values
+ 
+X_te_st = (X_te - X_tr.mean()) / X_tr.std()
+X_te_st = np.c_[np.ones(X_te_st.shape[0]), X_te_st]
+
+y_pred = np.matmul(X_te_st, w_opt)
+np.sqrt(mse(y_test, y_pred))    
 
 
 

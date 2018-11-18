@@ -224,6 +224,7 @@ def fit_test(df_fit):
 
     return pd.DataFrame(params)
 
+
 df_fit = fit_compare()
 
 plt.bar(df_fit.index, df_fit.rmse, color='red')
