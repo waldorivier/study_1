@@ -777,4 +777,31 @@ plt.show()
 
 
 
+#------------------------------------------------------------------------------
+# 3.6.3 Features
+#------------------------------------------------------------------------------
 
+from sklearn.preprocessing import PolynomialFeatures
+
+data_file =  data_dir.joinpath('electric-car.csv')
+data_df = pd.read_csv(data_file)
+
+y = data_df.iloc[:,1].values
+x = data_df.iloc[:,0].values
+
+plt.scatter(x, y)
+plt.show()
+
+pf_obj = PolynomialFeatures(degree=2)
+
+# Create the polynomial features
+
+X2 = pf_obj.fit_transform(x[:, np.newaxis]
+X2t = np.transpose(X2)
+plt.scatter(X2t[1], X2t[2])
+plt.show()
+
+linreg = LinearRegression()
+
+# Fit it
+linreg.fit(X2, y)
