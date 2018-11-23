@@ -776,7 +776,6 @@ plt.legend()
 plt.show()
 
 
-
 #------------------------------------------------------------------------------
 # 3.6.3 Features
 #------------------------------------------------------------------------------
@@ -796,12 +795,152 @@ pf_obj = PolynomialFeatures(degree=2)
 
 # Create the polynomial features
 
-X2 = pf_obj.fit_transform(x[:, np.newaxis]
+X2 = pf_obj.fit_transform(x[:, np.newaxis])
+
 X2t = np.transpose(X2)
 plt.scatter(X2t[1], X2t[2])
 plt.show()
+
+# linear regression on featured data
 
 linreg = LinearRegression()
 
 # Fit it
 linreg.fit(X2, y)
+
+x_values = np.linspace(min(x), max(x), num=100)
+X_values2 = pf_obj.transform(x_values[:, np.newaxis])
+
+y_values = linreg.predict(X_values2)
+
+print(np.sqrt(mse(x_values, y_values)))
+
+# Plot predictions
+plt.scatter(x, y)
+plt.plot(x_values, y_values, color='red')
+plt.show()
+
+#------------------------------------------------------------------------------
+# 3.6.6 Categorical Data, one-hot encoding, dummy variables
+#------------------------------------------------------------------------------
+
+data_file =  data_dir.joinpath('bike-sharing-cat.csv')
+data_df = pd.read_csv(data_file)
+
+X = data_df[['temp']].values
+y = data_df.casual.values
+
+lr = LinearRegression()
+lr.fit(X, y)
+
+# R**2
+lr.score(X, y) # 0.295
+
+X = data_df.drop(['casual'], axis = 1).values
+y = data_df.casual.values
+
+# Fit a linear regression
+lr = LinearRegression()
+lr.fit(X, y)
+lr.score(X, y) # 0.29
+
+encoded_df = pd.get_dummies(data_df, columns=['weekday'])
+
+# Create X/y data
+X = encoded_df.drop(['casual'], axis=1).values
+y = encoded_df.casual.values
+
+# Fit a linear regression
+lr = LinearRegression()
+lr.fit(X, y)
+lr.score(X, y) # 0.595
+
+#------------------------------------------------------------------------------
+# 3.6.7 Exercices
+#------------------------------------------------------------------------------
+
+from sklearn.model_selection import train_test_split
+
+data_file =  data_dir.joinpath('bike-sharing.csv')
+data_df = pd.read_csv(data_file)
+
+target = 'casual'
+cat_col_list = ['workingday', 'holiday', 'weekday', 'season', 'weathersit']
+
+def evaluate_model(data_df):
+    
+    encoded_df = pd.get_dummies(data_df, columns=cat_col_list)
+
+    col_list =  encoded_df.columns
+    col_list_wo_target = col_list.drop(target)
+
+    X = encoded_df[col_list_wo_target].values
+    y = encoded_df[target].values
+    y = np.c_[y]
+
+    X_tr, X_te, y_tr, y_te = train_test_split(
+        X, y, train_size = 0.5, test_size = 0.5, random_state=1)
+
+    lr = LinearRegression()
+    lr.fit(X_tr, y_tr)
+
+    y_pred_tr = lr.predict(X_tr)
+    y_pred_te = lr.predict(X_te)
+   
+    # determine the median data 
+
+    dummy = DummyRegressor(strategy='median')
+    dummy.fit(X_tr, y_tr)
+    y_pred_base = dummy.predict(X_te)
+
+    row = {}
+
+    row['features']     = data_df.columns
+    row['mae_tr']       = mae(y_pred_tr, y_tr)
+    row['mae_te']       = mae(y_pred_te, y_te)
+    row['mae_baseline'] = mae(y_pred_base, y_te)
+    row['temp']         = pd.Series(X_te[:,0])
+    row['y_te']         = pd.Series(y_te[:,0])
+    row['y_pred_te']    = pd.Series(y_pred_te[:,0])
+
+    results.append(row)
+
+# evaluate base 
+
+results = []
+evaluate_model(data_df)
+
+# adding poly features 
+
+data_df_ = data_df.copy()
+
+data_df_['temp_2'] = data_df_['temp'] ** 2
+data_df_['temp_3'] = data_df_['temp'] ** 3
+
+evaluate_model(data_df_)
+
+dr = pd.DataFrame(results)
+
+i_c = 0
+for i in np.arange(len(dr.temp)):
+
+    i_c+=1
+    color=sns.color_palette()[np.mod(i_c, 6)]
+    plt.scatter(dr.temp[i].values, dr.y_te[i].values, color=color, label="observations " + str(i))
+
+    i_c+=1
+    color=sns.color_palette()[np.mod(i_c, 6)]
+    plt.scatter(dr.temp[i].values, dr.y_pred_te[i].values, color=color, label="predictions " + str(i))
+
+plt.legend()
+plt.xlabel('temperatures')
+plt.ylabel('users')
+plt.show()
+
+# split in datas in two sets (wdays an non wdays)
+
+data_df_wdays = data_df.copy()
+
+split = data_df_wdays.
+
+data_df_wdays = data_df_wdays[data_df_wdays]
