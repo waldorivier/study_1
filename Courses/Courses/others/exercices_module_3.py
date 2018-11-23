@@ -867,7 +867,7 @@ data_df = pd.read_csv(data_file)
 target = 'casual'
 cat_col_list = ['workingday', 'holiday', 'weekday', 'season', 'weathersit']
 
-def evaluate_model(data_df):
+def evaluate_model(data_df, tag):
     
     encoded_df = pd.get_dummies(data_df, columns=cat_col_list)
 
@@ -894,7 +894,6 @@ def evaluate_model(data_df):
     y_pred_base = dummy.predict(X_te)
 
     row = {}
-
     row['features']     = data_df.columns
     row['mae_tr']       = mae(y_pred_tr, y_tr)
     row['mae_te']       = mae(y_pred_te, y_te)
@@ -902,22 +901,37 @@ def evaluate_model(data_df):
     row['temp']         = pd.Series(X_te[:,0])
     row['y_te']         = pd.Series(y_te[:,0])
     row['y_pred_te']    = pd.Series(y_pred_te[:,0])
+    row['tag']          = tag
 
     results.append(row)
 
+#------------------------------------------------------------------------------
 # evaluate base 
 
 results = []
-evaluate_model(data_df)
+evaluate_model(data_df, 'original')
 
 # adding poly features 
 
+data_df_pol = data_df.copy()
+
+data_df_pol['temp_2'] = data_df_pol['temp'] ** 2
+data_df_pol['temp_3'] = data_df_pol['temp'] ** 3
+
+evaluate_model(data_df_pol, 'poly')
+
+# split in datas in two sets (wdays an non wdays)
+
 data_df_ = data_df.copy()
+cond_split = data_df_.workingday == 1
 
-data_df_['temp_2'] = data_df_['temp'] ** 2
-data_df_['temp_3'] = data_df_['temp'] ** 3
+data_df_wdays = data_df_[cond_split]
+evaluate_model(data_df_wdays, 'working days')
 
-evaluate_model(data_df_)
+data_df_non_wdays = data_df_[~cond_split]
+evaluate_model(data_df_non_wdays, 'non working days')
+
+#------------------------------------------------------------------------------
 
 dr = pd.DataFrame(results)
 
@@ -926,21 +940,13 @@ for i in np.arange(len(dr.temp)):
 
     i_c+=1
     color=sns.color_palette()[np.mod(i_c, 6)]
-    plt.scatter(dr.temp[i].values, dr.y_te[i].values, color=color, label="observations " + str(i))
+    plt.scatter(dr.temp[i].values, dr.y_te[i].values, color=color, label=dr.tag[i])
 
     i_c+=1
     color=sns.color_palette()[np.mod(i_c, 6)]
-    plt.scatter(dr.temp[i].values, dr.y_pred_te[i].values, color=color, label="predictions " + str(i))
+    plt.scatter(dr.temp[i].values, dr.y_pred_te[i].values, color=color, label=dr.tag[i])
 
 plt.legend()
 plt.xlabel('temperatures')
 plt.ylabel('users')
 plt.show()
-
-# split in datas in two sets (wdays an non wdays)
-
-data_df_wdays = data_df.copy()
-
-split = data_df_wdays.
-
-data_df_wdays = data_df_wdays[data_df_wdays]
