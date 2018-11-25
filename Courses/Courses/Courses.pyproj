@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>025b859f-91ae-4c8a-a47a-428b2d610a26</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>others\exercices_module_3_3_8.py</StartupFile>
+    <StartupFile>others\exercices_module_3_7.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -22,6 +22,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="others\exercices_module_3_7.py" />
     <Compile Include="others\exercices_module_3_3_8.py" />
     <Compile Include="others\exercices_module_3.py">
       <SubType>Code</SubType>
