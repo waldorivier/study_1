@@ -775,7 +775,6 @@ plt.scatter(y_test, y_test - y_pred, color=['red', 'blue'], label=['Test data','
 plt.legend()
 plt.show()
 
-
 #------------------------------------------------------------------------------
 # 3.6.3 Features
 #------------------------------------------------------------------------------
@@ -861,14 +860,31 @@ lr.score(X, y) # 0.595
 
 from sklearn.model_selection import train_test_split
 
-data_file =  data_dir.joinpath('bike-sharing.csv')
-data_df = pd.read_csv(data_file)
+def plot_models(data_df):
 
-target = 'casual'
-cat_col_list = ['workingday', 'holiday', 'weekday', 'season', 'weathersit']
+    i_c = 0
+    for i in np.arange(len(data_df.temp)):
 
-def evaluate_model(data_df, tag):
+        i_c += 1
+        color=sns.color_palette()[np.mod(i_c, 6)]
+        plt.scatter(data_df.temp[i].values, data_df.y_te[i].values, color=color, label=data_df.tag[i])
+
+        if data_df.prediction[i]:
+
+            i_c += 1
+            color=sns.color_palette()[np.mod(i_c, 6)]
+            plt.scatter(data_df.temp[i].values, data_df.y_pred_te[i].values, color=color, label=data_df.tag[i] + 
+                         str(" prediction"))
+   
+    plt.legend()
+    plt.show()
+   
+
+def evaluate_model(data_df, tag, prediction):
     
+    target = 'casual'
+    cat_col_list = ['workingday', 'holiday', 'weekday', 'season', 'weathersit']
+
     encoded_df = pd.get_dummies(data_df, columns=cat_col_list)
 
     col_list =  encoded_df.columns
@@ -884,8 +900,9 @@ def evaluate_model(data_df, tag):
     lr = LinearRegression()
     lr.fit(X_tr, y_tr)
 
-    y_pred_tr = lr.predict(X_tr)
-    y_pred_te = lr.predict(X_te)
+    # negatives values not allowed 
+    y_pred_tr = np.maximum(lr.predict(X_tr), 0)
+    y_pred_te = np.maximum(lr.predict(X_te), 0)
    
     # determine the median data 
 
@@ -901,24 +918,28 @@ def evaluate_model(data_df, tag):
     row['temp']         = pd.Series(X_te[:,0])
     row['y_te']         = pd.Series(y_te[:,0])
     row['y_pred_te']    = pd.Series(y_pred_te[:,0])
+    row['prediction']   = prediction
     row['tag']          = tag
 
     results.append(row)
 
+data_file =  data_dir.joinpath('bike-sharing.csv')
+data_df = pd.read_csv(data_file)
+
+
+def add_poly (data_df):
+
+    df = data_df.copy()
+
+    df['temp_2'] = data_df['temp'] ** 2
+    df['temp_3'] = data_df['temp'] ** 3
+
+    return df
+
 #------------------------------------------------------------------------------
-# evaluate base 
+# builds models
 
-results = []
-evaluate_model(data_df, 'original')
-
-# adding poly features 
-
-data_df_pol = data_df.copy()
-
-data_df_pol['temp_2'] = data_df_pol['temp'] ** 2
-data_df_pol['temp_3'] = data_df_pol['temp'] ** 3
-
-evaluate_model(data_df_pol, 'poly')
+data_df_pol = add_poly(data_df)
 
 # split in datas in two sets (wdays an non wdays)
 
@@ -926,27 +947,42 @@ data_df_ = data_df.copy()
 cond_split = data_df_.workingday == 1
 
 data_df_wdays = data_df_[cond_split]
-evaluate_model(data_df_wdays, 'working days')
-
 data_df_non_wdays = data_df_[~cond_split]
-evaluate_model(data_df_non_wdays, 'non working days')
+
+data_df_wdays_poly = add_poly(data_df_wdays)
+data_df_non_wdays_poly = add_poly(data_df_non_wdays)
+
+#------------------------------------------------------------------------------
+# evaluates models
+
+results = []
+
+evaluate_model(data_df, 'original', True)
+evaluate_model(data_df_pol, 'poly', True)
 
 #------------------------------------------------------------------------------
 
-dr = pd.DataFrame(results)
+df_results = pd.DataFrame(results)
+plot_models(df_results)
+df_results[['tag', 'mae_tr', 'mae_te', 'mae_baseline']]
 
-i_c = 0
-for i in np.arange(len(dr.temp)):
+#------------------------------------------------------------------------------
+# models after split 
 
-    i_c+=1
-    color=sns.color_palette()[np.mod(i_c, 6)]
-    plt.scatter(dr.temp[i].values, dr.y_te[i].values, color=color, label=dr.tag[i])
+results = []
 
-    i_c+=1
-    color=sns.color_palette()[np.mod(i_c, 6)]
-    plt.scatter(dr.temp[i].values, dr.y_pred_te[i].values, color=color, label=dr.tag[i])
+evaluate_model(data_df_wdays_poly, 'working days poly', True)
+evaluate_model(data_df_non_wdays_poly, 'non working days poly', True)
 
-plt.legend()
-plt.xlabel('temperatures')
-plt.ylabel('users')
-plt.show()
+df_results = pd.DataFrame(results)
+plot_models(df_results)
+
+df_results[['tag', 'mae_tr', 'mae_te', 'mae_baseline']]
+
+# concatenate splitted prediction and perform mae calculation
+
+mae(np.concatenate(df_results.y_pred_te),
+    np.concatenate(df_results.y_te)
+   
+    
+#------------------------------------------------------------------------------
