@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>025b859f-91ae-4c8a-a47a-428b2d610a26</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>others\exercices_module_3_7.py</StartupFile>
+    <StartupFile>poc_projects\chain_classifier.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -22,38 +22,41 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="others\exercices_module_3_7.py" />
-    <Compile Include="others\exercices_module_3_3_8.py" />
-    <Compile Include="others\exercices_module_3.py">
+    <Compile Include="poc_projects\chain_classifier.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="projects\course_1.py">
+    <Compile Include="study\exercices_module_3_3_8.py" />
+    <Compile Include="study\exercices_module_3.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="others\data_analyse.py" />
-    <Compile Include="others\dta_inspect.py" />
-    <Compile Include="others\exercices_module_2.py" />
-    <Compile Include="projects\course_2.py">
+    <Compile Include="course_projects\course_1.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="others\utilities.py">
+    <Compile Include="study\data_analyse.py" />
+    <Compile Include="study\dta_inspect.py" />
+    <Compile Include="study\exercices_module_2.py" />
+    <Compile Include="course_projects\course_2.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="study\utilities.py">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Data\" />
     <Folder Include="Data\module_3\" />
+    <Folder Include="poc_projects\" />
+    <Folder Include="study\" />
     <Folder Include="others\" />
-    <Folder Include="others\" />
-    <Folder Include="projects\" />
+    <Folder Include="course_projects\" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="projects\Course_1.ipynb" />
+    <Content Include="course_projects\Course_1.ipynb" />
     <Content Include="Data\consumer_complaints.csv" />
     <Content Include="Data\data.xls" />
-    <Content Include="projects\df_food_study_1.db" />
+    <Content Include="course_projects\df_food_study_1.db" />
     <Content Include="Data\financial_data.csv" />
-    <Content Include="projects\food.db" />
+    <Content Include="course_projects\food.db" />
     <Content Include="Data\module_2_data_1.xls" />
     <Content Include="Data\Mountains.csv" />
     <Content Include="Data\songs.csv" />
