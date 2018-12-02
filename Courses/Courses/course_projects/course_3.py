@@ -111,6 +111,18 @@ mse(y, y_pred_bsl)
 R2 = 1 - mse(y, y_pred) / mse(y, y_pred_bsl)
 
 #-------------------------------------------------------------------------
+# POLYFIT vs GRADIENT DESCENT
+
+# Polyfit : 
+#    analytical solution (implement OLS resolution)
+#    finds a polynomial response (y) to problem with one feature (x)
+
+# Gradient descent : 
+#    general iterative algorithm solution
+#    apply to multi-features problem 
+
+
+#-------------------------------------------------------------------------
 
 results = []
 gradient(x, y, results, 0.1)
