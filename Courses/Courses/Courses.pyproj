@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>025b859f-91ae-4c8a-a47a-428b2d610a26</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>poc_projects\chain_classifier.py</StartupFile>
+    <StartupFile>course_projects\course_3.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -22,6 +22,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="course_projects\course_3.py" />
     <Compile Include="poc_projects\chain_classifier.py">
       <SubType>Code</SubType>
     </Compile>
@@ -38,6 +39,8 @@
     <Compile Include="course_projects\course_2.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="study\exercices_module_3_7.py" />
+    <Compile Include="study\exercices_module_3_7_6.py" />
     <Compile Include="study\utilities.py">
       <SubType>Code</SubType>
     </Compile>
@@ -52,16 +55,8 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="course_projects\Course_1.ipynb" />
-    <Content Include="Data\consumer_complaints.csv" />
-    <Content Include="Data\data.xls" />
     <Content Include="course_projects\df_food_study_1.db" />
-    <Content Include="Data\financial_data.csv" />
     <Content Include="course_projects\food.db" />
-    <Content Include="Data\module_2_data_1.xls" />
-    <Content Include="Data\Mountains.csv" />
-    <Content Include="Data\songs.csv" />
-    <Content Include="Data\tmdb_5000_movies.csv" />
-    <Content Include="Data\webscraping.html" />
   </ItemGroup>
   <ItemGroup>
     <Interpreter Include="env\">
