@@ -3,17 +3,15 @@ from pathlib import PureWindowsPath
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
-import sqlite3
-import random
-import googletrans as translator
-from pandas.tseries.offsets import *
-import calendar
 from sklearn.linear_model import SGDRegressor
 from sklearn.linear_model import HuberRegressor
 from sklearn.dummy import DummyRegressor
 from sklearn.linear_model import LinearRegression
-import itertools
+from sklearn.linear_model import Ridge
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.metrics import mean_squared_error as mse
+
+import seaborn as sns
 from sklearn.metrics import r2_score
 from sklearn.preprocessing import scale
 from sklearn.model_selection import train_test_split
@@ -28,155 +26,102 @@ data_result_name = 'result.csv'
 
 pd.set_option('display.max_columns', 30)
 
-def mae(y, y_pred):
-    return np.mean(np.abs(y-y_pred))
-
-def mse(y, y_pred):
-    return np.mean(np.square(y - y_pred))
-
 #-------------------------------------------------------------------------
+def evaluate_model_poly(degree, x, y, results,
+                        is_ridge = False, alpha_ridge = 0.04, plot = False):
+    reg = None
 
-def plot_models(data_df):
+    poly = PolynomialFeatures(degree, include_bias=False)
 
-    i_c = 0
-    for i in np.arange(len(data_df.temp)):
-
-        i_c += 1
-        color=sns.color_palette()[np.mod(i_c, 6)]
-        plt.scatter(data_df.temp[i].values, data_df.y_te[i].values, color=color, label=data_df.tag[i])
-
-        if data_df.prediction[i]:
-
-            i_c += 1
-            color=sns.color_palette()[np.mod(i_c, 6)]
-            plt.scatter(data_df.temp[i].values, data_df.y_pred_te[i].values, color=color, label=data_df.tag[i] + 
-                         str(" prediction"))
-   
-    plt.legend()
-    plt.show()
-
-#-------------------------------------------------------------------------
-
-def evaluate_model(data_df, target, tag, prediction):
-    
-    col_list = data_df.columns.copy()
-    col_list_wo_target = col_list.drop(target)
-
-    X = data_df[col_list_wo_target].values
-    y = data_df[target].values
-    y = np.c_[y]
+    poly.fit(x)
+    X = poly.fit_transform(x)
 
     X_tr, X_te, y_tr, y_te = train_test_split(
-        X, y, train_size = 0.5, test_size = 0.5, random_state=1)
+        X, y, train_size=0.8, test_size=0.2, random_state=0)
 
-    lr = LinearRegression()
-    lr.fit(X_tr, y_tr)
+    if is_ridge :
+        if alpha_ridge is None:
+            reg = Ridge()
+        else:
+            reg = Ridge(alpha_ridge)
+    else :
+        reg = LinearRegression()
 
-    # negatives values not allowed 
-    y_pred_tr = lr.predict(X_tr)
-    y_pred_te = lr.predict(X_te)
-   
-    # determine the median data 
+    reg.fit(X_tr, y_tr)
+        
+    y_tr_pred = reg.predict(X_tr)
+    y_te_pred = reg.predict(X_te)
 
-    dummy = DummyRegressor(strategy='median')
-    dummy.fit(X_tr, y_tr)
-    y_pred_base = dummy.predict(X_te)
+    # draw the model
+    x_model = np.linspace(min(x), max(x), num=100)
+    x_model = x_model[:, np.newaxis]
 
+    X_model = poly.transform(x_model)
+    y_model = reg.predict(X_model)
+    
     row = {}
-    row['features']     = data_df.columns
-    row['mae_tr']       = mae(y_pred_tr, y_tr)
-    row['mae_te']       = mae(y_pred_te, y_te)
-    row['mae_baseline'] = mae(y_pred_base, y_te)
-    row['temp']         = pd.Series(X_te[:,0])
-    row['y_te']         = pd.Series(y_te[:,0])
-    row['y_pred_te']    = pd.Series(y_pred_te[:,0])
-    row['prediction']   = prediction
-    row['tag']          = tag
+    row['is_ridge'] = is_ridge
+    row['L2'] = np.sum(reg.coef_ ** 2)
+    row['degree'] = degree
+    row['alpha'] = alpha
+    row['mse_tr'] = mse(y_tr_pred, y_tr)
+    row['mse_te'] = mse(y_te_pred, y_te)
+    row['score_tr'] = reg.score(X_tr, y_tr)
+    row['score_te'] = reg.score(X_te, y_te)
 
+    if plot:
+        plt.plot(x_model, y_model)
+        plt.scatter(X_tr[:, 0], y_tr, label='train set')
+        plt.scatter(X_te[:, 0], y_te, label='test set')
+              
     results.append(row)
 
 #-------------------------------------------------------------------------
 
-data_file = data_dir.joinpath('data-points.csv')
+data_file = data_dir.joinpath('bike-sharing-simple.csv')
 data_df = pd.read_csv(data_file)
 
-x = data_df.x.values
-y = data_df.y.values
+x_ = data_df['temp'].values
+y = data_df['users'].values
+
+x_model = np.linspace(min(x_), max(x_), num=100)
+coefs = np.polyfit(x_, y, 10)
+y_model = np.polyval(coefs, x_model)
+plt.plot(x_model, y_model)
+y_pred = np.polyval(coefs, x)
+plt.scatter (x_, y)
+
+np.sqrt(mse(y, y_pred))
+
+#-------------------------------------------------------------------------
+
+x = x_[:, np.newaxis]
 
 results = []
-evaluate_model(data_df, 'y', "", True)
+for degree in np.arange(10, 11):
+    for alpha in np.logspace(-10, 0, num=100):
+        evaluate_model_poly(degree, x, y, results, True, alpha, False)
+        # evaluate_model_poly(degree, x, y, results, False, None, False)
 
-data_df_1 = data_df.copy()
-data_df_1['x2'] = data_df_1.x ** 2
-data_df_1.drop('x', axis=1, inplace=True)
-
-evaluate_model(data_df_1, 'y', "", True)
+plt.legend()
+plt.show()
 
 df_results = pd.DataFrame(results)
-plot_models(df_results)
-df_results[['tag', 'mae_tr', 'mae_te', 'mae_baseline']]
+df_results
 
-#-------------------------------------------------------------------------
-
-X = np.c_[np.ones(len(x)), x]
-
-x = data_df.x
-y = data_df.y
-plt.scatter(x, y, marker='o')
-
-coefs = np.polyfit(x, y, deg=10)
-
-# Compute prediction curve
-x_values = np.linspace(min(x), max(x), num=50)
-y_values = np.polyval(coefs, x_values)
-
-plt.scatter(x_values, y_values,marker='^')
-plt.show()
-
-#-------------------------------------------------------------------------
-
-from sklearn.preprocessing import PolynomialFeatures
-import numpy as np
-
-# Create the polynomial features
-poly_obj = PolynomialFeatures(degree=10, include_bias=False)
-
-f_ = poly_obj.fit(x[:, np.newaxis])
-
-X_poly = poly_obj.fit_transform(x[:, np.newaxis])
-
-X_tr, X_te, y_tr, y_te = train_test_split(
-    X_poly, y, test_size=25, random_state=0)
-
-print('Train set:', X_tr.shape, y_tr.shape) # (25, 10) (25,)
-print('Test set:', X_te.shape, y_te.shape) # (25, 10) (25,)
-
-lr.fit(X_tr, y_tr)
-
-# Plot the model
-x_values = np.linspace(min(x), max(x), num=100)
-x_values_poly = poly_obj.transform(x_values[:, np.newaxis])
-y_values_lr = lr.predict(x_values_poly)
-
-plt.scatter(X_tr[:, 0], y_tr, label='train set')
-plt.scatter(X_te[:, 0], y_te, label='test set')
-plt.plot(x_values, y_values_lr)
+plt.semilogx(df_results.alpha, df_results.mse_tr, label='train curve')
+plt.semilogx(df_results.alpha, df_results.mse_te, label='test curve')
 plt.legend()
 plt.show()
 
-from sklearn.linear_model import Ridge
+# determine the otpimum
 
-# Ridge regression
-ridge = Ridge()
-ridge.fit(X_tr, y_tr)
+df_results
+df_results.iloc[df_results.mse_te.idxmin(),]
 
-# Plot the model
-y_values_ridge = ridge.predict(x_values_poly)
-
-plt.scatter(X_tr[:, 0], y_tr, label='train set')
-plt.scatter(X_te[:, 0], y_te, label='test set')
-plt.plot(x_values, y_values_ridge)
+evaluate_model_poly(10, x, y, results, True, 0.00475081, True)
 plt.legend()
 plt.show()
 
-ridge.coef_
+#-------------------------------------------------------------------------
+    

@@ -97,18 +97,14 @@ def evaluate_model(data_df, target, tag, prediction):
 
 #-------------------------------------------------------------------------
 
-data_file = data_dir.joinpath('data-points.csv')
+data_file = data_dir.joinpath('bike-sharing-simple.csv')
 data_df = pd.read_csv(data_file)
 
-x = data_df.x.values
-y = data_df.y.values
+x = data_df.temp.values
+y = data_df.casual.values
 
 results = []
 evaluate_model(data_df, 'y', "", True)
-
-data_df_1 = data_df.copy()
-data_df_1['x2'] = data_df_1.x ** 2
-data_df_1.drop('x', axis=1, inplace=True)
 
 evaluate_model(data_df_1, 'y', "", True)
 
