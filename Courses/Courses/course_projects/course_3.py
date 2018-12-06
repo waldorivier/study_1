@@ -218,3 +218,37 @@ df_results
 #-------------------------------------------------------------------------
 # Warm-UP - TASK 3
 #-------------------------------------------------------------------------
+
+data_file = data_dir.joinpath('task-3.csv')
+data_df = pd.read_csv(data_file)
+
+x = data_df['x']
+y = data_df['y']
+
+x_tr, x_te, y_tr, y_te = train_test_split(
+    x, y, train_size=0.5, test_size=0.5, random_state=0)
+
+coefs = np.polyfit(x_tr, y_tr, deg=10)
+
+#-------------------------------------------------------------------------
+# prints the model 
+#-------------------------------------------------------------------------
+x_model = np.linspace(min(x), max(x), num=100)
+y_model = np.polyval(coefs, x_model)
+
+y_tr_pred = np.polyval(coefs, x_tr)
+y_te_pred = np.polyval(coefs, x_te)
+
+mse(y_tr_pred, x_tr)
+mse(y_te_pred, x_te)
+
+plt.scatter(x, y, label='observations', color='blue')
+plt.plot(x_model, y_model, label = 'model', color='red')
+plt.xlabel('x')
+plt.ylabel('y')
+plt.legend()
+plt.show()
+
+
+
+
