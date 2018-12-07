@@ -155,7 +155,7 @@ plt.scatter(data_df.x3, data_df[target], color = 'green')
 plt.show()
 
 #-------------------------------------------------------------------------
-def evaluate_model(reg_type, data_df, featurs, target, results):
+def evaluate_model(reg_type, data_df, features, target, results):
 
     res = {}
 
@@ -242,8 +242,9 @@ y_te_pred = np.polyval(coefs, x_te)
 mse(y_tr_pred, x_tr)
 mse(y_te_pred, x_te)
 
-plt.scatter(x, y, label='observations', color='blue')
-plt.plot(x_model, y_model, label = 'model', color='red')
+plt.scatter(x_tr, y_tr, label='train', color='red')
+plt.scatter(x_te, y_te, label='test', color='green')
+plt.plot(x_model, y_model, label = 'model', color='cyan')
 plt.xlabel('x')
 plt.ylabel('y')
 plt.legend()
