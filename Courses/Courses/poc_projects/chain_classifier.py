@@ -1,4 +1,5 @@
-import mysql.connector
+#import mysql.connector
+import cx_Oracle    
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -10,6 +11,9 @@ soldel_db = mysql.connector.connect(
   passwd="waldo",
   database="mupe"
 )
+
+connection = cx_Oracle.connect("Data Source = LABCIT; User ID = PADEV96_DATA; Password = PADEV96_DATA")
+
 
 class chain_vector:
     _ser_items = None
