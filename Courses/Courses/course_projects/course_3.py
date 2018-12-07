@@ -140,19 +140,16 @@ R2 = 1 - mse(y, y_pred) / mse(y, y_pred_bsl)
 # Warm-UP - TASK 2
 #-------------------------------------------------------------------------
 
-data_file = data_dir.joinpath('task-2.csv')
-data_df = pd.read_csv(data_file)
-
-target = 'y'
-
 #-------------------------------------------------------------------------
 # give an idea of what we plot
 #-------------------------------------------------------------------------
 
-plt.scatter(data_df.x1, data_df[target], color = 'red')
-plt.scatter(data_df.x2, data_df[target], color = 'blue')
-plt.scatter(data_df.x3, data_df[target], color = 'green')
-plt.show()
+def plot_df(data_df) :
+    plt.scatter(data_df.x1, data_df[target], label = 'x1', color = 'red')
+    plt.scatter(data_df.x2, data_df[target], label = 'x2',color = 'blue')
+    plt.scatter(data_df.x3, data_df[target], label = 'x3',color = 'green')
+    plt.legend()
+    plt.show()
 
 #-------------------------------------------------------------------------
 def evaluate_model(reg_type, data_df, features, target, results):
@@ -164,7 +161,7 @@ def evaluate_model(reg_type, data_df, features, target, results):
     y = np.c_[y]
 
     X_tr, X_te, y_tr, y_te = train_test_split(
-        X, y, train_size=0.8, test_size=0.2, random_state=0)
+        X, y, train_size=0.2, test_size=0.8, random_state=0)
 
     # linear regression without removing outliers
 
@@ -183,8 +180,8 @@ def evaluate_model(reg_type, data_df, features, target, results):
     # metrics
     
     res['reg_type'] = reg_type
-    res['mae_tr'] = mae(y_tr_pred, y_tr)
-    res['mae_te'] = mae(y_te_pred, y_te)
+    res['mae_tr'] = mae(y_tr, y_tr_pred)
+    res['mae_te'] = mae(y_te, y_te_pred)
 
     results.append(res)
 
@@ -193,21 +190,28 @@ def evaluate_model(reg_type, data_df, features, target, results):
 
 #-------------------------------------------------------------------------
 
+data_file = data_dir.joinpath('task-2.csv')
+data_df = pd.read_csv(data_file)
+
+target = 'y'
 features = data_df.columns.tolist()
 features.remove(target)
 
 results = []
 evaluate_model('linear', data_df, features, target, results)
+plot_df(data_df)
 
 # removes outliers
 
 data_df_wo = data_df.copy()
 for f in data_df.columns:
     z = (data_df_wo[f] - data_df_wo[f].mean()) / data_df_wo[f].std()
-    outliers = z >= 3
+    outliers = np.abs(z) >= 2
 
     print (f, outliers.sum())
     data_df_wo = data_df_wo[~outliers]
+
+plot_df(data_df_wo)
 
 evaluate_model('linear', data_df_wo, features, target, results)
 evaluate_model('huber', data_df, features, target, results)
@@ -218,37 +222,117 @@ df_results
 #-------------------------------------------------------------------------
 # Warm-UP - TASK 3
 #-------------------------------------------------------------------------
+def evaluate_model_poly(degree, x, y, results, is_ridge = False, alpha_ridge = 0.04, 
+                        plot = False):
+    reg = None
+
+    poly = PolynomialFeatures(degree, include_bias=False)
+
+    poly.fit(x)
+    X = poly.fit_transform(x)
+
+    X_tr, X_te, y_tr, y_te = train_test_split(
+        X, y, train_size=0.5, test_size=0.5, random_state=0)
+
+    if is_ridge :
+        if alpha_ridge is None:
+            reg = Ridge()
+        else:
+            reg = Ridge(alpha_ridge)
+    else :
+        reg = LinearRegression()
+
+    reg.fit(X_tr, y_tr)
+        
+    y_tr_pred = reg.predict(X_tr)
+    y_te_pred = reg.predict(X_te)
+
+    # draw the model
+    x_model = np.linspace(min(x), max(x), num=100)
+    x_model = x_model[:, np.newaxis]
+
+    X_model = poly.transform(x_model)
+    y_model = reg.predict(X_model)
+    
+    row = {}
+    row['is_ridge'] = is_ridge
+    row['L2']       = np.sum(reg.coef_ ** 2)
+    row['degree']   = degree
+    row['alpha']    = alpha
+    row['mse_tr']   = mse(y_tr_pred, y_tr)
+    row['mse_te']   = mse(y_te_pred, y_te)
+    row['score_tr'] = reg.score(X_tr, y_tr)
+    row['score_te'] = reg.score(X_te, y_te)
+
+    if plot:
+        plt.plot(x_model, y_model, label='model : ' + str("ridge regression = ") + str(is_ridge) + "; degree = " + str(degree) )
+        plt.scatter(X_tr[:, 0], y_tr, label='train set')
+        plt.scatter(X_te[:, 0], y_te, label='test set')
+              
+    results.append(row)
+
+#-------------------------------------------------------------------------
 
 data_file = data_dir.joinpath('task-3.csv')
 data_df = pd.read_csv(data_file)
 
-x = data_df['x']
-y = data_df['y']
-
-x_tr, x_te, y_tr, y_te = train_test_split(
-    x, y, train_size=0.5, test_size=0.5, random_state=0)
-
-coefs = np.polyfit(x_tr, y_tr, deg=10)
+x_ = data_df['x'].values
+y = data_df['y'].values
 
 #-------------------------------------------------------------------------
-# prints the model 
+# Regression using polynomial features 
 #-------------------------------------------------------------------------
-x_model = np.linspace(min(x), max(x), num=100)
-y_model = np.polyval(coefs, x_model)
+x = x_[:, np.newaxis]
 
-y_tr_pred = np.polyval(coefs, x_tr)
-y_te_pred = np.polyval(coefs, x_te)
-
-mse(y_tr_pred, x_tr)
-mse(y_te_pred, x_te)
-
-plt.scatter(x_tr, y_tr, label='train', color='red')
-plt.scatter(x_te, y_te, label='test', color='green')
-plt.plot(x_model, y_model, label = 'model', color='cyan')
-plt.xlabel('x')
-plt.ylabel('y')
+results = []
+evaluate_model_poly(10, x, y, results, False, None, True)
 plt.legend()
 plt.show()
+
+df_results = pd.DataFrame(results)
+df_results
+
+#-------------------------------------------------------------------------
+# Regression using Ridge(alpha) / grid search
+#-------------------------------------------------------------------------
+results = []
+for degree in np.arange(10, 11):
+    for alpha in np.logspace(-1, 10, num=100):
+        evaluate_model_poly(degree, x, y, results, True, alpha, False)
+      
+df_results = pd.DataFrame(results)
+df_results
+
+#-------------------------------------------------------------------------
+# Plots mse train / test
+#-------------------------------------------------------------------------
+plt.semilogx(df_results.alpha, df_results.mse_tr, label='mse train curve')
+plt.semilogx(df_results.alpha, df_results.mse_te, label='mse test curve')
+plt.legend()
+plt.show()
+
+#-------------------------------------------------------------------------
+# determine the otpimum
+#-------------------------------------------------------------------------
+df_results
+df_results.iloc[df_results.mse_te.idxmin(),]
+
+#-------------------------------------------------------------------------
+# draw the optimum ridge solution
+#-------------------------------------------------------------------------
+results = []
+evaluate_model_poly(10, x, y, results, True, 0.1, True)
+
+# If we compare with a polynomial regression of degree 4 
+evaluate_model_poly(4, x, y, results, False, None, True)
+
+plt.legend()
+plt.show()
+
+df_results = pd.DataFrame(results)
+df_results
+
+#-------------------------------------------------------------------------
 
 
 
