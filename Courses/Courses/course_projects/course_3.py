@@ -222,8 +222,7 @@ df_results
 #-------------------------------------------------------------------------
 # Warm-UP - TASK 3
 #-------------------------------------------------------------------------
-def evaluate_model_poly(degree, x, y, results, is_ridge = False, alpha_ridge = 0.04, 
-                        plot = False):
+def evaluate_model_poly(degree, x, y, is_ridge, alpha_ridge, results, plot = False):
     reg = None
 
     poly = PolynomialFeatures(degree, include_bias=False)
@@ -232,7 +231,7 @@ def evaluate_model_poly(degree, x, y, results, is_ridge = False, alpha_ridge = 0
     X = poly.fit_transform(x)
 
     X_tr, X_te, y_tr, y_te = train_test_split(
-        X, y, train_size=0.5, test_size=0.5, random_state=0)
+        X, y, train_size=0.8, test_size=0.2, random_state=0)
 
     if is_ridge :
         if alpha_ridge is None:
@@ -258,7 +257,7 @@ def evaluate_model_poly(degree, x, y, results, is_ridge = False, alpha_ridge = 0
     row['is_ridge'] = is_ridge
     row['L2']       = np.sum(reg.coef_ ** 2)
     row['degree']   = degree
-    row['alpha']    = alpha
+    row['alpha']    = alpha_ridge
     row['mse_tr']   = mse(y_tr_pred, y_tr)
     row['mse_te']   = mse(y_te_pred, y_te)
     row['score_tr'] = reg.score(X_tr, y_tr)
@@ -285,7 +284,7 @@ y = data_df['y'].values
 x = x_[:, np.newaxis]
 
 results = []
-evaluate_model_poly(10, x, y, results, False, None, True)
+evaluate_model_poly(10, x, y, False, None, results, True)
 plt.legend()
 plt.show()
 
@@ -297,8 +296,8 @@ df_results
 #-------------------------------------------------------------------------
 results = []
 for degree in np.arange(10, 11):
-    for alpha in np.logspace(-1, 10, num=100):
-        evaluate_model_poly(degree, x, y, results, True, alpha, False)
+    for alpha in np.logspace(-2, 10, num=100):
+        evaluate_model_poly(degree, x, y, True, alpha, results, False)
       
 df_results = pd.DataFrame(results)
 df_results
@@ -318,13 +317,14 @@ df_results
 df_results.iloc[df_results.mse_te.idxmin(),]
 
 #-------------------------------------------------------------------------
-# draw the optimum ridge solution
+# draw the optimum ridge solution and compares with 
+# a polynomial regression of degree 4 
 #-------------------------------------------------------------------------
 results = []
-evaluate_model_poly(10, x, y, results, True, 0.1, True)
+evaluate_model_poly(10, x, y, True, 0.162975, results, True)
 
 # If we compare with a polynomial regression of degree 4 
-evaluate_model_poly(4, x, y, results, False, None, True)
+evaluate_model_poly(4, x, y, False, None, results, True)
 
 plt.legend()
 plt.show()
