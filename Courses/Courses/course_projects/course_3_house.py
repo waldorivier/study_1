@@ -32,12 +32,39 @@ pd.set_option('display.max_columns', 90)
 
 working_dir = os.getcwd()
 data_file = os.path.join(working_dir, 'course_projects', 'Data', 'module_3', 'house-prices.csv')
-data_df = pd.read_csv(data_file)
+df_origin = pd.read_csv(data_file)
+
+#------------------------------------------------------------------------------
 
 analyze = utils.analyze()
+meta_data = utils.meta_data(working_dir)
 
 results = []
-analyze.analyze_columns(data_df, results)
+analyze.analyze_columns(df_origin, results)
+
+#------------------------------------------------------------------------------
+# dropping all NAN values reduced the number of columns from 82 to 55
 
 df_results = pd.DataFrame(results)
 
+#------------------------------------------------------------------------------
+# keep the features being removed
+
+all_columns = set(df_origin.columns)
+df_w = df_origin.dropna(axis=1).copy()
+
+removed_columns = all_columns.difference(set(df_w.columns))
+df_rm = df_origin[list(removed_columns)]
+
+df.rm
+
+#------------------------------------------------------------------------------
+# change the dimentsion of the target sale price
+
+target = 'SalePrice'
+
+df_w[target] = np.log(df_w[target])
+
+#------------------------------------------------------------------------------
+
+meta_data.load_meta_data()

@@ -1,3 +1,5 @@
+import os
+from pandas.core.frame import DataFrame
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -44,3 +46,24 @@ class analyze:
             ax.set_xlabel("thresh")
 
             plt.show()
+
+
+class meta_data:
+    #------------------------------------------------------------------------------
+    # meta data 
+    #
+    #------------------------------------------------------------------------------
+
+    # _df_meta : pd.DataFrame
+    _working_dir : str
+
+    def _init_(self, working_dir):
+        _working_dir = working_dir
+
+
+    def load_meta_data(self):
+        data_file = os.path.join(_working_dir, 'course_projects', 'Data', 'module_3', 'meta_data.txt')
+        _df_meta = pd.DataFrame.from_csv(data_file, sep='\t')
+        _df_meta.reset_index(inplace=True)
+        _df_meta.ffill(inplace=True)
+
