@@ -18,7 +18,8 @@ from sklearn.dummy import DummyRegressor
 #-------------------------------------------------------------------------
 
 working_dir = PureWindowsPath(os.getcwd())
-data_dir = PureWindowsPath(working_dir.joinpath('Data').joinpath('module_3'))
+data_dir = PureWindowsPath(working_dir.joinpath('study').joinpath('data').joinpath('module_3'))
+
 data_result_name = 'result.csv'
 
 pd.set_option('display.max_columns', 30)
@@ -160,7 +161,7 @@ def fit_compare():
     df_train.sort_values(by=['temp'], inplace=True)
 
     x_train = df_train.temp.values
-    y_train = df_train.users.values
+    y_train = df_train.casual.values
 
     df_poly = fit_poly (x_train, y_train)
     df_huber = fit_huber (x_train, y_train)
@@ -182,7 +183,7 @@ def fit_test(df_fit):
 
     df_test.sort_values(by=['temp'], inplace=True)
     x_test = df_test.temp.values
-    y_test = df_test.users.values
+    y_test = df_test.casual.values
    
     params = []
     for row in df_fit.itertuples():

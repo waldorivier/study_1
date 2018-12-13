@@ -31,7 +31,7 @@ import utils
 pd.set_option('display.max_columns', 90)
 
 working_dir = os.getcwd()
-data_file = os.path.join(working_dir, 'course_projects', 'Data', 'module_3', 'house-prices.csv')
+data_file = os.path.join(working_dir, 'course_projects', 'data', 'module_3', 'house-prices.csv')
 df_origin = pd.read_csv(data_file)
 
 #------------------------------------------------------------------------------
@@ -56,7 +56,7 @@ df_w = df_origin.dropna(axis=1).copy()
 removed_columns = all_columns.difference(set(df_w.columns))
 df_rm = df_origin[list(removed_columns)]
 
-df.rm
+df_rm
 
 #------------------------------------------------------------------------------
 # change the dimentsion of the target sale price

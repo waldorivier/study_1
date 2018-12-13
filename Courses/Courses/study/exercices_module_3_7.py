@@ -23,7 +23,7 @@ from sklearn.model_selection import train_test_split
 #-------------------------------------------------------------------------
 
 working_dir = PureWindowsPath(os.getcwd())
-data_dir = PureWindowsPath(working_dir.joinpath('Data').joinpath('module_3'))
+data_dir = PureWindowsPath(working_dir.joinpath('study').joinpath('data').joinpath('module_3'))
 data_result_name = 'result.csv'
 
 pd.set_option('display.max_columns', 30)
@@ -101,12 +101,11 @@ data_file = data_dir.joinpath('bike-sharing-simple.csv')
 data_df = pd.read_csv(data_file)
 
 x = data_df.temp.values
-y = data_df.casual.values
+y = data_df.users.values
 
 results = []
-evaluate_model(data_df, 'y', "", True)
-
-evaluate_model(data_df_1, 'y', "", True)
+evaluate_model(data_df, 'users', "", True)
+evaluate_model(data_df, 'users', "", True)
 
 df_results = pd.DataFrame(results)
 plot_models(df_results)
@@ -116,8 +115,8 @@ df_results[['tag', 'mae_tr', 'mae_te', 'mae_baseline']]
 
 X = np.c_[np.ones(len(x)), x]
 
-x = data_df.x
-y = data_df.y
+x = data_df.temp
+y = data_df.users
 plt.scatter(x, y, marker='o')
 
 coefs = np.polyfit(x, y, deg=10)
@@ -159,7 +158,7 @@ plt.scatter(X_te[:, 0], y_te, label='test set')
 plt.plot(x_values, y_values_lr)
 plt.legend()
 plt.show()
-
+  
 from sklearn.linear_model import Ridge
 
 # Ridge regression

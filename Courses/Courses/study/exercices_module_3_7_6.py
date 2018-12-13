@@ -21,7 +21,7 @@ from sklearn.model_selection import train_test_split
 #-------------------------------------------------------------------------
 
 working_dir = PureWindowsPath(os.getcwd())
-data_dir = PureWindowsPath(working_dir.joinpath('Data').joinpath('module_3'))
+data_dir = PureWindowsPath(working_dir.joinpath('study').joinpath('data').joinpath('module_3'))
 data_result_name = 'result.csv'
 
 pd.set_option('display.max_columns', 30)
@@ -88,7 +88,7 @@ x_model = np.linspace(min(x_), max(x_), num=100)
 coefs = np.polyfit(x_, y, 10)
 y_model = np.polyval(coefs, x_model)
 plt.plot(x_model, y_model)
-y_pred = np.polyval(coefs, x)
+y_pred = np.polyval(coefs, x_)
 plt.scatter (x_, y)
 
 np.sqrt(mse(y, y_pred))

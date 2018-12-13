@@ -23,7 +23,7 @@ from sklearn.preprocessing import scale
 #-------------------------------------------------------------------------
 
 working_dir = PureWindowsPath(os.getcwd())
-data_dir = PureWindowsPath(working_dir.joinpath('Data').joinpath('module_3'))
+data_dir = PureWindowsPath(working_dir.joinpath('study').joinpath('data').joinpath('module_3'))
 data_result_name = 'result.csv'
 
 pd.set_option('display.max_columns', 30)
@@ -372,7 +372,7 @@ plot_(data_df_)
 # define outliers
 # a, b = np.polyfit(data_df_.body.values, data_df_.brain.values, deg=1)
 # i_outliers = data_df_.brain < (data_df_.body * a - 3.6)
-i_outlier = data_df_.body > 16
+i_outliers = data_df_.body > 16
 
 # remove outliers
 df_wo_outliers = data_df_[~i_outliers]
@@ -433,7 +433,7 @@ except ValueError :
     print (i)
 
 ar_lr_huber_coef
-pd.DataFrame(ar_lr_huber_coef, columns=[''])
+pd.DataFrame(ar_lr_huber_coef)
 
 #------------------------------------------------------------------------------
 
@@ -459,20 +459,22 @@ plt.show()
 
 y=[]
 
-a = [1, 2, 3, 5, 6, 25]
-x = pd.Series(a)
+x = [1, 2, 3, 5, 6, 25]
+_x = pd.Series(x)
 
-for i in np.arange(0, 25):
-    y.append(np.mean(np.abs(x-i)))
+for i in x:
+    y.append(np.mean(np.abs(_x-i)))
 
 plt.plot(y, label='mae')
 plt.legend()
 plt.show()
 
+X = np.c_[x]
+
 dummy = DummyRegressor(strategy='mean')
-dummy.fit(x[:, np.newaxis], y)
+dummy.fit(X, y)
         
-pred_baseline = dummy.predict(x[:, np.newaxis])
+pred_baseline = dummy.predict(X)
 
 #-------------------------------------------------------------------------
 # 3.3.9 Multivariables
