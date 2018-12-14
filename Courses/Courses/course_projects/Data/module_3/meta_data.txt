@@ -1,4 +1,4 @@
-column	designation	type	code	value	
+column	designation	type	code	
 PID	Parcel identification number  - can be used with city web site for parcel review. 	Nominal		
 MS SubClass	 Identifies the type of dwelling involved in the sale.	Nominal	20	1-STORY 1946 & NEWER ALL STYLES
 			30	1-STORY 1945 & OLDER
@@ -16,7 +16,7 @@ MS SubClass	 Identifies the type of dwelling involved in the sale.	Nominal	20	1-
 			160	2-STORY PUD - 1946 & NEWER
 			180	PUD - MULTILEVEL - INCL SPLIT LEV/FOYER
 			190	2 FAMILY CONVERSION - ALL STYLES AND AGES
-MS Zoning (Nominal)	Identifies the general zoning classification of the sale.	Nominal	A	Agriculture
+MS Zoning	Identifies the general zoning classification of the sale.	Nominal	A	Agriculture
 			       C	Commercial
 			       FV	Floating Village Residential
 			       I	Industrial

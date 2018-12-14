@@ -47,15 +47,8 @@ class analyze:
 
             plt.show()
 
-
 class meta_data:
-    #------------------------------------------------------------------------------
-    # meta data 
-    #
-    #------------------------------------------------------------------------------
-
-    # _df_meta : pd.DataFrame
-    _working_dir : str
+    _working_dir = ""
     _df_meta = None
 
     def __init__(self, working_dir):
@@ -67,3 +60,9 @@ class meta_data:
         self._df_meta.reset_index(inplace=True)
         self._df_meta.ffill(inplace=True)
 
+    def get_type(self, column):
+        try:
+            return self._df_meta[self._df_meta.column == column]['type'].iloc[0]
+
+        except:
+            print (column + " : column not found in meta data" )
