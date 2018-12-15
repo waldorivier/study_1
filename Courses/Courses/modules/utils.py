@@ -66,3 +66,14 @@ class meta_data:
 
         except:
             print (column + " : column not found in meta data" )
+
+    def transform_ordinal_column(self, df, column):
+        if self.get_type(column) == 'Ordinal':
+            ordinal_values = self._df_meta[self._df_meta.column == column]['ordinal_value'] 
+            ordinal_values = self._df_meta[self._df_meta.column == column]['ordinal_code'] 
+            
+            d = meta._df_meta[['column','code', 'ordinal_value']]
+
+
+            
+            
