@@ -81,11 +81,11 @@ class meta_data:
         self._df_meta.reset_index(inplace=True)
         self._df_meta.ffill(inplace=True)
 
-    def get_type(self, column):
+    def _get_type(self, column):
         try:
             return self._df_meta[self._df_meta.column == column]['type'].iloc[0]
         except:
-            print ("Column not found in meta data" + column)
+            print ("Column not found in meta data " + column)
     
     def get_type_columns(self, type):
         columns = self._df_meta.copy()
@@ -96,22 +96,22 @@ class meta_data:
        self._transform_column(df, column, 'Ordinal')
 
     def get_dict_ordinal(self, column):
-        df_ordinal = self._df_meta[self._df_meta['column'] == column]
-
-        codes = df_ordinal.code.values
-        try:
-            codes = codes.astype(float)
-        except:
-            codes = [i.strip() for i in df_ordinal.code.values]
+        dict_ordinal = None
+        if self._get_type(column) == 'Ordinal':
+            df_ordinal = self._df_meta[self._df_meta['column'] == column]
+            codes = df_ordinal.code.values
+            try:
+                codes = codes.astype(float)
+            except:
+                codes = [i.strip() for i in df_ordinal.code.values]
             
-        dict_ordinal = dict(zip(codes, df_ordinal.ordinal_value.values))
-
+            dict_ordinal = dict(zip(codes, df_ordinal.ordinal_value.values))
         return dict_ordinal
 
     def _transform_column(self, df, column, type):
         if df.columns.contains(column):
-            if self.get_type(column) == type:
-                df_ordinal = self.get_dict_ordinal(column)
+            if self._get_type(column) == type:
+                dict_ordinal = self.get_dict_ordinal(column)
                 df[column] = df[column].map(dict_ordinal)
 
     def transform_ordinal_df(self, df):
@@ -120,6 +120,16 @@ class meta_data:
        for column in ordinal_columns:
            self.transform_ordinal_column(df, column)
 
+class custom_data:
+    _meta_data = None
+
+    def __init__(self, meta_data):
+        self._meta_data = meta_data
+
+    def get_type_columns(self, df : pd.DataFrame, type):
+        columns = df.columns.intersection(self._meta_data.get_type_columns(type))
+        return columns
+    
 #------------------------------------------------------------------------------
 
 pd.set_option('display.max_columns', 90)
@@ -149,26 +159,21 @@ df = df_origin.dropna(axis=1).copy()
 removed_columns = all_columns.difference(set(df.columns))
 df_rm = df_origin[list(removed_columns)]
 
-#------------------------------------------------------------------------------
-# change the dimension of the target 
-
-target = 'SalePrice'
-df[target] = np.log(df[target])
 
 #------------------------------------------------------------------------------
 
 #------------------------------------------------------------------------------
 # test a model given a subset of colums 
 #------------------------------------------------------------------------------
-def perform_test(df, meta_data, columns_subset, target, results):
+def perform_test(df:pd.DataFrame, custom_data:custom_data, columns_subset, target, results):
 
     try:
         _df = df.copy()
     
         _y = _df[target]
         _df = _df[columns_subset]
- 
-        nominal_columns = meta_data.get_type_columns('Nominal')
+        
+        nominal_columns = custom_data.get_type_columns(_df, 'Nominal')
         if len(nominal_columns) > 0:
             _df = pd.get_dummies(_df, columns=nominal_columns)
 
@@ -177,10 +182,6 @@ def perform_test(df, meta_data, columns_subset, target, results):
         
         _X = _df.values
 
-        #----------------------------------
-        # TODO : if type is ordinal choose the ad-hoc encoding corresponding to
-        # ----------------------------------
-  
         X_tr, X_te, y_tr, y_te = train_test_split(
            _X, _y.values, train_size = 0.5, test_size = 0.5, random_state=1)
 
@@ -215,29 +216,36 @@ def perform_test(df, meta_data, columns_subset, target, results):
 
 #------------------------------------------------------------------------------
 
+all_columns = set(df_origin.columns)
+df = df_origin.dropna(axis=1).copy()
+
 meta_data = meta_data(working_dir)
 meta_data.load_meta_data()
+custom_data = custom_data(meta_data)
 
-meta_data.get_type_columns('Ordinal')
+target = 'SalePrice'
+df[target] = np.log(df[target])
+
 meta_data.transform_ordinal_df(df)
-
-df[df.columns.intersection(meta_data.get_type_columns('Ordinal'))]
-
-columns_subset = ['Year Built', 'Lot Shape']
 
 columns = df.columns.copy()
 columns_wo_target = columns.drop(target)
 columns_wo_target = columns_wo_target.drop(['Order', 'PID'])
 
-perform_test(df, meta_data, columns_subset, target, results)
+columns_subset = ['Overall Qual', 'Gr Liv Area']
 
 results = []
-for i in np.arange(1, len(columns_wo_target) + 1):
-    combinations = [list(x) for x in itertools.combinations(columns_wo_target, 2)]
-
-    for combination in combinations:
-        perform_test(df_w, meta_data, combination, target, results)
+combinations = [list(x) for x in itertools.combinations(columns_wo_target, 2)]
+for combination in combinations:
+    perform_test(df, custom_data, combination, target, results)
 
 df_results = pd.DataFrame(results)
-df_results['train_score']
+df_r = df_results[['train_score','test_score']]
+
+i_min = df_r['test_score'].idxmin()
+df_results.iloc[i_min,:]
+
+ 
+
+
 

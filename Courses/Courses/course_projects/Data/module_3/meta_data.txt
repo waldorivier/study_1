@@ -146,7 +146,7 @@ Roof Matl	Roof material	Nominal	       ClyTile		Clay or Tile
 			       Tar&Grv		Gravel & Tar
 			       WdShake		Wood Shakes
 			       WdShngl		Wood Shingles
-Exterior 1	Exterior covering on house	Nominal	       AsbShng		Asbestos Shingles
+Exterior 1st	Exterior covering on house	Nominal	       AsbShng		Asbestos Shingles
 			       AsphShn		Asphalt Shingles
 			       BrkComm		Brick Common
 			       BrkFace		Brick Face
@@ -163,7 +163,7 @@ Exterior 1	Exterior covering on house	Nominal	       AsbShng		Asbestos Shingles
 			       VinylSd		Vinyl Siding
 			       Wd Sdng		Wood Siding
 			       WdShing		Wood Shingles
-Exterior 2	Exterior covering on house (if more than one material)	Nominal	       AsbShng		Asbestos Shingles
+Exterior 2nd	Exterior covering on house (if more than one material)	Nominal	       AsbShng		Asbestos Shingles
 			       AsphShn		Asphalt Shingles
 			       BrkComm		Brick Common
 			       BrkFace		Brick Face
@@ -243,7 +243,7 @@ Heating	Type of heating	Nominal	       Floor		Floor Furnace
 			       Grav		Gravity furnace
 			       OthW		Hot water or steam heat other than gas
 			       Wall		Wall furnace
-HeatingQC	Heating quality and condition	Ordinal	       Ex	10	Excellent
+Heating QC	Heating quality and condition	Ordinal	       Ex	10	Excellent
 			       Gd	8	Good
 			       TA	6	Average/Typical
 			       Fa	4	Fair
@@ -264,11 +264,11 @@ Full Bath	Full bathrooms above grade	Discrete
 Half Bath	Half baths above grade	Discrete			
 Bedroom	Bedrooms above grade (does NOT include basement bedrooms)	Discrete			
 Kitchen	Kitchens above grade	Discrete			
-KitchenQual 	Kitchen quality	       Ex	Excellent		
-		       Gd	Good		
-		       TA	Typical/Average		
-		       Fa	Fair		
-		       Po	Poor		
+Kitchen Qual	Kitchen quality	Ordinal	       Ex	10	Excellent
+			       Gd	8	Good
+			       TA	6	Typical/Average
+			       Fa	4	Fair
+			       Po	0	Poor
 TotRmsAbvGrd	Total rooms above grade (does not include bathrooms)	Discrete			
 Functional	Home functionality (Assume typical unless deductions are warranted)	Ordinal	       Typ	10	Typical Functionality
 			       Min1	9	Minor Deductions 1
