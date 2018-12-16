@@ -148,12 +148,6 @@ if 0:
     df_results = pd.DataFrame(results)
 
 #------------------------------------------------------------------------------
-# dropping all NAN values reduced the number of columns from 82 to 55
-
-all_columns = set(df_origin.columns)
-df = df_origin.dropna(axis=1).copy()
-
-#------------------------------------------------------------------------------
 # keep the features being removed
 
 removed_columns = all_columns.difference(set(df.columns))
@@ -203,6 +197,7 @@ def perform_test(df:pd.DataFrame, custom_data:custom_data, columns_subset, targe
 
         row = {}
         row['colums']       = columns_subset
+        row['coefs ']       = lr.coefs_
         row['train_score']  = np.sqrt(mse(y_pred_tr, y_tr))
         row['test_score']   = np.sqrt(mse(y_pred_te, y_te))
         row['test_base']    = np.sqrt(mse(y_pred_base, y_te))
@@ -240,9 +235,7 @@ for combination in combinations:
     perform_test(df, custom_data, combination, target, results)
 
 df_results = pd.DataFrame(results)
-df_r = df_results[['train_score','test_score']]
-
-i_min = df_r['test_score'].idxmin()
+i_min = df_results['test_score'].idxmin()
 df_results.iloc[i_min,:]
 
  
