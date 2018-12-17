@@ -23,6 +23,7 @@ from sklearn.preprocessing import scale
 from sklearn.model_selection import train_test_split
 
 import itertools
+import random
 
 class analyze:
     #------------------------------------------------------------------------------
@@ -73,8 +74,9 @@ class meta_data:
 
     def __init__(self, working_dir):
         self._working_dir = working_dir
+        self._load_meta_data()
 
-    def load_meta_data(self):
+    def _load_meta_data(self):
         data_file = os.path.join(self._working_dir, 'course_projects', 'data', 'module_3', 'meta_data.txt')
 
         self._df_meta = pd.DataFrame.from_csv(data_file, sep='\t')
@@ -104,7 +106,7 @@ class meta_data:
                 codes = codes.astype(float)
             except:
                 codes = [i.strip() for i in df_ordinal.code.values]
-            
+         
             dict_ordinal = dict(zip(codes, df_ordinal.ordinal_value.values))
         return dict_ordinal
 
@@ -122,14 +124,23 @@ class meta_data:
 
 class custom_data:
     _meta_data = None
+    _working_dir = None
+    _df_test_data = None
 
-    def __init__(self, meta_data):
+    def __init__(self, working_dir, meta_data):
+        self._working_dir = working_dir
         self._meta_data = meta_data
+        
+        self._load_test_data()
 
     def get_type_columns(self, df : pd.DataFrame, type):
         columns = df.columns.intersection(self._meta_data.get_type_columns(type))
         return columns
-    
+
+    def _load_test_data(self):
+        data_file = os.path.join(self._working_dir, 'course_projects', 'data', 'module_3', 'house-prices-test.csv')
+        self._df_test_data = pd.read_csv(data_file)
+        
 #------------------------------------------------------------------------------
 
 pd.set_option('display.max_columns', 90)
@@ -152,7 +163,6 @@ if 0:
 
 removed_columns = all_columns.difference(set(df.columns))
 df_rm = df_origin[list(removed_columns)]
-
 
 #------------------------------------------------------------------------------
 
@@ -196,13 +206,14 @@ def perform_test(df:pd.DataFrame, custom_data:custom_data, columns_subset, targe
         y_pred_base = dummy.predict(X_te)
 
         row = {}
-        row['colums']       = columns_subset
-        row['coefs ']       = lr.coefs_
-        row['train_score']  = np.sqrt(mse(y_pred_tr, y_tr))
-        row['test_score']   = np.sqrt(mse(y_pred_te, y_te))
-        row['test_base']    = np.sqrt(mse(y_pred_base, y_te))
-        row['y_te']         = pd.Series(y_te)
-        row['y_pred_te']    = pd.Series(y_pred_te)
+        row['subset_colums'] = columns_subset
+        row['df_colums']     = _df.columns
+        row['coefs ']        = lr.coef_
+        row['train_score']   = np.sqrt(mse(y_pred_tr, y_tr))
+        row['test_score']    = np.sqrt(mse(y_pred_te, y_te))
+        row['test_base']     = np.sqrt(mse(y_pred_base, y_te))
+        row['y_te']          = pd.Series(y_te)
+        row['y_pred_te']     = pd.Series(y_pred_te)
 
         results.append(row)
     
@@ -215,8 +226,7 @@ all_columns = set(df_origin.columns)
 df = df_origin.dropna(axis=1).copy()
 
 meta_data = meta_data(working_dir)
-meta_data.load_meta_data()
-custom_data = custom_data(meta_data)
+custom_data = custom_data(working_dir, meta_data)
 
 target = 'SalePrice'
 df[target] = np.log(df[target])
@@ -227,10 +237,9 @@ columns = df.columns.copy()
 columns_wo_target = columns.drop(target)
 columns_wo_target = columns_wo_target.drop(['Order', 'PID'])
 
-columns_subset = ['Overall Qual', 'Gr Liv Area']
-
 results = []
-combinations = [list(x) for x in itertools.combinations(columns_wo_target, 2)]
+combinations = [list(x) for x in itertools.combinations(columns_wo_target, 5)]
+combinations = [random.choice(combinations) for i in np.arange(1000)]
 for combination in combinations:
     perform_test(df, custom_data, combination, target, results)
 
@@ -238,7 +247,10 @@ df_results = pd.DataFrame(results)
 i_min = df_results['test_score'].idxmin()
 df_results.iloc[i_min,:]
 
- 
+i_min = df_results['train_score'].idxmin()
+best_train = df_results.iloc[i_min,:]
+best_train[1]
+
 
 
 
