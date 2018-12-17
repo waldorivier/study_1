@@ -140,6 +140,18 @@ class custom_data:
     def _load_test_data(self):
         data_file = os.path.join(self._working_dir, 'course_projects', 'data', 'module_3', 'house-prices-test.csv')
         self._df_test_data = pd.read_csv(data_file)
+
+    
+class result:
+    _columns_subset = None
+    _columns        = None
+    _coef           = None
+    _train_score    = None
+    _test_score     = None
+    _test_baseline  = None
+    _y_te           = None
+    _y_te_pred      = None
+
         
 #------------------------------------------------------------------------------
 
@@ -205,17 +217,17 @@ def perform_test(df:pd.DataFrame, custom_data:custom_data, columns_subset, targe
         dummy.fit(X_tr, y_tr)
         y_pred_base = dummy.predict(X_te)
 
-        row = {}
-        row['subset_colums'] = columns_subset
-        row['df_colums']     = _df.columns
-        row['coefs ']        = lr.coef_
-        row['train_score']   = np.sqrt(mse(y_pred_tr, y_tr))
-        row['test_score']    = np.sqrt(mse(y_pred_te, y_te))
-        row['test_base']     = np.sqrt(mse(y_pred_base, y_te))
-        row['y_te']          = pd.Series(y_te)
-        row['y_pred_te']     = pd.Series(y_pred_te)
+        r = result()
+        r._columns_subset = columns_subset
+        r._columns        = _df.columns
+        r._coef           = lr.coef_
+        r._train_score    = np.sqrt(mse(y_pred_tr, y_tr))
+        r._test_score     = np.sqrt(mse(y_pred_te, y_te))
+        r._test_baseline  = np.sqrt(mse(y_pred_base, y_te))
+        r._y_te           = pd.Series(y_te)
+        r._y_te_pred      = pd.Series(y_pred_te)
 
-        results.append(row)
+        results.append(r)
     
     except:
         print (columns_subset)
@@ -243,7 +255,7 @@ combinations = [random.choice(combinations) for i in np.arange(1000)]
 for combination in combinations:
     perform_test(df, custom_data, combination, target, results)
 
-df_results = pd.DataFrame(results)
+df_results = pd.DataFrame.from_records(results)
 i_min = df_results['test_score'].idxmin()
 df_results.iloc[i_min,:]
 
