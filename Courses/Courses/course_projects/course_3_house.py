@@ -152,8 +152,17 @@ class result:
     _y_te           = None
     _y_te_pred      = None
 
-        
-#------------------------------------------------------------------------------
+    def as_dict(self):
+        return {'columns_subset' : _columns_subset,
+                'columns'        : _columns,
+                'coef'           : _coef,
+                'train_score'    : _train_score,
+                'test_score'     : test_score,
+                'test_baseline'  : _test_baseline,
+                'y_te'           : _y_te,
+                'y_te_pred'      : _y_te_pred}
+                
+#---------------------------------------------------------------------------
 
 pd.set_option('display.max_columns', 90)
 
@@ -255,7 +264,7 @@ combinations = [random.choice(combinations) for i in np.arange(1000)]
 for combination in combinations:
     perform_test(df, custom_data, combination, target, results)
 
-df_results = pd.DataFrame.from_records(results)
+re
 i_min = df_results['test_score'].idxmin()
 df_results.iloc[i_min,:]
 
