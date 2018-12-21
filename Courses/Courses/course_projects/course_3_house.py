@@ -264,7 +264,8 @@ combinations = [random.choice(combinations) for i in np.arange(1000)]
 for combination in combinations:
     perform_test(df, custom_data, combination, target, results)
 
-re
+p
+
 i_min = df_results['test_score'].idxmin()
 df_results.iloc[i_min,:]
 
