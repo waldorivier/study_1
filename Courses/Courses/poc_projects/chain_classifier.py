@@ -14,7 +14,6 @@ soldel_db = mysql.connector.connect(
 
 connection = cx_Oracle.connect("Data Source = LABCIT; User ID = PADEV96_DATA; Password = PADEV96_DATA")
 
-
 class chain_vector:
     _ser_items = None
     _nb_items = None
