@@ -7,6 +7,7 @@ from pathlib import PureWindowsPath
 import numpy as np
 import pandas as pd
 import xml.etree.cElementTree as et
+from datetime import date
 
 try :
     dta_file_name = '_5750_18_101_qfzj46001.xml'
@@ -30,10 +31,10 @@ try :
     if local :
         working_dir = PureWindowsPath(os.getcwd())
         data_dir = PureWindowsPath(working_dir.joinpath('Data'))
-    
+
     else :
         client_root_dir = PureWindowsPath('O:\\')
-        data_dir = PureWindowsPath(client_root_dir.joinpath('Lausanne','24 BenAdmin-Param','05 Paiement','SEPA','Contrôles'))
+        data_dir = PureWindowsPath(client_root_dir.joinpath('UBS Optio 1e','24 BenAdmin-Param','06 Reprise','Atos','data_reprise'))
     
     #--------------------------------------------------------------------------
     def helper_get_file(file_name) :
@@ -130,7 +131,7 @@ try :
         # lecture des comptes / écriture de la liste 45
         #--------------------------------------------------------------------------
 
-    if 1 : 
+    if 0 : 
         df_liste_45 = pd.read_excel(helper_get_file(liste_45_file_name))
        
         # forcer en string pour l'évaluation de la regexp (un nombre unique étant considéré 
@@ -148,6 +149,29 @@ try :
         df_ecrit.sort_values(by = 'ecrit')
         df_ecrit.to_csv(helper_get_file(result_file_name), sep = ';')
         
+
+    if 1:
+        df_data_converted = pd.read_excel(helper_get_file('UBS Optio 1e_Mitarbeiterliste_Atos AG_01 01.2019_AON_wri.xls'), sheet_name='reprise')
+        
+        df_header = df_data_converted.iloc[0:3,:]
+        df_data = df_data_converted.iloc[4:,:]
+        # df_data = df_data_converted.iloc[4:5,:]
+        
+        # convert datetime to compatible mupe format
+
+        date_columns = ['DAFFIL','DENSER','DATEFF','DANAIS']
+
+        for column in date_columns:
+            df_data[column] = df_data[column].map(lambda x : x.strftime('%d.%m.%Y')) 
+
+        int_columns = ['NPOST']
+        for column in int_columns:
+            df_data[column] = df_data[column].astype(int)
+
+        df_header.to_csv(helper_get_file('header_affi.csv'), sep = ';', index=False)
+        df_data.to_csv(helper_get_file('data_affi.csv'), sep = ';', header=False, index=False, encoding='UTF-8')
+        # df_data.to_csv(helper_get_file('data_affi.csv'), sep = ';', header=False, index=False)
+
 except ValueError as e  :
     print (e)
 
