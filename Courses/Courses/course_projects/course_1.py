@@ -16,7 +16,7 @@ try :
 
     #--------------------------------------------------------------------------
     # décomposition du score de bonheur par critère; forme stack bar 
-    # fonction utilisée plus bas
+    # fonction utilisée plus basmo
     #--------------------------------------------------------------------------
     def plot_stack_bar (df, title) :
 
