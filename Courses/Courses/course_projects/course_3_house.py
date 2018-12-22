@@ -83,24 +83,24 @@ class meta_data:
         self._df_meta.reset_index(inplace=True)
         self._df_meta.ffill(inplace=True)
 
-    def _get_type(self, column):
+    def _get_type_of_col(self, col):
         try:
-            return self._df_meta[self._df_meta.column == column]['type'].iloc[0]
+            return self._df_meta[self._df_meta['column'] == col]['type'].iloc[0]
         except:
-            print ("Column not found in meta data " + column)
+            print ("Column not found in meta data " + col)
     
-    def get_type_columns(self, type):
-        columns = self._df_meta.copy()
-        columns = columns[columns.type==type]['column'].drop_duplicates()
-        return columns
+    def get_cols_of_type(self, type):
+        cols = self._df_meta.copy()
+        cols = cols[cols.type==type]['column'].drop_duplicates()
+        return cols
 
-    def transform_ordinal_column(self, df, column):
-       self._transform_column(df, column, 'Ordinal')
+    def map_ordinal_col(self, df, col):
+       self._map_col(df, col, 'Ordinal')
 
-    def get_dict_ordinal(self, column):
+    def get_dict_ordinal(self, col):
         dict_ordinal = None
-        if self._get_type(column) == 'Ordinal':
-            df_ordinal = self._df_meta[self._df_meta['column'] == column]
+        if self._get_type_of_col(col) == 'Ordinal':
+            df_ordinal = self._df_meta[self._df_meta['column'] == col]
             codes = df_ordinal.code.values
             try:
                 codes = codes.astype(float)
@@ -110,65 +110,97 @@ class meta_data:
             dict_ordinal = dict(zip(codes, df_ordinal.ordinal_value.values))
         return dict_ordinal
 
-    def _transform_column(self, df, column, type):
-        if df.columns.contains(column):
-            if self._get_type(column) == type:
-                dict_ordinal = self.get_dict_ordinal(column)
-                df[column] = df[column].map(dict_ordinal)
+    def _map_col(self, df, col, type):
+        if df.columns.contains(col):
+            if self._get_type_of_col(col) == type:
+                dict_ordinal = self.get_dict_ordinal(col)
+                df[col] = df[col].map(dict_ordinal)
 
-    def transform_ordinal_df(self, df):
-       ordinal_columns = self.get_type_columns('Ordinal')
+    # all ordinal columns's code will be associated with numerical values  
+    # as defined in meta data
+    def map_ordinal_cols(self, df):
+       cols = self.get_cols_of_type('Ordinal')
 
-       for column in ordinal_columns:
-           self.transform_ordinal_column(df, column)
+       for col in cols:
+           self.map_ordinal_col(df, col)
 
-class custom_data:
+class sample_data:
     _meta_data = None
     _working_dir = None
+    _df_target = None
+ 
     _df_test_data = None
-
-    def __init__(self, working_dir, meta_data):
-        self._working_dir = working_dir
-        self._meta_data = meta_data
+    _df_train_data = None
+    _df_train_data_orig = None
+ 
+    def __init__(self, working_dir, meta_data, target):
+        assert meta_data is not None
         
+        self._working_dir = working_dir
+
+        self._load_train_data()
         self._load_test_data()
 
-    def get_type_columns(self, df : pd.DataFrame, type):
-        columns = df.columns.intersection(self._meta_data.get_type_columns(type))
-        return columns
+        self._target = target
+        self._meta_data = meta_data
 
+    def prepare_train_data(self):
+       # drop nan columns which contains null values     
+        self._df_train_data = self._df_train_data_orig.dropna(axis=1).copy()
+
+        # takes the log the target
+        self._df_train_data[self._target] = np.log(self._df_train_data[self._target])
+
+        self._meta_data.map_ordinal_cols(self._df_train_data)
+        
+    # columns which were removed after prepare above
+    def get_removed_cols(self): 
+        return self._df_train_data_orig.columns.difference(set(self._df_train_data.columns))
+    
+    def get_cols_of_type(self, type):
+        cols = self._df_train_data.columns.intersection(self._meta_data.get_cols_of_type(type))
+        return cols
+ 
+    def get_cols_wo_target(self):
+        cols = self._df_train_data.columns.copy()
+        cols = cols.drop(self._target)
+        cols = cols.drop(['Order', 'PID'])
+        return cols
+
+    def _load_train_data(self):
+        data_file = os.path.join(self._working_dir, 'course_projects', 'data', 'module_3', 'house-prices.csv')
+ 
+        # save a copy of original train data     
+        self._df_train_data_orig = pd.read_csv(data_file)
+ 
     def _load_test_data(self):
         data_file = os.path.join(self._working_dir, 'course_projects', 'data', 'module_3', 'house-prices-test.csv')
         self._df_test_data = pd.read_csv(data_file)
+ 
+    class result:
+        _comb_cols      = None
+        _cols           = None
+        _coef           = None
+        _train_score    = None
+        _test_score     = None
+        _test_baseline  = None
+        _y_te           = None
+        _y_te_pred      = None
 
-    
-class result:
-    _columns_subset = None
-    _columns        = None
-    _coef           = None
-    _train_score    = None
-    _test_score     = None
-    _test_baseline  = None
-    _y_te           = None
-    _y_te_pred      = None
-
-    def as_dict(self):
-        return {'columns_subset' : _columns_subset,
-                'columns'        : _columns,
-                'coef'           : _coef,
-                'train_score'    : _train_score,
-                'test_score'     : test_score,
-                'test_baseline'  : _test_baseline,
-                'y_te'           : _y_te,
-                'y_te_pred'      : _y_te_pred}
+        def as_dict(self):
+            return {'comb_cols'      : self._ccomb_cols,
+                    'cola'           : self._cols,
+                    'coef'           : self._coef,
+                    'train_score'    : self._train_score,
+                    'test_score'     : self._test_score,
+                    'test_baseline'  : self._test_baseline,
+                    'y_te'           : self._y_te,
+                    'y_te_pred'      : self._y_te_pred}
                 
 #---------------------------------------------------------------------------
 
 pd.set_option('display.max_columns', 90)
-
 working_dir = os.getcwd()
-data_file = os.path.join(working_dir, 'course_projects', 'data', 'module_3', 'house-prices.csv')
-df_origin = pd.read_csv(data_file)
 
 #------------------------------------------------------------------------------
 
@@ -180,27 +212,18 @@ if 0:
     df_results = pd.DataFrame(results)
 
 #------------------------------------------------------------------------------
-# keep the features being removed
-
-removed_columns = all_columns.difference(set(df.columns))
-df_rm = df_origin[list(removed_columns)]
-
-#------------------------------------------------------------------------------
-
-#------------------------------------------------------------------------------
 # test a model given a subset of colums 
 #------------------------------------------------------------------------------
-def perform_test(df:pd.DataFrame, custom_data:custom_data, columns_subset, target, results):
-
+def perform_test(sample_data:sample_data, comb_cols, results):
     try:
-        _df = df.copy()
+        _df = sample_data._df_train_data.copy()
     
-        _y = _df[target]
-        _df = _df[columns_subset]
+        _y = _df[sample_data._target]
+        _df = _df[comb_cols]
         
-        nominal_columns = custom_data.get_type_columns(_df, 'Nominal')
-        if len(nominal_columns) > 0:
-            _df = pd.get_dummies(_df, columns=nominal_columns)
+        cols = sample_data.get_cols_of_type('Nominal')
+        if len(cols) > 0:
+            _df = pd.get_dummies(_df, columns=cols)
 
         #----------------------------------    
         # TODO : remove eventual outliers 
@@ -226,9 +249,9 @@ def perform_test(df:pd.DataFrame, custom_data:custom_data, columns_subset, targe
         dummy.fit(X_tr, y_tr)
         y_pred_base = dummy.predict(X_te)
 
-        r = result()
-        r._columns_subset = columns_subset
-        r._columns        = _df.columns
+        r = sample_data._result()
+        r._cols_subset    = comb_cols
+        r._cols          = _df.cols
         r._coef           = lr.coef_
         r._train_score    = np.sqrt(mse(y_pred_tr, y_tr))
         r._test_score     = np.sqrt(mse(y_pred_te, y_te))
@@ -239,39 +262,28 @@ def perform_test(df:pd.DataFrame, custom_data:custom_data, columns_subset, targe
         results.append(r)
     
     except:
-        print (columns_subset)
+        print(comb_cols)
 
 #------------------------------------------------------------------------------
 
-all_columns = set(df_origin.columns)
-df = df_origin.dropna(axis=1).copy()
-
 meta_data = meta_data(working_dir)
-custom_data = custom_data(working_dir, meta_data)
-
-target = 'SalePrice'
-df[target] = np.log(df[target])
-
-meta_data.transform_ordinal_df(df)
-
-columns = df.columns.copy()
-columns_wo_target = columns.drop(target)
-columns_wo_target = columns_wo_target.drop(['Order', 'PID'])
+sample_data = sample_data(working_dir, meta_data, 'SalePrice')
+sample_data.prepare_train_data()
 
 results = []
-combinations = [list(x) for x in itertools.combinations(columns_wo_target, 5)]
+combinations = [list(x) for x in itertools.combinations(sample_data.get_cols_wo_target(), 2)]
 combinations = [random.choice(combinations) for i in np.arange(1000)]
 for combination in combinations:
-    perform_test(df, custom_data, combination, target, results)
+    perform_test(sample_data, combination, results)
 
-p
+df_results = pd.DataFrame([x.as_dict() for x in results])
 
 i_min = df_results['test_score'].idxmin()
 df_results.iloc[i_min,:]
 
 i_min = df_results['train_score'].idxmin()
 best_train = df_results.iloc[i_min,:]
-best_train[1]
+best_train
 
 
 
