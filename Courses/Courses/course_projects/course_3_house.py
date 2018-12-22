@@ -152,14 +152,17 @@ class sample_data:
         self._df_train_data[self._target] = np.log(self._df_train_data[self._target])
 
         self._meta_data.map_ordinal_cols(self._df_train_data)
+
+    def prepare_test_data(self):
+         self._meta_data.map_ordinal_cols(self._df_test_data)
         
+    def get_cols_of_type(self, df, type):
+        cols = df.columns.intersection(self._meta_data.get_cols_of_type(type))
+        return cols
+
     # columns which were removed after prepare above
     def get_removed_cols(self): 
         return self._df_train_data_orig.columns.difference(set(self._df_train_data.columns))
-    
-    def get_cols_of_type(self, type):
-        cols = self._df_train_data.columns.intersection(self._meta_data.get_cols_of_type(type))
-        return cols
  
     def get_cols_wo_target(self):
         cols = self._df_train_data.columns.copy()
@@ -178,24 +181,24 @@ class sample_data:
         self._df_test_data = pd.read_csv(data_file)
  
     class result:
-        _comb_cols      = None
-        _cols           = None
-        _coef           = None
-        _train_score    = None
-        _test_score     = None
-        _test_baseline  = None
-        _y_te           = None
-        _y_te_pred      = None
+        comb_cols      = None
+        cols           = None
+        coef           = None
+        train_score    = None
+        test_score     = None
+        test_baseline  = None
+        y_te           = None
+        y_te_pred      = None
 
         def as_dict(self):
-            return {'comb_cols'      : self._ccomb_cols,
-                    'cola'           : self._cols,
-                    'coef'           : self._coef,
-                    'train_score'    : self._train_score,
-                    'test_score'     : self._test_score,
-                    'test_baseline'  : self._test_baseline,
-                    'y_te'           : self._y_te,
-                    'y_te_pred'      : self._y_te_pred}
+            return {'comb_cols'      : self.comb_cols,
+                    'cols'           : self.cols,
+                    'lr'             : self.lr,
+                    'train_score'    : self.train_score,
+                    'test_score'     : self.test_score,
+                    'test_baseline'  : self.test_baseline,
+                    'y_te'           : self.y_te,
+                    'y_te_pred'      : self.y_te_pred}
                 
 #---------------------------------------------------------------------------
 
@@ -212,16 +215,16 @@ if 0:
     df_results = pd.DataFrame(results)
 
 #------------------------------------------------------------------------------
-# test a model given a subset of colums 
+# train given a subset of colums 
 #------------------------------------------------------------------------------
-def perform_test(sample_data:sample_data, comb_cols, results):
+def perform_train(sample_data:sample_data, comb_cols, results):
     try:
         _df = sample_data._df_train_data.copy()
     
         _y = _df[sample_data._target]
         _df = _df[comb_cols]
         
-        cols = sample_data.get_cols_of_type('Nominal')
+        cols = sample_data.get_cols_of_type(_df, 'Nominal')
         if len(cols) > 0:
             _df = pd.get_dummies(_df, columns=cols)
 
@@ -239,30 +242,61 @@ def perform_test(sample_data:sample_data, comb_cols, results):
         #----------------------------------
         # negatives values not allowed 
      
-        y_pred_tr = np.maximum(lr.predict(X_tr), 0)
-        y_pred_te = np.maximum(lr.predict(X_te), 0)
+        # y_pred_tr = np.maximum(lr.predict(X_tr), 0)
+        # y_pred_te = np.maximum(lr.predict(X_te), 0)
    
         #----------------------------------
         # determine the baseline 
 
         dummy = DummyRegressor()
         dummy.fit(X_tr, y_tr)
-        y_pred_base = dummy.predict(X_te)
+        y_pred_base = dummy.predict(X_te)   
 
-        r = sample_data._result()
-        r._cols_subset    = comb_cols
-        r._cols          = _df.cols
-        r._coef           = lr.coef_
-        r._train_score    = np.sqrt(mse(y_pred_tr, y_tr))
-        r._test_score     = np.sqrt(mse(y_pred_te, y_te))
-        r._test_baseline  = np.sqrt(mse(y_pred_base, y_te))
-        r._y_te           = pd.Series(y_te)
-        r._y_te_pred      = pd.Series(y_pred_te)
+        r = sample_data.result()
+        r.comb_cols      = comb_cols
+        r.cols           = _df.columns
+        r.lr             = lr
+        r.train_score    = np.sqrt(mse(y_pred_tr, y_tr))
+        r.test_score     = np.sqrt(mse(y_pred_te, y_te))
+        r.test_baseline  = np.sqrt(mse(y_pred_base, y_te))
+        r.y_te           = pd.Series(y_te)
+        r.y_te_pred      = pd.Series(y_pred_te)
 
         results.append(r)
     
     except:
         print(comb_cols)
+
+#------------------------------------------------------------------------------
+
+def perform_test(sample_data:sample_data, optimum, results):
+    try:
+        _df = sample_data._df_test_data.copy()
+        _df = _df[best_train.comb_cols]
+        
+        cols = sample_data.get_cols_of_type(_df, 'Nominal')
+        if len(cols) > 0:
+            _df = pd.get_dummies(_df, columns=cols)
+
+        # re-index to be compatible with train set 
+        _df = _df.reindex(columns=optimum.cols)
+        _df.fillna(0)
+
+        _X = _df.values
+
+        y_pred = optimum.lr.predict(_X)
+  
+        r = sample_data.result()
+        r.comb_cols = comb_cols
+        r.cols      = _df.columns
+
+        # transform 
+        r.y_te_pred = pd.Series(np.exp(y_pred))
+
+        results.append(r)
+    
+    except:
+        print(best_train.comb_cols)
 
 #------------------------------------------------------------------------------
 
@@ -274,16 +308,18 @@ results = []
 combinations = [list(x) for x in itertools.combinations(sample_data.get_cols_wo_target(), 2)]
 combinations = [random.choice(combinations) for i in np.arange(1000)]
 for combination in combinations:
-    perform_test(sample_data, combination, results)
+    perform_train(sample_data, combination, results)
 
 df_results = pd.DataFrame([x.as_dict() for x in results])
 
 i_min = df_results['test_score'].idxmin()
 df_results.iloc[i_min,:]
 
-i_min = df_results['train_score'].idxmin()
-best_train = df_results.iloc[i_min,:]
-best_train
+optimum = df_results.iloc[i_min,:]
+optimum
+
+sample_data.prepare_test_data()
+perform_train(sample_data, optimum, results)
 
 
 
