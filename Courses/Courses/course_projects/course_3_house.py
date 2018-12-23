@@ -1,3 +1,4 @@
+#-------------------------------------------------------------------------
 # Module 3 : course project - predicting house prices
 #-------------------------------------------------------------------------
 
@@ -23,6 +24,7 @@ from sklearn.preprocessing import scale
 from sklearn.model_selection import train_test_split
 
 import itertools
+import math
 import random
 
 class analyze:
@@ -34,29 +36,34 @@ class analyze:
     # 
     # plot the result  
     #------------------------------------------------------------------------------
-    def analyze_columns(self, df, results):
+    
+    def __init__(self):
+        return None
+        
+    def analyze_cols(self, df, results):
         _df = df.copy()
 
         null_values_max = _df.isnull().sum().max()
         if null_values_max > 0:
             threshes = np.arange(0, null_values_max, 100)
             
-            def select_columns(df, thresh):
-                row = {}
+            def drop_cols(df, thresh):
                 _df = df.dropna(thresh=thresh, axis=1)
+
+                row = {}
                 row['thresh'] = thresh
                 row['shape'] = _df.shape[1]
                 results.append(row)
         
             for thresh in threshes :
-                select_columns(_df, thresh)
+                drop_cols(_df, thresh)
     
             df_results = pd.DataFrame(results)
             df_results.set_index('shape', inplace=True)
         
             fig, ax = plt.subplots(nrows=1, ncols=1)
             fig.suptitle("numbers of remaining columns in terms of thresh for a df of shape (" +  
-                            str(df.shape[0]) + "," + str(df.shape[1]) + ")")
+                          str(df.shape[0]) + "," + str(df.shape[1]) + ")")
         
             x_pos = np.arange(len(df_results))
             ax.bar(x_pos, df_results.index, align='center', color='green')
@@ -68,8 +75,13 @@ class analyze:
 
             plt.show()
 
+#------------------------------------------------------------------------------
+# class which implements utilities to access house price meta data (columns, 
+# column's type, ordinal column code mapping, tansfomation of entire ordinal 
+# columns of a dataframe
+#------------------------------------------------------------------------------
 class meta_data:
-    _working_dir = ""
+    _working_dir = None
     _df_meta = None
 
     def __init__(self, working_dir):
@@ -77,7 +89,7 @@ class meta_data:
         self._load_meta_data()
 
     def _load_meta_data(self):
-        data_file = os.path.join(self._working_dir, 'course_projects', 'data', 'module_3', 'meta_data.txt')
+        data_file = os.path.join(self._working_dir, 'meta_data.txt')
 
         self._df_meta = pd.DataFrame.from_csv(data_file, sep='\t')
         self._df_meta.reset_index(inplace=True)
@@ -93,9 +105,6 @@ class meta_data:
         cols = self._df_meta.copy()
         cols = cols[cols.type==type]['column'].drop_duplicates()
         return cols
-
-    def map_ordinal_col(self, df, col):
-       self._map_col(df, col, 'Ordinal')
 
     def get_dict_ordinal(self, col):
         dict_ordinal = None
@@ -115,23 +124,29 @@ class meta_data:
             if self._get_type_of_col(col) == type:
                 dict_ordinal = self.get_dict_ordinal(col)
                 df[col] = df[col].map(dict_ordinal)
-
-    # all ordinal columns's code will be associated with numerical values  
-    # as defined in meta data
+    
+    def _map_ordinal_col(self, df, col):
+       self._map_col(df, col, 'Ordinal')
+       
+    # all ordinal columns's code will be associated with numerical values  as defined in meta data
     def map_ordinal_cols(self, df):
-       cols = self.get_cols_of_type('Ordinal')
+        cols = self.get_cols_of_type('Ordinal')
+        for col in cols:
+            self._map_ordinal_col(df, col)
 
-       for col in cols:
-           self.map_ordinal_col(df, col)
-
+#------------------------------------------------------------------------------
+# class which implements utilities house price data
+#------------------------------------------------------------------------------
 class sample_data:
     _meta_data = None
     _working_dir = None
-    _df_target = None
+    _target = None
  
     _df_test_data = None
     _df_train_data = None
     _df_train_data_orig = None
+
+    _df_pred_reference = None
  
     def __init__(self, working_dir, meta_data, target):
         assert meta_data is not None
@@ -140,17 +155,17 @@ class sample_data:
 
         self._load_train_data()
         self._load_test_data()
+        self._load_pred_reference()
 
         self._target = target
         self._meta_data = meta_data
 
     def prepare_train_data(self):
-       # drop nan columns which contains null values     
+        # drop nan columns which contains null values     
         self._df_train_data = self._df_train_data_orig.dropna(axis=1).copy()
 
         # takes the log the target
         self._df_train_data[self._target] = np.log(self._df_train_data[self._target])
-
         self._meta_data.map_ordinal_cols(self._df_train_data)
 
     def prepare_test_data(self):
@@ -171,19 +186,30 @@ class sample_data:
         return cols
 
     def _load_train_data(self):
-        data_file = os.path.join(self._working_dir, 'course_projects', 'data', 'module_3', 'house-prices.csv')
+        data_file = os.path.join(self._working_dir, 'house-prices.csv')
  
         # save a copy of original train data     
         self._df_train_data_orig = pd.read_csv(data_file)
  
     def _load_test_data(self):
-        data_file = os.path.join(self._working_dir, 'course_projects', 'data', 'module_3', 'house-prices-test.csv')
+        data_file = os.path.join(self._working_dir, 'house-prices-test.csv')
         self._df_test_data = pd.read_csv(data_file)
+
+    def _load_pred_reference(self):
+        data_file = os.path.join(self._working_dir, 'house-prices-pred-example.csv')
+        self._df_pred_reference = pd.read_csv(data_file)
+
+    def analyze(self):
+        ana = analyze()
+        results = []
+        ana.analyze_cols(self._df_train_data_orig, results)
+        return pd.DataFrame(results)
  
     class result:
+        PID            = None
         comb_cols      = None
         cols           = None
-        coef           = None
+        lr             = None
         train_score    = None
         test_score     = None
         test_baseline  = None
@@ -191,7 +217,8 @@ class sample_data:
         y_te_pred      = None
 
         def as_dict(self):
-            return {'comb_cols'      : self.comb_cols,
+            return {'PID'            : self.PID,
+                    'comb_cols'      : self.comb_cols,
                     'cols'           : self.cols,
                     'lr'             : self.lr,
                     'train_score'    : self.train_score,
@@ -201,40 +228,34 @@ class sample_data:
                     'y_te_pred'      : self.y_te_pred}
                 
 #---------------------------------------------------------------------------
+def anp(n, k):
+    return math.factorial(n) / (math.factorial(k) * math.factorial(n - k))
 
 pd.set_option('display.max_columns', 90)
-working_dir = os.getcwd()
 
 #------------------------------------------------------------------------------
-
-if 0:
-    analyze = analyze()
-    results = []
-    analyze.analyze_columns(df_origin, results)
-
-    df_results = pd.DataFrame(results)
-
-#------------------------------------------------------------------------------
-# train given a subset of colums 
+# Evaluates a model given a subset of colums choosen among those of
+# the original data set 
 #------------------------------------------------------------------------------
 def perform_train(sample_data:sample_data, comb_cols, results):
     try:
-        _df = sample_data._df_train_data.copy()
-    
-        _y = _df[sample_data._target]
-        _df = _df[comb_cols]
+        df = sample_data._df_train_data.copy()
+        PID = df['PID']
+
+        y = df[sample_data._target]
+        df = df[comb_cols]
         
-        cols = sample_data.get_cols_of_type(_df, 'Nominal')
+        cols = sample_data.get_cols_of_type(df, 'Nominal')
         if len(cols) > 0:
-            _df = pd.get_dummies(_df, columns=cols)
+            df = pd.get_dummies(df, columns=cols)
 
         #----------------------------------    
         # TODO : remove eventual outliers 
         
-        _X = _df.values
+        X = df.values
 
         X_tr, X_te, y_tr, y_te = train_test_split(
-           _X, _y.values, train_size = 0.5, test_size = 0.5, random_state=1)
+           X, y.values, train_size = 0.5, test_size = 0.5, random_state=1)
 
         lr = LinearRegression()
         lr.fit(X_tr, y_tr)
@@ -242,8 +263,8 @@ def perform_train(sample_data:sample_data, comb_cols, results):
         #----------------------------------
         # negatives values not allowed 
      
-        # y_pred_tr = np.maximum(lr.predict(X_tr), 0)
-        # y_pred_te = np.maximum(lr.predict(X_te), 0)
+        y_pred_tr = np.maximum(lr.predict(X_tr), 0)
+        y_pred_te = np.maximum(lr.predict(X_te), 0)
    
         #----------------------------------
         # determine the baseline 
@@ -253,8 +274,9 @@ def perform_train(sample_data:sample_data, comb_cols, results):
         y_pred_base = dummy.predict(X_te)   
 
         r = sample_data.result()
+        r.PID            = PID
         r.comb_cols      = comb_cols
-        r.cols           = _df.columns
+        r.cols           = df.columns
         r.lr             = lr
         r.train_score    = np.sqrt(mse(y_pred_tr, y_tr))
         r.test_score     = np.sqrt(mse(y_pred_te, y_te))
@@ -268,27 +290,30 @@ def perform_train(sample_data:sample_data, comb_cols, results):
         print(comb_cols)
 
 #------------------------------------------------------------------------------
-
-def perform_test(sample_data:sample_data, optimum, results):
+# based on an optimal solution, predicts values from a given test sample 
+#------------------------------------------------------------------------------
+def perform_test(sample_data:sample_data, optimal_result, results):
     try:
-        _df = sample_data._df_test_data.copy()
-        _df = _df[best_train.comb_cols]
+        df = sample_data._df_test_data.copy()
+        PID = df['PID']
+        df = df[optimal_result.comb_cols]
         
-        cols = sample_data.get_cols_of_type(_df, 'Nominal')
+        cols = sample_data.get_cols_of_type(df, 'Nominal')
         if len(cols) > 0:
-            _df = pd.get_dummies(_df, columns=cols)
+            df = pd.get_dummies(df, columns=cols)
 
-        # re-index to be compatible with train set 
-        _df = _df.reindex(columns=optimum.cols)
-        _df.fillna(0)
+        # re-index test set to be compatible with train set 
+        df = df.reindex(columns=optimal_result.cols)
+        df.fillna(0, inplace=True)
 
-        _X = _df.values
+        X = df.values
 
-        y_pred = optimum.lr.predict(_X)
+        y_pred = optimal_result.lr.predict(X)
   
         r = sample_data.result()
-        r.comb_cols = comb_cols
-        r.cols      = _df.columns
+        r.PID = PID
+        r.comb_cols  = optimal_result.comb_cols
+        r.cols       = df.columns
 
         # transform 
         r.y_te_pred = pd.Series(np.exp(y_pred))
@@ -296,9 +321,12 @@ def perform_test(sample_data:sample_data, optimum, results):
         results.append(r)
     
     except:
-        print(best_train.comb_cols)
+        print(optimal_result.comb_cols)
 
 #------------------------------------------------------------------------------
+
+working_dir = os.getcwd()
+working_dir = os.path.join(working_dir,'course_projects', 'data', 'module_3')
 
 meta_data = meta_data(working_dir)
 sample_data = sample_data(working_dir, meta_data, 'SalePrice')
@@ -315,12 +343,15 @@ df_results = pd.DataFrame([x.as_dict() for x in results])
 i_min = df_results['test_score'].idxmin()
 df_results.iloc[i_min,:]
 
-optimum = df_results.iloc[i_min,:]
-optimum
+optimal_result = df_results.iloc[i_min,:]
+optimal_result
 
+results = []
 sample_data.prepare_test_data()
-perform_train(sample_data, optimum, results)
+perform_test(sample_data, optimal_result, results)
+df_results = pd.DataFrame([x.as_dict() for x in results])
 
 
+sample_data._df_pred_reference
 
 
