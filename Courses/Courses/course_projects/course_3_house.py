@@ -135,7 +135,7 @@ class meta_data:
             self._map_ordinal_col(df, col)
 
 #------------------------------------------------------------------------------
-# class which implements utilities house price data
+# class which implements utilities to manage house price data
 #------------------------------------------------------------------------------
 class sample_data:
     _meta_data = None
@@ -274,15 +274,15 @@ def perform_train(sample_data:sample_data, comb_cols, results):
         y_pred_base = dummy.predict(X_te)   
 
         r = sample_data.result()
-        r.PID            = PID
-        r.comb_cols      = comb_cols
-        r.cols           = df.columns
-        r.lr             = lr
-        r.train_score    = np.sqrt(mse(y_pred_tr, y_tr))
-        r.test_score     = np.sqrt(mse(y_pred_te, y_te))
-        r.test_baseline  = np.sqrt(mse(y_pred_base, y_te))
-        r.y_te           = pd.Series(y_te)
-        r.y_te_pred      = pd.Series(y_pred_te)
+        r.PID = PID
+        r.comb_cols = comb_cols
+        r.cols = df.columns
+        r.lr = lr
+        r.train_score = np.sqrt(mse(y_pred_tr, y_tr))
+        r.test_score = np.sqrt(mse(y_pred_te, y_te))
+        r.test_baseline = np.sqrt(mse(y_pred_base, y_te))
+        r.y_te = y_te
+        r.y_te_pred = y_pred_te
 
         results.append(r)
     
@@ -302,21 +302,21 @@ def perform_test(sample_data:sample_data, optimal_result, results):
         if len(cols) > 0:
             df = pd.get_dummies(df, columns=cols)
 
-        # re-index test set to be compatible with train set 
+        # re-index test set in order to be compatible with train set 
         df = df.reindex(columns=optimal_result.cols)
         df.fillna(0, inplace=True)
 
         X = df.values
 
-        y_pred = optimal_result.lr.predict(X)
+        y_pred_te = optimal_result.lr.predict(X)
   
         r = sample_data.result()
         r.PID = PID
         r.comb_cols  = optimal_result.comb_cols
-        r.cols       = df.columns
+        r.cols = df.columns
 
         # transform 
-        r.y_te_pred = pd.Series(np.exp(y_pred))
+        r.y_te_pred = np.exp(y_pred_te)
 
         results.append(r)
     
@@ -340,6 +340,7 @@ for combination in combinations:
 
 df_results = pd.DataFrame([x.as_dict() for x in results])
 
+# search for an optimal result
 i_min = df_results['test_score'].idxmin()
 df_results.iloc[i_min,:]
 
@@ -349,9 +350,14 @@ optimal_result
 results = []
 sample_data.prepare_test_data()
 perform_test(sample_data, optimal_result, results)
-df_results = pd.DataFrame([x.as_dict() for x in results])
+
+df_results = pd.concat([pd.DataFrame(results[0].PID), 
+                        pd.DataFrame(results[0].y_te_pred)], axis=1)
+df_results.columns = ['PID', 'SalePrice']
 
 
-sample_data._df_pred_reference
 
+df_pred_reference = sample_data._df_pred_reference
+len(set(df_pred_reference.PID).intersection(set(df_results.PID)))
 
+df_compare_reference = pd.merge(df_pred_reference, df_results, on=['PID'])
