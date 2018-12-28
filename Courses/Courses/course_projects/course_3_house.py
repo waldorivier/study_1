@@ -205,18 +205,18 @@ class sample_data:
         return pd.DataFrame(results)
  
     class result:
-        PID = None
         comb_cols = None
         cols = None
         lr = None
         train_score = None
         test_score = None
         test_baseline  = None
+        PID_pred = None
         y_te = None
         y_te_pred = None
 
         def as_dict(self):
-            return {'PID' : self.PID,
+            return {'PID_test' : self.PID_pred,
                     'comb_cols' : self.comb_cols,
                     'cols' : self.cols,
                     'lr' : self.lr,
@@ -239,8 +239,6 @@ pd.set_option('display.max_columns', 90)
 def perform_train(sample_data:sample_data, comb_cols, results):
     try:
         df = sample_data._df_train_data.copy()
-        PID = df['PID']
-
         y = df[sample_data._target]
         df = df[comb_cols]
         
@@ -251,10 +249,9 @@ def perform_train(sample_data:sample_data, comb_cols, results):
         #----------------------------------    
         # TODO : remove eventual outliers 
         
-        X = df.values
-
+        _X = df.values
         X_tr, X_te, y_tr, y_te = train_test_split(
-           X, y.values, train_size = 0.5, test_size = 0.5, random_state=1)
+           _X, y.values, train_size = 0.5, test_size = 0.5, random_state=1)
 
         lr = LinearRegression()
         lr.fit(X_tr, y_tr)
@@ -273,29 +270,34 @@ def perform_train(sample_data:sample_data, comb_cols, results):
         y_pred_base = dummy.predict(X_te)   
 
         r = sample_data.result()
-        r.PID = PID
         r.comb_cols = comb_cols
         r.cols = df.columns
         r.lr = lr
         r.train_score = np.sqrt(mse(y_pred_tr, y_tr))
         r.test_score = np.sqrt(mse(y_pred_te, y_te))
         r.test_baseline = np.sqrt(mse(y_pred_base, y_te))
+        r.PID_test = None
         r.y_te = y_te
         r.y_te_pred = y_pred_te
-
         results.append(r)
-    
+
     except:
         print(comb_cols)
 
 #------------------------------------------------------------------------------
 # Based on an optimal solution, predicts values from a given test sample 
 #------------------------------------------------------------------------------
-def perform_test(sample_data:sample_data, optimal_result, results):
+def perform_test(sample_data, optimal_train, results):
+    assert sample_data is not None
+    assert optimal_train is not None
+    assert results is not None
+
     try:
+        id = 'PID'
         df = sample_data._df_test_data.copy()
-        PID = df['PID']
-        df = df[optimal_result.comb_cols]
+        PID = df[id]
+
+        df = df[optimal_train.comb_cols]
         
         cols = sample_data.get_cols_of_type(df, 'Nominal')
         if len(cols) > 0:
@@ -306,94 +308,90 @@ def perform_test(sample_data:sample_data, optimal_result, results):
         df.fillna(0, inplace=True)
 
         X = df.values
-
-        y_pred_te = optimal_result.lr.predict(X)
+        y_pred_te = optimal_train.lr.predict(X)
   
         r = sample_data.result()
-        r.PID = PID
-        r.comb_cols  = optimal_result.comb_cols
+        r.PID_test = PID
+        r.comb_cols = optimal_train.comb_cols
         r.cols = df.columns
 
         # transform 
         r.y_te_pred = np.exp(y_pred_te)
-
         results.append(r)
-    
+
     except:
-        print(optimal_result.comb_cols)
+        print(optimal_train.comb_cols)
 
 #------------------------------------------------------------------------------
 #
 #------------------------------------------------------------------------------
 class model_selector:
-    _result_file_name = 'house-prices-pred.csv'
-    
+    _prediction_file_name = 'house-prices-pred.csv'
     _sample_data = None
-    _optimal_train = None
-
     _train_results = None
-    _test_result = None
+    _prediction = None
 
     def __init__(self, sample_data):
         assert sample_data is not None
 
         self._sample_data = sample_data
-  
-
+ 
     #--------------------------------------------------------------------------
-    # enumerates ovver all possible combinations
+    # enumerates all possible combinations with two features 
     #--------------------------------------------------------------------------
     def run_combinations(self):
-        self._sample_data.load_data()
-        self._sample_data.prepare_train_data()
-
         self._train_results = []
-        self._test_result = []
+        self._prediction = []
+  
+        self._sample_data.prepare_train_data()
         
         combinations = [list(x) for x in itertools.combinations(sample_data.get_cols_wo_target(), 2)]
-        combinations = [random.choice(combinations) for i in np.arange(1000)]
+        combinations = [random.choice(combinations) for i in np.arange(10)]
         for combination in combinations:
             perform_train(sample_data, combination, self._train_results)
 
-        df_train_results = pd.DataFrame([x.as_dict() for x in self._train_results])
+        sample_data.prepare_pred_data()
+        perform_test(sample_data, self._find_optimal_train(), self._prediction)
+     
+        self._write_result()
+  
+    #--------------------------------------------------------------------------
+    # find an optimal test score among all train's run
+    #--------------------------------------------------------------------------
+    def _find_optimal_train(self):
+        assert self._train_results is not None and len(self._train_results) > 0
 
-        #--------------------------------------------------------------------------
-        # search for an optimal result in train_results
+        df = pd.DataFrame([x.as_dict() for x in self._train_results])
+        i_opt = df['test_score'].idxmin()
+        return df.iloc[i_opt,:]
 
-        i_optimal_train = df_train_results['test_score'].idxmin()
-        df_train_results.iloc[i_optimal_train,:]
-        self._optimal_train = df_train_results.iloc[i_optimal_train,:]
+    #--------------------------------------------------------------------------
+    # write prediction 
+    #--------------------------------------------------------------------------
+    def _write_result(self):
+        data_file = os.path.join(self._sample_data._working_dir, self._prediction_file_name)
 
-        #--------------------------------------------------------------------------
-        # apply optimal result to test data
+        df = pd.concat([pd.DataFrame(self._prediction[0].PID_test), 
+                        pd.DataFrame(self._prediction[0].y_te_pred)], axis=1)
 
-        sample_data.prepare_test_data()
-        perform_test(sample_data, self._optimal_train, self._test_result)
-
-        #--------------------------------------------------------------------------
-        # prepare and write the preditions  
-
-        df_test_result = pd.concat([pd.DataFrame(self._test_result[0].PID), 
-                                    pd.DataFrame(self._test_result[0].y_te_pred)], axis=1)
-        df_test_result.columns = ['PID', 'SalePrice']
-        self._write_result(df_test_result)
-    
-    def _write_result(self, df):
-        data_file = os.path.join(self._sample_data._working_dir, self._result_file_name )
+        df.columns = ['PID', 'SalePrice']
         df.to_csv(data_file, index=False)
 
-    def _print_optimal(self):
-        assert self._optimal_train is not None
+    #--------------------------------------------------------------------------
+    # plot optimal trains 
+    #--------------------------------------------------------------------------
+    def _plot_optimal_train(self):
+        opt = self._find_optimal_train()
 
-        values = [self._optimal_train.test_baseline,  
-                  self._optimal_train.train_score,
-                  self._optimal_train.test_score, ]
+        values = [opt.test_baseline,  
+                  opt.train_score,
+                  opt.test_score, ]
   
         fig, ax = plt.subplots()
 
         bar_width = 0.6
         index = np.arange(len(values))
-        rects1 = ax.bar(index, values, bar_width, color='b')
+        rects1 = ax.bar(index, values, bar_width, color='g')
         ax.set_xlabel('metrics')
         ax.set_ylabel('mse score')
         ax.set_title('score by metrics')
@@ -411,10 +409,10 @@ working_dir = os.path.join(working_dir,'course_projects', 'data', 'module_3')
 
 meta_data = meta_data(working_dir)
 sample_data = sample_data(working_dir, 'SalePrice', meta_data)
+sample_data.load_data()
 
 model_selector = model_selector(sample_data)
 model_selector.run_combinations()
-model_selector._print_optimal()
 
 
 
