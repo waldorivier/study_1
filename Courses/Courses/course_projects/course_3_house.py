@@ -145,8 +145,6 @@ class sample_data:
     _df_test_data = None
     _df_train_data = None
     _df_train_data_orig = None
-
-    _df_pred_reference = None
  
     def __init__(self, working_dir, target, meta_data):
         assert working_dir is not None and len(working_dir) > 0
@@ -160,10 +158,9 @@ class sample_data:
     def load_data(self):
         self._load_train_data()
         self._load_test_data()
-        self._load_pred_reference()
         
     def prepare_train_data(self):
-        assert self._df_train_data is not None
+        assert self._df_train_data_orig is not None 
 
         # drop nan columns which contains null values     
         self._df_train_data = self._df_train_data_orig.dropna(axis=1).copy()
@@ -200,10 +197,6 @@ class sample_data:
     def _load_test_data(self):
         data_file = os.path.join(self._working_dir, 'house-prices-test.csv')
         self._df_test_data = pd.read_csv(data_file)
-
-    def _load_pred_reference(self):
-        data_file = os.path.join(self._working_dir, 'house-prices-pred-example.csv')
-        self._df_pred_reference = pd.read_csv(data_file)
 
     def analyze(self):
         ana = analyze()
@@ -333,52 +326,85 @@ def perform_test(sample_data:sample_data, optimal_result, results):
 #
 #------------------------------------------------------------------------------
 class model_selector:
+    _result_file_name = 'house-prices-pred.csv'
+    
     _sample_data = None
+    _optimal_train = None
+
+    _train_results = None
+    _test_result = None
 
     def __init__(self, sample_data):
         assert sample_data is not None
 
         self._sample_data = sample_data
+  
 
     #--------------------------------------------------------------------------
-    # enumerates ovver alle possible combinations
+    # enumerates ovver all possible combinations
     #--------------------------------------------------------------------------
     def run_combinations(self):
-        
         self._sample_data.load_data()
         self._sample_data.prepare_train_data()
 
-        results = []
+        self._train_results = []
+        self._test_result = []
+        
         combinations = [list(x) for x in itertools.combinations(sample_data.get_cols_wo_target(), 2)]
         combinations = [random.choice(combinations) for i in np.arange(1000)]
         for combination in combinations:
-            perform_train(sample_data, combination, results)
+            perform_train(sample_data, combination, self._train_results)
 
-        df_results = pd.DataFrame([x.as_dict() for x in results])
+        df_train_results = pd.DataFrame([x.as_dict() for x in self._train_results])
 
-        # search for an optimal result
-        i_min = df_results['test_score'].idxmin()
-        df_results.iloc[i_min,:]
+        #--------------------------------------------------------------------------
+        # search for an optimal result in train_results
 
-        optimal_result = df_results.iloc[i_min,:]
-        optimal_result
+        i_optimal_train = df_train_results['test_score'].idxmin()
+        df_train_results.iloc[i_optimal_train,:]
+        self._optimal_train = df_train_results.iloc[i_optimal_train,:]
 
-        results = []
+        #--------------------------------------------------------------------------
+        # apply optimal result to test data
+
         sample_data.prepare_test_data()
-        perform_test(sample_data, optimal_result, results)
+        perform_test(sample_data, self._optimal_train, self._test_result)
 
-        df_results = pd.concat([pd.DataFrame(results[0].PID), 
-                                pd.DataFrame(results[0].y_te_pred)], axis=1)
-        df_results.columns = ['PID', 'SalePrice']
+        #--------------------------------------------------------------------------
+        # prepare and write the preditions  
 
-        df_pred_reference = sample_data._df_pred_reference
-        len(set(df_pred_reference.PID).intersection(set(df_results.PID)))
+        df_test_result = pd.concat([pd.DataFrame(self._test_result[0].PID), 
+                                    pd.DataFrame(self._test_result[0].y_te_pred)], axis=1)
+        df_test_result.columns = ['PID', 'SalePrice']
+        self._write_result(df_test_result)
+    
+    def _write_result(self, df):
+        data_file = os.path.join(self._sample_data._working_dir, self._result_file_name )
+        df.to_csv(data_file, index=False)
 
-        df_compare_reference = pd.merge(df_pred_reference, df_results, on=['PID'])
+    def _print_optimal(self):
+        assert self._optimal_train is not None
+
+        values = [self._optimal_train.test_baseline,  
+                  self._optimal_train.train_score,
+                  self._optimal_train.test_score, ]
+  
+        fig, ax = plt.subplots()
+
+        bar_width = 0.6
+        index = np.arange(len(values))
+        rects1 = ax.bar(index, values, bar_width, color='b')
+        ax.set_xlabel('metrics')
+        ax.set_ylabel('mse score')
+        ax.set_title('score by metrics')
+        ax.set_xticks(index)
+        ax.set_xticklabels(('baseline test score', 'train score', 'test score'))
+        ax.legend()
+
+        fig.tight_layout()
+        plt.show()
         
-        return None
-
-
+#------------------------------------------------------------------------------
 
 working_dir = os.getcwd()
 working_dir = os.path.join(working_dir,'course_projects', 'data', 'module_3')
@@ -386,8 +412,9 @@ working_dir = os.path.join(working_dir,'course_projects', 'data', 'module_3')
 meta_data = meta_data(working_dir)
 sample_data = sample_data(working_dir, 'SalePrice', meta_data)
 
-data = None
-model_selector = model_selector(data)
+model_selector = model_selector(sample_data)
 model_selector.run_combinations()
+model_selector._print_optimal()
+
 
 
