@@ -169,7 +169,7 @@ class sample_data:
         self._df_train_data[self._target] = np.log(self._df_train_data[self._target])
         self._meta_data.map_ordinal_cols(self._df_train_data)
 
-    def prepare_test_data(self):
+    def prepare_prediction_data(self):
         assert self._df_test_data is not None
 
         self._meta_data.map_ordinal_cols(self._df_test_data)
@@ -236,7 +236,7 @@ pd.set_option('display.max_columns', 90)
 # Evaluates a model given a subset of colums choosen among those of
 # the original data set 
 #------------------------------------------------------------------------------
-def perform_train(sample_data:sample_data, comb_cols, results):
+def run_train(sample_data, comb_cols, results):
     try:
         df = sample_data._df_train_data.copy()
         y = df[sample_data._target]
@@ -285,12 +285,11 @@ def perform_train(sample_data:sample_data, comb_cols, results):
         print(comb_cols)
 
 #------------------------------------------------------------------------------
-# Based on an optimal solution, predicts values from a given test sample 
+# Based on an optimal solution, return prediciton values for a given sample 
 #------------------------------------------------------------------------------
-def perform_test(sample_data, optimal_train, results):
+def build_prediction(optimal_train, sample_data):
     assert sample_data is not None
     assert optimal_train is not None
-    assert results is not None
 
     try:
         id = 'PID'
@@ -304,20 +303,21 @@ def perform_test(sample_data, optimal_train, results):
             df = pd.get_dummies(df, columns=cols)
 
         # re-index test set in order to be compatible with train set 
-        df = df.reindex(columns=optimal_result.cols)
+        df = df.reindex(columns=optimal_train.cols)
         df.fillna(0, inplace=True)
 
         X = df.values
         y_pred_te = optimal_train.lr.predict(X)
   
-        r = sample_data.result()
-        r.PID_test = PID
-        r.comb_cols = optimal_train.comb_cols
-        r.cols = df.columns
+        prediction = sample_data.result()
+        prediction.PID_test = PID
+        prediction.comb_cols = optimal_train.comb_cols
+        prediction.cols = df.columns
 
         # transform 
-        r.y_te_pred = np.exp(y_pred_te)
-        results.append(r)
+        prediction.y_te_pred = np.exp(y_pred_te)
+
+        return prediction
 
     except:
         print(optimal_train.comb_cols)
@@ -346,20 +346,20 @@ class model_selector:
         self._sample_data.prepare_train_data()
         
         combinations = [list(x) for x in itertools.combinations(sample_data.get_cols_wo_target(), 2)]
-        combinations = [random.choice(combinations) for i in np.arange(10)]
+        combinations = [random.choice(combinations) for i in np.arange(1000)]
         for combination in combinations:
-            perform_train(sample_data, combination, self._train_results)
+            run_train(sample_data, combination, self._train_results)
 
-        sample_data.prepare_pred_data()
-        perform_test(sample_data, self._find_optimal_train(), self._prediction)
+        sample_data.prepare_prediction_data()
+        self._prediction = build_prediction( self._find_optimal_train(), sample_data)
      
-        self._write_result()
+        self._write_prediction()
   
     #--------------------------------------------------------------------------
     # find an optimal test score among all train's run
     #--------------------------------------------------------------------------
     def _find_optimal_train(self):
-        assert self._train_results is not None and len(self._train_results) > 0
+        assert len(self._train_results) > 0
 
         df = pd.DataFrame([x.as_dict() for x in self._train_results])
         i_opt = df['test_score'].idxmin()
@@ -368,13 +368,14 @@ class model_selector:
     #--------------------------------------------------------------------------
     # write prediction 
     #--------------------------------------------------------------------------
-    def _write_result(self):
-        data_file = os.path.join(self._sample_data._working_dir, self._prediction_file_name)
+    def _write_prediction(self):
+        assert self._prediction is not None
 
-        df = pd.concat([pd.DataFrame(self._prediction[0].PID_test), 
-                        pd.DataFrame(self._prediction[0].y_te_pred)], axis=1)
-
+        df = pd.concat([pd.DataFrame(self._prediction.PID_test), 
+                        pd.DataFrame(self._prediction.y_te_pred)], axis=1)
         df.columns = ['PID', 'SalePrice']
+
+        data_file = os.path.join(self._sample_data._working_dir, self._prediction_file_name)
         df.to_csv(data_file, index=False)
 
     #--------------------------------------------------------------------------
