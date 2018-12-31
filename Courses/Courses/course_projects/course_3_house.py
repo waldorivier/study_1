@@ -272,7 +272,7 @@ pd.set_option('display.max_columns', 90)
 # evaluates a model given a subset of colums choosen among those of
 # the original data set 
 #------------------------------------------------------------------------------
-def run_train(sample_data, comb_cols, results):
+def run_train(reg_type, sample_data, comb_cols, results):
     try:
         df = sample_data._df_train_data.copy()
         y = df[sample_data._target]
@@ -289,14 +289,20 @@ def run_train(sample_data, comb_cols, results):
         X_tr, X_te, y_tr, y_te = train_test_split(
            _X, y.values, train_size = 0.5, test_size = 0.5, random_state=1)
 
-        lr = LinearRegression()
-        lr.fit(X_tr, y_tr)
-
+        if reg_type == 'linear':
+            reg = LinearRegression()
+        else:
+            if reg_type == 'huber':
+                reg = HuberRegressor(1.35)
+                y_tr = y_tr.flatten()
+    
+        reg.fit(X_tr, y_tr)
+       
         #----------------------------------
         # negatives values not allowed 
      
-        y_pred_tr = np.maximum(lr.predict(X_tr), 0)
-        y_pred_te = np.maximum(lr.predict(X_te), 0)
+        y_pred_tr = np.maximum(reg.predict(X_tr), 0)
+        y_pred_te = np.maximum(reg.predict(X_te), 0)
    
         #----------------------------------
         # determine the baseline 
@@ -308,7 +314,7 @@ def run_train(sample_data, comb_cols, results):
         r = sample_data.result()
         r.comb_cols = comb_cols
         r.cols = df.columns
-        r.lr = lr
+        r.lr = reg
         r.train_score = np.sqrt(mse(y_pred_tr, y_tr))
         r.test_score = np.sqrt(mse(y_pred_te, y_te))
         r.test_baseline = np.sqrt(mse(y_pred_base, y_te))
@@ -379,8 +385,9 @@ class model_selector:
     #--------------------------------------------------------------------------
     # enumerates all possible combinations with k features
     # limit : max combinations 
+    # reg_type : linear, huber
     #--------------------------------------------------------------------------
-    def run_combinations(self, k, limit):
+    def run_combinations(self, reg_type, k, limit):
         self._sample_data.prepare_train_data()
 
         cols = self._sample_data.get_cols_wo_target()
@@ -394,7 +401,7 @@ class model_selector:
 
             self._train_results = []
             for combination in combinations:
-                run_train(sample_data, combination, self._train_results)
+                run_train(reg_type, sample_data, combination, self._train_results)
 
             sample_data.prepare_prediction_data()
             self._prediction = build_prediction(self._find_optimal_train(), sample_data)
@@ -405,13 +412,17 @@ class model_selector:
     # model 
     # a new optimal train will be calculated
     #--------------------------------------------------------------------------
-    def add_col(self, col):
-        optimal_train = self._find_optimal_train()
-        combination = optimal_train.comb_cols.copy()
-        combination.append(col)
+    def run_add_cols(self, reg_type, cols):
+        # assert self._sample_data.get_cols_wo_target().contains(col)        
+      
+        # get optimal train from previous run
+        opt_train = self._find_optimal_train()
+      
+        combination = opt_train.comb_cols.copy()
+        combination.extend(cols)
 
         self._train_results = []
-        run_train(sample_data, combination, self._train_results)
+        run_train(reg_type, sample_data, combination, self._train_results)
 
         sample_data.prepare_prediction_data()
         self._prediction = build_prediction(self._find_optimal_train(), sample_data)
@@ -456,8 +467,8 @@ class model_selector:
         ax.set_xticks(index)
 
         ax.set_xticklabels(('baseline test score', 'train score', 'test score'))
-        ax.legend() 
-
+        ax.legend()
+        fig.suptitle(opt.comb_cols)
         fig.tight_layout()
         plt.show()
         
@@ -468,10 +479,16 @@ working_dir = os.path.join(working_dir,'course_projects', 'data', 'module_3')
 
 meta_data = meta_data(working_dir)
 sample_data = sample_data(working_dir, 'SalePrice', meta_data)
+sample_data.load_data()
 
 model_selector = model_selector(sample_data)
-model_selector.run_combinations(2, 1000)
+model_selector.run_combinations('linear', 2, 1000)
 
 cols_to_add = ['Kitchen Qual', 'Lot Area', 'Year Built','Exter Qual', 'Heating QC', '1st Flr SF',  
                'Fireplaces', 'TotRms AbvGrd', 'Wood Deck SF']
 
+model_selector.run_add_cols('huber', cols_to_add)
+
+for col in cols_to_add:
+    model_selector.add_cols('linear', col)
+    model_selector._plot_optimal_train()
