@@ -6,6 +6,7 @@ import os
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 from sklearn.linear_model import SGDRegressor
 from sklearn.linear_model import HuberRegressor
@@ -179,6 +180,8 @@ class sample_data:
         return cols
  
     def get_cols_wo_target(self):
+        assert self._df_train_data is not None
+
         cols = self._df_train_data.columns.copy()
         cols = cols.drop(self._target)
         cols = cols.drop(['Order', 'PID'])
@@ -204,6 +207,39 @@ class sample_data:
         ana.analyze_cols(self._df_train_data_orig, results)
         return pd.DataFrame(results)
  
+    #------------------------------------------------------------------------------
+    # iterate over all features (eventually encoded) and plot SalePrice as response
+    #------------------------------------------------------------------------------
+    def iterate_pair_plot(self):
+        col_cnt = len(self.get_cols_wo_target())
+
+        for i in np.arange(0, col_cnt, 4):
+            self._pair_plot(i)
+   
+    def _pair_plot(self, i_low):
+        # range of cols
+        cols_wo_target = self.get_cols_wo_target()[i_low:i_low + 4]
+        cols_wi_target = cols_wo_target.copy()
+        cols_wi_target = cols_wi_target.insert(len(cols_wo_target), self._target)
+        
+        # cols and target
+        df = self._df_train_data[cols_wi_target]
+       
+        cols = sample_data.get_cols_of_type(df, 'Nominal')
+        if len(cols) > 0:
+            df = pd.get_dummies(df, columns=cols)
+
+        cols_wo_target = df.columns.drop(self._target)       
+        
+        # avoid too many cols to be plot (resulting in an non lisible plot)
+        cols_wo_target = cols_wo_target[:10]
+
+        g = sns.pairplot(df, x_vars=cols_wo_target,
+            y_vars=[self._target], 
+            kind="reg",
+            plot_kws={'line_kws':{'color':'red'}})
+        plt.show()
+
     class result:
         comb_cols = None
         cols = None
@@ -233,7 +269,7 @@ def anp(n, k):
 pd.set_option('display.max_columns', 90)
 
 #------------------------------------------------------------------------------
-# Evaluates a model given a subset of colums choosen among those of
+# evaluates a model given a subset of colums choosen among those of
 # the original data set 
 #------------------------------------------------------------------------------
 def run_train(sample_data, comb_cols, results):
@@ -285,7 +321,7 @@ def run_train(sample_data, comb_cols, results):
         print(comb_cols)
 
 #------------------------------------------------------------------------------
-# Based on an optimal solution, return prediciton values for a given sample 
+# based on an optimal solution, return prediciton values for a given sample 
 #------------------------------------------------------------------------------
 def build_prediction(optimal_train, sample_data):
     assert sample_data is not None
@@ -317,8 +353,12 @@ def build_prediction(optimal_train, sample_data):
         # transform 
         prediction.y_te_pred = np.exp(y_pred_te)
 
-        return prediction
-
+        # format 
+        df = pd.concat([pd.DataFrame(prediction.PID_test), 
+                        pd.DataFrame(prediction.y_te_pred)], axis=1)
+        df.columns = ['PID', 'SalePrice']
+        return df
+        
     except:
         print(optimal_train.comb_cols)
 
@@ -337,24 +377,45 @@ class model_selector:
         self._sample_data = sample_data
  
     #--------------------------------------------------------------------------
-    # enumerates all possible combinations with two features 
+    # enumerates all possible combinations with k features
+    # limit : max combinations 
     #--------------------------------------------------------------------------
-    def run_combinations(self):
-        self._train_results = []
-        self._prediction = []
-  
+    def run_combinations(self, k, limit):
         self._sample_data.prepare_train_data()
-        
-        combinations = [list(x) for x in itertools.combinations(sample_data.get_cols_wo_target(), 2)]
-        combinations = [random.choice(combinations) for i in np.arange(1000)]
-        for combination in combinations:
-            run_train(sample_data, combination, self._train_results)
+
+        cols = self._sample_data.get_cols_wo_target()
+        cols_cnt = len(cols)
+
+        # avoid too many combinations to be evaluated
+
+        if (anp(cols_cnt, k) < 2000):
+            combinations = [list(x) for x in itertools.combinations(cols, k)]
+            combinations = [random.choice(combinations) for i in np.arange(limit)]
+
+            self._train_results = []
+            for combination in combinations:
+                run_train(sample_data, combination, self._train_results)
+
+            sample_data.prepare_prediction_data()
+            self._prediction = build_prediction(self._find_optimal_train(), sample_data)
+            self._write_prediction()
+  
+    #--------------------------------------------------------------------------
+    # add a column to an optimal combination in order to build a more accurate 
+    # model 
+    # a new optimal train will be calculated
+    #--------------------------------------------------------------------------
+    def add_col(self, col):
+        optimal_train = self._find_optimal_train()
+        combination = optimal_train.comb_cols.copy()
+        combination.append(col)
+
+        self._train_results = []
+        run_train(sample_data, combination, self._train_results)
 
         sample_data.prepare_prediction_data()
-        self._prediction = build_prediction( self._find_optimal_train(), sample_data)
-     
-        self._write_prediction()
-  
+        self._prediction = build_prediction(self._find_optimal_train(), sample_data)
+   
     #--------------------------------------------------------------------------
     # find an optimal test score among all train's run
     #--------------------------------------------------------------------------
@@ -371,15 +432,11 @@ class model_selector:
     def _write_prediction(self):
         assert self._prediction is not None
 
-        df = pd.concat([pd.DataFrame(self._prediction.PID_test), 
-                        pd.DataFrame(self._prediction.y_te_pred)], axis=1)
-        df.columns = ['PID', 'SalePrice']
-
         data_file = os.path.join(self._sample_data._working_dir, self._prediction_file_name)
-        df.to_csv(data_file, index=False)
-
+        self._prediction.to_csv(data_file, index=False)
+  
     #--------------------------------------------------------------------------
-    # plot optimal trains 
+    # plot optimal train
     #--------------------------------------------------------------------------
     def _plot_optimal_train(self):
         opt = self._find_optimal_train()
@@ -397,23 +454,24 @@ class model_selector:
         ax.set_ylabel('mse score')
         ax.set_title('score by metrics')
         ax.set_xticks(index)
+
         ax.set_xticklabels(('baseline test score', 'train score', 'test score'))
-        ax.legend()
+        ax.legend() 
 
         fig.tight_layout()
         plt.show()
         
 #------------------------------------------------------------------------------
-
+    
 working_dir = os.getcwd()
 working_dir = os.path.join(working_dir,'course_projects', 'data', 'module_3')
 
 meta_data = meta_data(working_dir)
 sample_data = sample_data(working_dir, 'SalePrice', meta_data)
-sample_data.load_data()
 
 model_selector = model_selector(sample_data)
-model_selector.run_combinations()
+model_selector.run_combinations(2, 1000)
 
-
+cols_to_add = ['Kitchen Qual', 'Lot Area', 'Year Built','Exter Qual', 'Heating QC', '1st Flr SF',  
+               'Fireplaces', 'TotRms AbvGrd', 'Wood Deck SF']
 
