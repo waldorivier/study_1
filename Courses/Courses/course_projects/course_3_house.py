@@ -170,6 +170,10 @@ class sample_data:
         self._df_train_data[self._target] = np.log(self._df_train_data[self._target])
         self._meta_data.map_ordinal_cols(self._df_train_data)
 
+    # columns which were removed 
+    def get_removed_cols(self): 
+        return self._df_train_data_orig.columns.difference(set(self._df_train_data.columns))
+
     def prepare_prediction_data(self):
         assert self._df_test_data is not None
 
@@ -193,10 +197,6 @@ class sample_data:
         # save a copy of original train data     
         self._df_train_data_orig = pd.read_csv(data_file)
  
-    # columns which were removed 
-    def get_removed_cols(self): 
-        return self._df_train_data_orig.columns.difference(set(self._df_train_data.columns))
-
     def _load_test_data(self):
         data_file = os.path.join(self._working_dir, 'house-prices-test.csv')
         self._df_test_data = pd.read_csv(data_file)
@@ -213,32 +213,67 @@ class sample_data:
     def iterate_pair_plot(self):
         col_cnt = len(self.get_cols_wo_target())
 
-        for i in np.arange(0, col_cnt, 4):
+        for i in np.arange(0, col_cnt):
             self._pair_plot(i)
    
-    def _pair_plot(self, i_low):
-        # range of cols
-        cols_wo_target = self.get_cols_wo_target()[i_low:i_low + 4]
-        cols_wi_target = cols_wo_target.copy()
-        cols_wi_target = cols_wi_target.insert(len(cols_wo_target), self._target)
-        
-        # cols and target
-        df = self._df_train_data[cols_wi_target]
+    def pair_plot(self, col):
+        assert self._df_train_data.columns.contains(col)
+
+        df = self._df_train_data.copy()
+        df = df[[self._target, col]]
        
-        cols = sample_data.get_cols_of_type(df, 'Nominal')
-        if len(cols) > 0:
-            df = pd.get_dummies(df, columns=cols)
+        if self._meta_data._get_type_of_col(col) == 'Nominal':
+            df = pd.get_dummies(df, col)    
 
-        cols_wo_target = df.columns.drop(self._target)       
-        
-        # avoid too many cols to be plot (resulting in an non lisible plot)
-        cols_wo_target = cols_wo_target[:10]
-
-        g = sns.pairplot(df, x_vars=cols_wo_target,
+        cols = df.columns.drop(self._target)
+        g = sns.pairplot(df, x_vars=cols,
             y_vars=[self._target], 
             kind="reg",
             plot_kws={'line_kws':{'color':'red'}})
         plt.show()
+
+    def hist_plot(self, col):
+        assert self._df_train_data.columns.contains(col)
+
+        df = self._df_train_data.copy()
+        df = df[col]
+      
+        if self._meta_data._get_type_of_col(col) == 'Nominal':
+            df = pd.get_dummies(df, col)    
+
+        df.hist()
+        plt.show()
+
+    def get_train_distribution(self):
+        assert self._df_train_data is not None
+
+        return np.exp(self._df_train_data.SalePrice).describe()
+    
+    def _indicator(self, col):
+        def _f_fire_places(x):
+            if x > 1:
+                return 1
+            else:
+                return 0
+            return _f
+
+        def _f_year_built(x):
+            if x > 1970:
+                return 1
+            else:
+                return 0
+
+        if col == 'Fireplaces':
+            return _f_fire_places
+        elif col == 'Year Built':
+            return _f_year_built
+        
+    def apply_transformation(self, col):
+        assert self._df_train_data.columns.contains(col)
+
+        indicator = self._indicator(col)
+        assert indicator is not None
+        self._df_train_data[col] = self._df_train_data[col].apply(indicator)
 
     class result:
         comb_cols = None
@@ -291,11 +326,12 @@ def run_train(reg_type, sample_data, comb_cols, results):
 
         if reg_type == 'linear':
             reg = LinearRegression()
-        else:
-            if reg_type == 'huber':
-                reg = HuberRegressor(1.35)
-                y_tr = y_tr.flatten()
-    
+        elif reg_type == 'huber':
+            reg = HuberRegressor(1.35)
+            y_tr = y_tr.flatten()
+        elif reg_type == 'ridge':    
+            reg = Ridge(0.04)
+
         reg.fit(X_tr, y_tr)
        
         #----------------------------------
@@ -382,8 +418,13 @@ class model_selector:
 
         self._sample_data = sample_data
  
+    def reset(self):
+        self._train_results = None
+        self._prediction = None
+
     #--------------------------------------------------------------------------
     # enumerates all possible combinations with k features
+    # perform and write perdictions
     # limit : max combinations 
     # reg_type : linear, huber
     #--------------------------------------------------------------------------
@@ -412,13 +453,14 @@ class model_selector:
     # model 
     # a new optimal train will be calculated
     #--------------------------------------------------------------------------
-    def run_add_cols(self, reg_type, cols):
-        # assert self._sample_data.get_cols_wo_target().contains(col)        
-      
-        # get optimal train from previous run
-        opt_train = self._find_optimal_train()
-      
-        combination = opt_train.comb_cols.copy()
+    def run_combination(self, reg_type, cols):
+        self._sample_data.prepare_train_data()
+        # when no optimal train already exists
+        try :
+            opt_train = self._find_optimal_train()
+            combination = opt_train.comb_cols.copy()
+        except:
+            combination = []
         combination.extend(cols)
 
         self._train_results = []
@@ -436,6 +478,14 @@ class model_selector:
         df = pd.DataFrame([x.as_dict() for x in self._train_results])
         i_opt = df['test_score'].idxmin()
         return df.iloc[i_opt,:]
+
+    #--------------------------------------------------------------------------
+    # get Saleprice distibution of the optimal train 
+    #--------------------------------------------------------------------------
+    def get_prediction_distribution(self):
+        assert self._prediction is not None
+
+        return self._prediction.SalePrice.describe()
 
     #--------------------------------------------------------------------------
     # write prediction 
@@ -463,12 +513,11 @@ class model_selector:
         rects1 = ax.bar(index, values, bar_width, color='g')
         ax.set_xlabel('metrics')
         ax.set_ylabel('mse score')
-        ax.set_title('score by metrics')
+        ax.set_title(opt.comb_cols)
         ax.set_xticks(index)
 
         ax.set_xticklabels(('baseline test score', 'train score', 'test score'))
         ax.legend()
-        fig.suptitle(opt.comb_cols)
         fig.tight_layout()
         plt.show()
         
@@ -480,15 +529,25 @@ working_dir = os.path.join(working_dir,'course_projects', 'data', 'module_3')
 meta_data = meta_data(working_dir)
 sample_data = sample_data(working_dir, 'SalePrice', meta_data)
 sample_data.load_data()
-
 model_selector = model_selector(sample_data)
-model_selector.run_combinations('linear', 2, 1000)
 
-cols_to_add = ['Kitchen Qual', 'Lot Area', 'Year Built','Exter Qual', 'Heating QC', '1st Flr SF',  
-               'Fireplaces', 'TotRms AbvGrd', 'Wood Deck SF']
+# model_selector.run_combinations('linear', 2, 1000)
 
-model_selector.run_add_cols('huber', cols_to_add)
+optimal_cols =  ['Overall Qual', 'Gr Liv Area']
+
+model_selector.reset()
+model_selector.run_combination('linear', optimal_cols)
+model_selector._find_optimal_train()
+model_selector.get_prediction_distribution()
+
+sample_data.apply_transformation('Fireplaces')
+sample_data.apply_transformation('Year Built')
+
+cols_to_add = ['Fireplaces', 'Lot Area', 'Year Built', 'TotRms AbvGrd', '1st Flr SF', 'Neighborhood']
 
 for col in cols_to_add:
-    model_selector.add_cols('linear', col)
-    model_selector._plot_optimal_train()
+    model_selector.run_combination('linear', [col])
+    model_selector._find_optimal_train()
+    model_selector.get_prediction_distribution()
+    # model_selector._plot_optimal_train()
+
