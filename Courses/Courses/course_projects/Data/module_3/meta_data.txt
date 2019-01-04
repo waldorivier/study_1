@@ -1,5 +1,5 @@
 column	designation	type	code	ordinal_value	code_designation
-PID	Parcel identification number  - can be used with city web site for parcel review. 	ID			
+PID	Parcel identification number  - can be used with city web site for parcel review. 	Nominal			
 MS SubClass	 Identifies the type of dwelling involved in the sale.	Nominal	20		1-STORY 1946 & NEWER ALL STYLES
 			30		1-STORY 1945 & OLDER
 			40		1-STORY W/FINISHED ATTIC ALL AGES

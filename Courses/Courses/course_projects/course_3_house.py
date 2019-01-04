@@ -79,7 +79,7 @@ class analyze:
 #------------------------------------------------------------------------------
 # class which implements utilities to access house price meta data (columns, 
 # column's type, ordinal column code mapping, tansfomation of entire ordinal 
-# columns of a dataframe
+# columns of a dataframe, etc...)
 #------------------------------------------------------------------------------
 class meta_data:
     _working_dir = None
@@ -120,6 +120,23 @@ class meta_data:
             dict_ordinal = dict(zip(codes, df_ordinal.ordinal_value.values))
         return dict_ordinal
 
+    #------------------------------------------------------------------------------
+    # return dictionnary build on code and code designation (used in special case
+    # for MS SubClass feature) 
+    #------------------------------------------------------------------------------
+    def get_dict_nominal(self, col):
+        dict_nominal = None
+        if self._get_type_of_col(col) == 'Nominal':
+            df_nominal = self._df_meta[self._df_meta['column'] == col]
+            codes = df_nominal.code.values
+            try:
+                codes = codes.astype(int)
+            except:
+                codes = [i.strip() for i in df_nominal.code.values]
+         
+            dict_nominal = dict(zip(codes, df_nominal.code_designation.values))
+        return dict_nominal
+
     def _map_col(self, df, col, type):
         if df.columns.contains(col):
             if self._get_type_of_col(col) == type:
@@ -129,7 +146,7 @@ class meta_data:
     def _map_ordinal_col(self, df, col):
        self._map_col(df, col, 'Ordinal')
        
-    # all ordinal columns's code will be associated with numerical values  as defined in meta data
+    # all ordinal columns's code will be associated with numerical values as defined in meta data
     def map_ordinal_cols(self, df):
         cols = self.get_cols_of_type('Ordinal')
         for col in cols:
@@ -170,7 +187,13 @@ class sample_data:
         self._df_train_data[self._target] = np.log(self._df_train_data[self._target])
         self._meta_data.map_ordinal_cols(self._df_train_data)
 
-    # columns which were removed 
+        # special case MS SubClass
+
+        col = 'MS SubClass'
+        dict_nominal = self._meta_data.get_dict_nominal(col)
+        self._df_train_data[col] = self._df_train_data[col].map(dict_nominal)
+    
+    # columns which were removed in prepare step above
     def get_removed_cols(self): 
         return self._df_train_data_orig.columns.difference(set(self._df_train_data.columns))
 
@@ -342,8 +365,8 @@ def run_train(reg_type, sample_data, comb_cols, results):
    
         #----------------------------------
         # determine the baseline 
-
-        dummy = DummyRegressor()
+                
+        dummy = DummyRegressor(strategy='mean')
         dummy.fit(X_tr, y_tr)
         y_pred_base = dummy.predict(X_te)   
 
@@ -436,7 +459,7 @@ class model_selector:
 
         # avoid too many combinations to be evaluated
 
-        if (anp(cols_cnt, k) < 2000):
+        if (anp(cols_cnt, k) < 100000) :
             combinations = [list(x) for x in itertools.combinations(cols, k)]
             combinations = [random.choice(combinations) for i in np.arange(limit)]
 
@@ -449,8 +472,8 @@ class model_selector:
             self._write_prediction()
   
     #--------------------------------------------------------------------------
-    # add a column to an optimal combination in order to build a more accurate 
-    # model 
+    # add columes to an (eventually already evaluated) optimal combination in order
+    # to build a more accurate  model 
     # a new optimal train will be calculated
     #--------------------------------------------------------------------------
     def run_combination(self, reg_type, cols):
@@ -531,7 +554,7 @@ sample_data = sample_data(working_dir, 'SalePrice', meta_data)
 sample_data.load_data()
 model_selector = model_selector(sample_data)
 
-# model_selector.run_combinations('linear', 2, 1000)
+model_selector.run_combinations('linear', 1, 2000)
 
 optimal_cols =  ['Overall Qual', 'Gr Liv Area']
 
@@ -543,11 +566,13 @@ model_selector.get_prediction_distribution()
 sample_data.apply_transformation('Fireplaces')
 sample_data.apply_transformation('Year Built')
 
-cols_to_add = ['Fireplaces', 'Lot Area', 'Year Built', 'TotRms AbvGrd', '1st Flr SF', 'Neighborhood']
+cols_to_add = ['Fireplaces', 'Lot Area', 'Year Built', 'TotRms AbvGrd', '1st Flr SF', 'MS SubClass']
 
 for col in cols_to_add:
     model_selector.run_combination('linear', [col])
     model_selector._find_optimal_train()
     model_selector.get_prediction_distribution()
     # model_selector._plot_optimal_train()
+
+sample_data.get_train_distribution()
 
