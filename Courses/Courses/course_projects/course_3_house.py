@@ -177,11 +177,15 @@ class sample_data:
         self._load_train_data()
         self._load_test_data()
         
+    #------------------------------------------------------------------------------
+    # 
+    #------------------------------------------------------------------------------
     def prepare_train_data(self):
         assert self._df_train_data_orig is not None 
 
         # drop nan columns which contains null values     
-        self._df_train_data = self._df_train_data_orig.dropna(axis=1).copy()
+        self._df_train_data = self._df_train_data_orig.dropna(thresh=2429, axis=1).copy()
+        self._df_train_data.fillna(0, inplace=True)
 
         # takes the log the target
         self._df_train_data[self._target] = np.log(self._df_train_data[self._target])
@@ -566,7 +570,7 @@ model_selector.get_prediction_distribution()
 sample_data.apply_transformation('Fireplaces')
 sample_data.apply_transformation('Year Built')
 
-cols_to_add = ['Fireplaces', 'Lot Area', 'Year Built', 'TotRms AbvGrd', '1st Flr SF', 'MS SubClass']
+cols_to_add = ['Fireplaces', 'Lot Area', 'Year Built', 'TotRms AbvGrd', '1st Flr SF', 'MS SubClass', 'Central Air']
 
 for col in cols_to_add:
     model_selector.run_combination('linear', [col])
