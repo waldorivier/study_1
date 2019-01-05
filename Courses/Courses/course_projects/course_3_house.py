@@ -28,54 +28,6 @@ import itertools
 import math
 import random
 
-class analyze:
-    #------------------------------------------------------------------------------
-    # analyze columns 
-    #
-    # applies series of threshes on the df and mesures the number
-    # of remaining columns
-    # 
-    # plot the result  
-    #------------------------------------------------------------------------------
-    
-    def __init__(self):
-        return None
-        
-    def analyze_cols(self, df, results):
-        _df = df.copy()
-
-        null_values_max = _df.isnull().sum().max()
-        if null_values_max > 0:
-            threshes = np.arange(0, null_values_max, 100)
-            
-            def drop_cols(df, thresh):
-                _df = df.dropna(thresh=thresh, axis=1)
-
-                row = {}
-                row['thresh'] = thresh
-                row['shape'] = _df.shape[1]
-                results.append(row)
-        
-            for thresh in threshes :
-                drop_cols(_df, thresh)
-    
-            df_results = pd.DataFrame(results)
-            df_results.set_index('shape', inplace=True)
-        
-            fig, ax = plt.subplots(nrows=1, ncols=1)
-            fig.suptitle("numbers of remaining columns in terms of thresh for a df of shape (" +  
-                          str(df.shape[0]) + "," + str(df.shape[1]) + ")")
-        
-            x_pos = np.arange(len(df_results))
-            ax.bar(x_pos, df_results.index, align='center', color='green')
-            ax.set_xticks(x_pos)
-            ax.set_xticklabels(df_results['thresh'], rotation=45)
-
-            ax.set_ylabel("remaining columns")
-            ax.set_xlabel("thresh")
-
-            plt.show()
-
 #------------------------------------------------------------------------------
 # class which implements utilities to access house price meta data (columns, 
 # column's type, ordinal column code mapping, tansfomation of entire ordinal 
@@ -178,26 +130,37 @@ class sample_data:
         self._load_test_data()
         
     #------------------------------------------------------------------------------
-    # 
+    # Prepare data for the training phase
     #------------------------------------------------------------------------------
     def prepare_train_data(self):
         assert self._df_train_data_orig is not None 
 
-        # drop nan columns which contains null values     
+        # drop all columns which contains more than one NAN value
+        # motivations :
+        #   a. number of features removed is not dramatically important (20 on 81)
+        #   b. 7 features contains only 1 NAN value; without big effort and modification of 
+        #      the informations, we can  easyly keep them
+
         self._df_train_data = self._df_train_data_orig.dropna(thresh=2429, axis=1).copy()
-        self._df_train_data.fillna(0, inplace=True)
+        self._df_train_data.fillna(method='ffill', inplace=True)
 
         # takes the log the target
         self._df_train_data[self._target] = np.log(self._df_train_data[self._target])
+
+        # all ordinal features will be replaced with numerical (subjective) evaluations
         self._meta_data.map_ordinal_cols(self._df_train_data)
 
-        # special case MS SubClass
-
+        # special case for features MS SubClass; apply transformation in order 
+        # to use text nominal in place of numerical codes
         col = 'MS SubClass'
         dict_nominal = self._meta_data.get_dict_nominal(col)
         self._df_train_data[col] = self._df_train_data[col].map(dict_nominal)
+
+        # apply some transformation to "normalize" the distribution
+        # self.apply_transformation('Fireplaces')
+        # self.apply_transformation('Year Built')
     
-    # columns which were removed in prepare step above
+    # return the features which were removed in function prepare_train_data above
     def get_removed_cols(self): 
         return self._df_train_data_orig.columns.difference(set(self._df_train_data.columns))
 
@@ -228,12 +191,6 @@ class sample_data:
         data_file = os.path.join(self._working_dir, 'house-prices-test.csv')
         self._df_test_data = pd.read_csv(data_file)
 
-    def analyze(self):
-        ana = analyze()
-        results = []
-        ana.analyze_cols(self._df_train_data_orig, results)
-        return pd.DataFrame(results)
- 
     #------------------------------------------------------------------------------
     # iterate over all features (eventually encoded) and plot SalePrice as response
     #------------------------------------------------------------------------------
@@ -334,8 +291,8 @@ pd.set_option('display.max_columns', 90)
 # evaluates a model given a subset of colums choosen among those of
 # the original data set 
 #------------------------------------------------------------------------------
-def run_train(reg_type, sample_data, comb_cols, results):
-    try:
+def run_train(reg_type, alpha, sample_data, comb_cols, results):
+     try:
         df = sample_data._df_train_data.copy()
         y = df[sample_data._target]
         df = df[comb_cols]
@@ -357,7 +314,8 @@ def run_train(reg_type, sample_data, comb_cols, results):
             reg = HuberRegressor(1.35)
             y_tr = y_tr.flatten()
         elif reg_type == 'ridge':    
-            reg = Ridge(0.04)
+            if alpha is not None: 
+                reg = Ridge(alpha)
 
         reg.fit(X_tr, y_tr)
        
@@ -432,10 +390,10 @@ def build_prediction(optimal_train, sample_data):
         print(optimal_train.comb_cols)
 
 #------------------------------------------------------------------------------
-#
+# class which implements functionalities to test and select an otptimal model
 #------------------------------------------------------------------------------
 class model_selector:
-    _prediction_file_name = 'house-prices-pred.csv'
+    _prediction_base_file_name = 'house-prices-pred'
     _sample_data = None
     _train_results = None
     _prediction = None
@@ -445,7 +403,7 @@ class model_selector:
 
         self._sample_data = sample_data
  
-    def reset(self):
+    def reset_run(self):
         self._train_results = None
         self._prediction = None
 
@@ -453,36 +411,36 @@ class model_selector:
     # enumerates all possible combinations with k features
     # perform and write perdictions
     # limit : max combinations 
-    # reg_type : linear, huber
+    # reg_type : linear, huber, ridge
     #--------------------------------------------------------------------------
-    def run_combinations(self, reg_type, k, limit):
+    def run_combinations(self, reg_type, alpha, k, limit):
         self._sample_data.prepare_train_data()
 
         cols = self._sample_data.get_cols_wo_target()
         cols_cnt = len(cols)
 
-        # avoid too many combinations to be evaluated
+        if (cols_cnt > k):
+            # avoid too many combinations to be evaluated
+            if (anp(cols_cnt, k) < 2000):
+                combinations = [list(x) for x in itertools.combinations(cols, k)]
+                combinations = [random.choice(combinations) for i in np.arange(limit)]
 
-        if (anp(cols_cnt, k) < 100000) :
-            combinations = [list(x) for x in itertools.combinations(cols, k)]
-            combinations = [random.choice(combinations) for i in np.arange(limit)]
+                self._train_results = []
+                for combination in combinations:
+                    run_train(reg_type, alpha, sample_data, combination, self._train_results)
 
-            self._train_results = []
-            for combination in combinations:
-                run_train(reg_type, sample_data, combination, self._train_results)
-
-            sample_data.prepare_prediction_data()
-            self._prediction = build_prediction(self._find_optimal_train(), sample_data)
-            self._write_prediction()
+                sample_data.prepare_prediction_data()
+                self._prediction = build_prediction(self._find_optimal_train(), sample_data)
   
     #--------------------------------------------------------------------------
-    # add columes to an (eventually already evaluated) optimal combination in order
-    # to build a more accurate  model 
-    # a new optimal train will be calculated
+    # add features to an (eventually already evaluated) optimal combination 
+    # in order to build a more accurate model.
+    # a new optimal train will be evaluated
     #--------------------------------------------------------------------------
-    def run_combination(self, reg_type, cols):
+    def run_combination(self, reg_type, alpha, cols):
         self._sample_data.prepare_train_data()
-        # when no optimal train already exists
+
+        # when no optimal train already exists, 
         try :
             opt_train = self._find_optimal_train()
             combination = opt_train.comb_cols.copy()
@@ -491,7 +449,7 @@ class model_selector:
         combination.extend(cols)
 
         self._train_results = []
-        run_train(reg_type, sample_data, combination, self._train_results)
+        run_train(reg_type, alpha, sample_data, combination, self._train_results)
 
         sample_data.prepare_prediction_data()
         self._prediction = build_prediction(self._find_optimal_train(), sample_data)
@@ -515,12 +473,16 @@ class model_selector:
         return self._prediction.SalePrice.describe()
 
     #--------------------------------------------------------------------------
-    # write prediction 
+    # write prediction data to a csv file
     #--------------------------------------------------------------------------
-    def _write_prediction(self):
+    def _write_prediction(self, suffix):
         assert self._prediction is not None
+   
+        if suffix is not None:
+            file_name = self._prediction_base_file_name  + str('-') + (suffix)
+        file_name += str('.csv')
 
-        data_file = os.path.join(self._sample_data._working_dir, self._prediction_file_name)
+        data_file = os.path.join(self._sample_data._working_dir, file_name)
         self._prediction.to_csv(data_file, index=False)
   
     #--------------------------------------------------------------------------
@@ -544,8 +506,6 @@ class model_selector:
         ax.set_xticks(index)
 
         ax.set_xticklabels(('baseline test score', 'train score', 'test score'))
-        ax.legend()
-        fig.tight_layout()
         plt.show()
         
 #------------------------------------------------------------------------------
@@ -556,27 +516,57 @@ working_dir = os.path.join(working_dir,'course_projects', 'data', 'module_3')
 meta_data = meta_data(working_dir)
 sample_data = sample_data(working_dir, 'SalePrice', meta_data)
 sample_data.load_data()
+
+#------------------------------------------------------------------------------
+# 1. Simple model with only two features
+#------------------------------------------------------------------------------
+
 model_selector = model_selector(sample_data)
 
-model_selector.run_combinations('linear', 1, 2000)
+if 0:
+    model_selector.run_combinations('linear', None, 2, 2000)
+    model_selector._find_optimal_train()
+    model_selector.get_prediction_distribution()
+    model_selector._plot_optimal_train()
+    model_selector._write_prediction('simple')
+
+#------------------------------------------------------------------------------
+# 2. Intermediate model build with the 2 features determined above 
+#    and 8 added features;  features are choosen according following
+#    criterias :
+# 
+#    a. individual correlation with the target
+#    b. distribution as near as normal distribution
+#------------------------------------------------------------------------------
 
 optimal_cols =  ['Overall Qual', 'Gr Liv Area']
 
-model_selector.reset()
-model_selector.run_combination('linear', optimal_cols)
+cols_to_add = ['Fireplaces', 'Lot Area', 
+               'TotRms AbvGrd', 'Year Built',
+               '1st Flr SF', 'MS SubClass', 
+               'Central Air', 'Garage Cars']
+
+model_selector.reset_run()
+model_selector.run_combination('linear', None, optimal_cols)
 model_selector._find_optimal_train()
 model_selector.get_prediction_distribution()
 
-sample_data.apply_transformation('Fireplaces')
-sample_data.apply_transformation('Year Built')
-
-cols_to_add = ['Fireplaces', 'Lot Area', 'Year Built', 'TotRms AbvGrd', '1st Flr SF', 'MS SubClass', 'Central Air']
-
 for col in cols_to_add:
-    model_selector.run_combination('linear', [col])
+    model_selector.run_combination('linear', None, [col])
     model_selector._find_optimal_train()
     model_selector.get_prediction_distribution()
-    # model_selector._plot_optimal_train()
 
 sample_data.get_train_distribution()
+model_selector._plot_optimal_train()
+model_selector._write_prediction('intermediate')
+
+#------------------------------------------------------------------------------
+# 3. Complex model build with all the (remaining) features 
+#    Grid search with ridge regression model
+#------------------------------------------------------------------------------
+alpha = 0.04
+for alpha in np.logspace(-2, 10, num=100):
+    model_selector.run_combinations('ridge', alpha, 59, 2000)
+
+
 
