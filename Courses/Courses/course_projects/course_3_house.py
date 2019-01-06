@@ -292,7 +292,7 @@ pd.set_option('display.max_columns', 90)
 # the original data set 
 #------------------------------------------------------------------------------
 def run_train(reg_type, alpha, sample_data, comb_cols, results):
-     try:
+    try:
         df = sample_data._df_train_data.copy()
         y = df[sample_data._target]
         df = df[comb_cols]
@@ -343,7 +343,7 @@ def run_train(reg_type, alpha, sample_data, comb_cols, results):
         r.y_te = y_te
         r.y_te_pred = y_pred_te
         results.append(r)
-
+        
     except:
         print(comb_cols)
 
@@ -380,7 +380,7 @@ def build_prediction(optimal_train, sample_data):
         # transform 
         prediction.y_te_pred = np.exp(y_pred_te)
 
-        # format 
+        # format to a 2-column DataFrame
         df = pd.concat([pd.DataFrame(prediction.PID_test), 
                         pd.DataFrame(prediction.y_te_pred)], axis=1)
         df.columns = ['PID', 'SalePrice']
@@ -419,7 +419,7 @@ class model_selector:
         cols = self._sample_data.get_cols_wo_target()
         cols_cnt = len(cols)
 
-        if (cols_cnt > k):
+        if (cols_cnt >= k):
             # avoid too many combinations to be evaluated
             if (anp(cols_cnt, k) < 2000):
                 combinations = [list(x) for x in itertools.combinations(cols, k)]
@@ -454,6 +454,29 @@ class model_selector:
         sample_data.prepare_prediction_data()
         self._prediction = build_prediction(self._find_optimal_train(), sample_data)
    
+    #--------------------------------------------------------------------------
+    # run grid seach ridge regression with given features 
+    #--------------------------------------------------------------------------
+    def run_ridge_grid(self, cols):
+        self._sample_data.prepare_train_data()
+        
+        self._train_results = []
+        for alpha in np.logspace(-2, 10, num=100):
+            run_train('ridge', alpha, sample_data, cols, self._train_results)
+        
+        # plot ridge grid results
+        if self._train_results is not None:
+            df = pd.DataFrame([x.as_dict() for x in self._train_results])
+            alphas = [x.alpha for x in df.lr]
+
+            plt.semilogx(alphas, df.train_score, label='mse train curve')
+            plt.semilogx(alphas, df.test_score, label='mse test curve')
+            plt.legend()
+            plt.show()
+
+            sample_data.prepare_prediction_data()
+            self._prediction = build_prediction(self._find_optimal_train(), sample_data)
+
     #--------------------------------------------------------------------------
     # find an optimal test score among all train's run
     #--------------------------------------------------------------------------
@@ -540,23 +563,37 @@ if 0:
 #------------------------------------------------------------------------------
 
 optimal_cols =  ['Overall Qual', 'Gr Liv Area']
-
 cols_to_add = ['Fireplaces', 'Lot Area', 
                'TotRms AbvGrd', 'Year Built',
                '1st Flr SF', 'MS SubClass', 
                'Central Air', 'Garage Cars']
 
-model_selector.reset_run()
-model_selector.run_combination('linear', None, optimal_cols)
-model_selector._find_optimal_train()
-model_selector.get_prediction_distribution()
-
-for col in cols_to_add:
-    model_selector.run_combination('linear', None, [col])
+if 0:
+    model_selector.reset_run()
+    model_selector.run_combination('linear', None, optimal_cols)
     model_selector._find_optimal_train()
     model_selector.get_prediction_distribution()
 
-sample_data.get_train_distribution()
+    for col in cols_to_add:
+        model_selector.run_combination('linear', None, [col])
+        model_selector._find_optimal_train()
+        model_selector.get_prediction_distribution()
+
+    sample_data.get_train_distribution()
+    model_selector._plot_optimal_train()
+    model_selector._write_prediction('intermediate')
+
+#------------------------------------------------------------------------------
+# adjust with ridge regression
+# Grid search with ridge regression model
+#------------------------------------------------------------------------------
+
+model_selector.reset_run()
+cols = []
+cols = optimal_cols.copy()
+cols.extend(cols_to_add)
+
+model_selector.run_ridge_grid(cols)
 model_selector._plot_optimal_train()
 model_selector._write_prediction('intermediate')
 
@@ -564,9 +601,11 @@ model_selector._write_prediction('intermediate')
 # 3. Complex model build with all the (remaining) features 
 #    Grid search with ridge regression model
 #------------------------------------------------------------------------------
-alpha = 0.04
-for alpha in np.logspace(-2, 10, num=100):
-    model_selector.run_combinations('ridge', alpha, 59, 2000)
+alpha = 75
+model_selector.run_combinations('ridge', alpha, 59, 2000)
+
+
+    
 
 
 
