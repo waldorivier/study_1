@@ -574,7 +574,7 @@ cols_to_add = ['Fireplaces', 'Lot Area',
 
 if 0:
     model_selector.reset_run()
-    model_selector.run_combination('linear', None, 'mean', optimal_cols)
+    model_selector.run_combination('linear', None, 'median', optimal_cols)
     model_selector._find_optimal_train()
     model_selector.get_prediction_distribution()
 
@@ -582,7 +582,7 @@ if 0:
     # distribution conserves a good fit in comparison to the train'one 
 
     for col in cols_to_add:
-        model_selector.run_combination('linear', None, 'mean', [col])
+        model_selector.run_combination('linear', None, 'median', [col])
         model_selector._find_optimal_train()
         model_selector.get_prediction_distribution()
 
@@ -600,7 +600,7 @@ cols = []
 cols = optimal_cols.copy()
 cols.extend(cols_to_add)
 
-model_selector.run_ridge_grid('mean', cols)
+model_selector.run_ridge_grid('median', cols)
 model_selector._plot_optimal_train()
 model_selector._write_prediction('intermediate')
 
