@@ -30,7 +30,7 @@ import random
 
 #------------------------------------------------------------------------------
 # class which implements utilities to access house price meta data (columns, 
-# column's type, ordinal column code mapping, tansfomation of entire ordinal 
+# column's type, etc...), transformations ordinal column code mapping, tansfomation of entire ordinal 
 # columns of a dataframe, etc...)
 #------------------------------------------------------------------------------
 class meta_data:
@@ -139,7 +139,7 @@ class sample_data:
         # motivations :
         #   a. number of features removed is not dramatically important (20 on 81)
         #   b. 7 features contains only 1 NAN value; without big effort and modification of 
-        #      the informations, we can  easyly keep them
+        #        the informations, we can  easyly keep them
 
         self._df_train_data = self._df_train_data_orig.dropna(thresh=2429, axis=1).copy()
         self._df_train_data.fillna(method='ffill', inplace=True)
@@ -260,6 +260,7 @@ class sample_data:
         self._df_train_data[col] = self._df_train_data[col].apply(indicator)
 
     class result:
+        _metric = None
         comb_cols = None
         cols = None
         lr = None
@@ -270,8 +271,12 @@ class sample_data:
         y_te = None
         y_te_pred = None
 
+        def __init__(self, metric):
+            self._metric = metric
+
         def as_dict(self):
-            return {'PID_test' : self.PID_pred,
+            return {'metric' : self._metric,
+                    'PID_test' : self.PID_pred,
                     'comb_cols' : self.comb_cols,
                     'cols' : self.cols,
                     'lr' : self.lr,
@@ -280,7 +285,7 @@ class sample_data:
                     'test_baseline' : self.test_baseline,
                     'y_te' : self.y_te,
                     'y_te_pred' : self.y_te_pred}
-                
+
 #---------------------------------------------------------------------------
 def anp(n, k):
     return math.factorial(n) / (math.factorial(k) * math.factorial(n - k))
@@ -291,7 +296,7 @@ pd.set_option('display.max_columns', 90)
 # evaluates a model given a subset of colums choosen among those of
 # the original data set 
 #------------------------------------------------------------------------------
-def run_train(reg_type, alpha, sample_data, comb_cols, results):
+def run_train(reg_type, alpha, metric, sample_data, comb_cols, results):
     try:
         df = sample_data._df_train_data.copy()
         y = df[sample_data._target]
@@ -301,9 +306,6 @@ def run_train(reg_type, alpha, sample_data, comb_cols, results):
         if len(cols) > 0:
             df = pd.get_dummies(df, columns=cols)
 
-        #----------------------------------    
-        # TODO : remove eventual outliers 
-        
         _X = df.values
         X_tr, X_te, y_tr, y_te = train_test_split(
            _X, y.values, train_size = 0.5, test_size = 0.5, random_state=1)
@@ -318,27 +320,29 @@ def run_train(reg_type, alpha, sample_data, comb_cols, results):
                 reg = Ridge(alpha)
 
         reg.fit(X_tr, y_tr)
-       
-        #----------------------------------
-        # negatives values not allowed 
-     
-        y_pred_tr = np.maximum(reg.predict(X_tr), 0)
-        y_pred_te = np.maximum(reg.predict(X_te), 0)
+        y_pred_tr = reg.predict(X_tr)
+        y_pred_te = reg.predict(X_te)
    
-        #----------------------------------
-        # determine the baseline 
-                
-        dummy = DummyRegressor(strategy='mean')
+        # stores the results
+        r = sample_data.result(metric)
+
+        # evaluate the metric
+        dummy = DummyRegressor(strategy=metric)
         dummy.fit(X_tr, y_tr)
         y_pred_base = dummy.predict(X_te)   
 
-        r = sample_data.result()
+        if metric == 'mean':
+            r.train_score = np.sqrt(mse(y_pred_tr, y_tr))
+            r.test_score = np.sqrt(mse(y_pred_te, y_te))
+            r.test_baseline = np.sqrt(mse(y_pred_base, y_te))
+        elif metric == 'median':
+            r.train_score = mae(y_pred_tr, y_tr)
+            r.test_score = mae(y_pred_te, y_te)
+            r.test_baseline = mae(y_pred_base, y_te)
+           
         r.comb_cols = comb_cols
         r.cols = df.columns
         r.lr = reg
-        r.train_score = np.sqrt(mse(y_pred_tr, y_tr))
-        r.test_score = np.sqrt(mse(y_pred_te, y_te))
-        r.test_baseline = np.sqrt(mse(y_pred_base, y_te))
         r.PID_test = None
         r.y_te = y_te
         r.y_te_pred = y_pred_te
@@ -372,7 +376,7 @@ def build_prediction(optimal_train, sample_data):
         X = df.values
         y_pred_te = optimal_train.lr.predict(X)
   
-        prediction = sample_data.result()
+        prediction = sample_data.result(optimal_train.metric)
         prediction.PID_test = PID
         prediction.comb_cols = optimal_train.comb_cols
         prediction.cols = df.columns
@@ -413,7 +417,7 @@ class model_selector:
     # limit : max combinations 
     # reg_type : linear, huber, ridge
     #--------------------------------------------------------------------------
-    def run_combinations(self, reg_type, alpha, k, limit):
+    def run_combinations(self, reg_type, alpha, metric, k, limit):
         self._sample_data.prepare_train_data()
 
         cols = self._sample_data.get_cols_wo_target()
@@ -427,17 +431,17 @@ class model_selector:
 
                 self._train_results = []
                 for combination in combinations:
-                    run_train(reg_type, alpha, sample_data, combination, self._train_results)
+                    run_train(reg_type, alpha, metric, sample_data, combination, self._train_results)
 
-                sample_data.prepare_prediction_data()
-                self._prediction = build_prediction(self._find_optimal_train(), sample_data)
+                self._sample_data.prepare_prediction_data()
+                self._prediction = build_prediction(self._find_optimal_train(), self._sample_data)
   
     #--------------------------------------------------------------------------
     # add features to an (eventually already evaluated) optimal combination 
     # in order to build a more accurate model.
     # a new optimal train will be evaluated
     #--------------------------------------------------------------------------
-    def run_combination(self, reg_type, alpha, cols):
+    def run_combination(self, reg_type, alpha, metric, cols):
         self._sample_data.prepare_train_data()
 
         # when no optimal train already exists, 
@@ -449,7 +453,7 @@ class model_selector:
         combination.extend(cols)
 
         self._train_results = []
-        run_train(reg_type, alpha, sample_data, combination, self._train_results)
+        run_train(reg_type, alpha, metric, sample_data, combination, self._train_results)
 
         sample_data.prepare_prediction_data()
         self._prediction = build_prediction(self._find_optimal_train(), sample_data)
@@ -457,12 +461,12 @@ class model_selector:
     #--------------------------------------------------------------------------
     # run grid seach ridge regression with given features 
     #--------------------------------------------------------------------------
-    def run_ridge_grid(self, cols):
+    def run_ridge_grid(self, metric, cols):
         self._sample_data.prepare_train_data()
         
         self._train_results = []
         for alpha in np.logspace(-2, 10, num=100):
-            run_train('ridge', alpha, sample_data, cols, self._train_results)
+            run_train('ridge', alpha, metric, sample_data, cols, self._train_results)
         
         # plot ridge grid results
         if self._train_results is not None:
@@ -481,7 +485,7 @@ class model_selector:
     # find an optimal test score among all train's run
     #--------------------------------------------------------------------------
     def _find_optimal_train(self):
-        assert len(self._train_results) > 0
+        assert self._train_results is not None
 
         df = pd.DataFrame([x.as_dict() for x in self._train_results])
         i_opt = df['test_score'].idxmin()
@@ -547,7 +551,7 @@ sample_data.load_data()
 model_selector = model_selector(sample_data)
 
 if 0:
-    model_selector.run_combinations('linear', None, 2, 2000)
+    model_selector.run_combinations('linear', None, 'median', 2, 2000)
     model_selector._find_optimal_train()
     model_selector.get_prediction_distribution()
     model_selector._plot_optimal_train()
@@ -570,12 +574,15 @@ cols_to_add = ['Fireplaces', 'Lot Area',
 
 if 0:
     model_selector.reset_run()
-    model_selector.run_combination('linear', None, optimal_cols)
+    model_selector.run_combination('linear', None, 'mean', optimal_cols)
     model_selector._find_optimal_train()
     model_selector.get_prediction_distribution()
 
+    # adds columns one after the other to be sure that the prediction 
+    # distribution conserves a good fit in comparison to the train'one 
+
     for col in cols_to_add:
-        model_selector.run_combination('linear', None, [col])
+        model_selector.run_combination('linear', None, 'mean', [col])
         model_selector._find_optimal_train()
         model_selector.get_prediction_distribution()
 
@@ -593,7 +600,7 @@ cols = []
 cols = optimal_cols.copy()
 cols.extend(cols_to_add)
 
-model_selector.run_ridge_grid(cols)
+model_selector.run_ridge_grid('mean', cols)
 model_selector._plot_optimal_train()
 model_selector._write_prediction('intermediate')
 
@@ -601,8 +608,8 @@ model_selector._write_prediction('intermediate')
 # 3. Complex model build with all the (remaining) features 
 #    Grid search with ridge regression model
 #------------------------------------------------------------------------------
-alpha = 75
-model_selector.run_combinations('ridge', alpha, 59, 2000)
+alpha = 10
+model_selector.run_combinations('ridge', alpha, metric, 59, 2000)
 
 
     
