@@ -544,6 +544,9 @@ meta_data = meta_data(working_dir)
 sample_data = sample_data(working_dir, 'SalePrice', meta_data)
 sample_data.load_data()
 
+
+model_results = {}
+
 #------------------------------------------------------------------------------
 # 1. Simple model with only two features
 #------------------------------------------------------------------------------
@@ -556,6 +559,7 @@ if 0:
     model_selector.get_prediction_distribution()
     model_selector._plot_optimal_train()
     model_selector._write_prediction('simple')
+    model_results['simple'] = model_selector._find_optimal_train()
 
 #------------------------------------------------------------------------------
 # 2. Intermediate model build with the 2 features determined above 
@@ -590,29 +594,35 @@ if 0:
     model_selector._plot_optimal_train()
     model_selector._write_prediction('intermediate')
 
+    model_results['intermediate'] = model_selector._find_optimal_train()
+
 #------------------------------------------------------------------------------
 # adjust with ridge regression
 # Grid search with ridge regression model
 #------------------------------------------------------------------------------
 
-model_selector.reset_run()
-cols = []
-cols = optimal_cols.copy()
-cols.extend(cols_to_add)
+if 0:
+    model_selector.reset_run()
+    cols = []
+    cols = optimal_cols.copy()
+    cols.extend(cols_to_add)
 
-model_selector.run_ridge_grid('median', cols)
-model_selector._plot_optimal_train()
-model_selector._write_prediction('intermediate')
+    model_selector.run_ridge_grid('median', cols)
+    model_selector._plot_optimal_train()
+    model_selector._write_prediction('intermediate')
+    model_selector.get_prediction_distribution()
 
+    model_results['intermediate_adjusted'] = model_selector._find_optimal_train()
 #------------------------------------------------------------------------------
 # 3. Complex model build with all the (remaining) features 
-#    Grid search with ridge regression model
 #------------------------------------------------------------------------------
-alpha = 10
-model_selector.run_combinations('ridge', alpha, metric, 59, 2000)
+if 0:
+    alpha = 10
+    model_selector.reset_run()
 
-
-    
-
-
-
+    model_selector.run_combinations('ridge', alpha, 'median', 59, 2000)
+    model_results['complex'] = model_selector._find_optimal_train()
+        
+   
+def plot_model_result(mode_results):
+     
