@@ -544,8 +544,7 @@ meta_data = meta_data(working_dir)
 sample_data = sample_data(working_dir, 'SalePrice', meta_data)
 sample_data.load_data()
 
-
-model_results = {}
+model_optimal_train_results = {}
 
 #------------------------------------------------------------------------------
 # 1. Simple model with only two features
@@ -559,7 +558,7 @@ if 0:
     model_selector.get_prediction_distribution()
     model_selector._plot_optimal_train()
     model_selector._write_prediction('simple')
-    model_results['simple'] = model_selector._find_optimal_train()
+    model_optimal_train_results['simple'] = model_selector._find_optimal_train()
 
 #------------------------------------------------------------------------------
 # 2. Intermediate model build with the 2 features determined above 
@@ -594,7 +593,7 @@ if 0:
     model_selector._plot_optimal_train()
     model_selector._write_prediction('intermediate')
 
-    model_results['intermediate'] = model_selector._find_optimal_train()
+    model_optimal_train_results['intermediate'] = model_selector._find_optimal_train()
 
 #------------------------------------------------------------------------------
 # adjust with ridge regression
@@ -612,17 +611,21 @@ if 0:
     model_selector._write_prediction('intermediate')
     model_selector.get_prediction_distribution()
 
-    model_results['intermediate_adjusted'] = model_selector._find_optimal_train()
+    model_optimal_train_results['intermediate_adjusted'] = model_selector._find_optimal_train()
 #------------------------------------------------------------------------------
 # 3. Complex model build with all the (remaining) features 
 #------------------------------------------------------------------------------
 if 0:
     alpha = 10
     model_selector.reset_run()
-
     model_selector.run_combinations('ridge', alpha, 'median', 59, 2000)
-    model_results['complex'] = model_selector._find_optimal_train()
+    model_optimal_train_results['complex'] = model_selector._find_optimal_train()
         
-   
 def plot_model_result(mode_results):
-     
+    df = pd.DataFrame(model_optimal_train_results)
+    df = df.transpose()
+    df = df[['test_score']]
+    plt.bar(df.index.values, df.iloc[:,0:].values.flatten(), color='blue')
+    plt.show()
+
+plot_model_result(model_optimal_train_results)  
