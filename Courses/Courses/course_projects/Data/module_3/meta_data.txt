@@ -130,7 +130,7 @@ Overall Cond	Rates the overall condition of the house	Ordinal	10	10	Very Excelle
 			3	3	Fair
 			2	2	Poor
 			1	1	Very Poor
-Year Built	Original construction date	Discrete			
+Year Built	Original construction date	Nominal			
 Year Remod/Add	 Remodel date (same as construction date if no remodeling or additions)	Discrete			
 Roof Style	 Type of roof	Nominal	       Flat		Flat
 			       Gable		Gable
@@ -278,7 +278,7 @@ Functional	Home functionality (Assume typical unless deductions are warranted)	O
 			       Maj2	5	Major Deductions 2
 			       Sev	4	Severely Damaged
 			       Sal	3	Salvage only
-Fireplaces	Number of fireplaces	Discrete			
+Fireplaces	Number of fireplaces	Nominal			
 FireplaceQu	Fireplace quality	Ordinal	       Ex	10	Excellent - Exceptional Masonry Fireplace
 			       Gd	8	Good - Masonry Fireplace in main level
 			       TA	6	Average - Prefabricated Fireplace in main living area or Masonry Fireplace in basement
