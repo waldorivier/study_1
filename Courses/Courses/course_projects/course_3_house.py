@@ -544,6 +544,7 @@ meta_data = meta_data(working_dir)
 sample_data = sample_data(working_dir, 'SalePrice', meta_data)
 sample_data.load_data()
 
+# dictionnary to store the results
 model_optimal_train_results = {}
 
 #------------------------------------------------------------------------------
@@ -597,7 +598,7 @@ if 0:
 
 #------------------------------------------------------------------------------
 # adjust with ridge regression
-# Grid search with ridge regression model
+# grid search with ridge regression model
 #------------------------------------------------------------------------------
 
 if 0:
@@ -612,6 +613,7 @@ if 0:
     model_selector.get_prediction_distribution()
 
     model_optimal_train_results['intermediate_adjusted'] = model_selector._find_optimal_train()
+
 #------------------------------------------------------------------------------
 # 3. Complex model build with all the (remaining) features 
 #------------------------------------------------------------------------------
@@ -621,11 +623,25 @@ if 0:
     model_selector.run_combinations('ridge', alpha, 'median', 59, 2000)
     model_optimal_train_results['complex'] = model_selector._find_optimal_train()
         
+#------------------------------------------------------------------------------
+# 4. Plot model comparison
+#------------------------------------------------------------------------------
 def plot_model_result(mode_results):
     df = pd.DataFrame(model_optimal_train_results)
     df = df.transpose()
-    df = df[['test_score']]
-    plt.bar(df.index.values, df.iloc[:,0:].values.flatten(), color='blue')
-    plt.show()
+
+    # check that all resuts have the same metric
+    if (df.metric.drop_duplicates().count() == 1):
+        metric = df.metric.drop_duplicates()
+        df = df[['test_baseline', 'train_score', 'test_score']]
+    
+        ax = df.plot.bar(width=0.8)
+        ax.set_title("Comparison of the models (metric : " + metric.values[0] + str(")"))
+        ax.set_xlabel("models")
+        ax.set_ylabel("scores")
+
+        ax.set_xticklabels(df.index, rotation=0)            
+        plt.show()
 
 plot_model_result(model_optimal_train_results)  
+
