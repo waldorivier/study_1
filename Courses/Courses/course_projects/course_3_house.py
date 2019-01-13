@@ -608,7 +608,7 @@ if 0:
     cols = optimal_cols.copy()
     cols.extend(cols_to_add)
 
-    model_selector.run_ridge_grid('median', cols)
+    model_selector.run_ridge_grid('mean', cols)
     model_selector._plot_optimal_train()
     model_selector._write_prediction('intermediate')
     model_selector.get_prediction_distribution()
@@ -621,7 +621,7 @@ if 0:
 if 0:
     alpha = 10
     model_selector.reset_run()
-    model_selector.run_combinations('ridge', alpha, 'median', 59, 2000)
+    model_selector.run_combinations('ridge', alpha, 'median', 62, 2000)
     model_optimal_train_results['complex'] = model_selector._find_optimal_train()
         
 #------------------------------------------------------------------------------
@@ -633,7 +633,7 @@ if 0:
         df = pd.DataFrame(model_optimal_train_results)
         df = df.transpose()
 
-        # check that all resuts have the same metric
+        # check that all models have been evaluated with the same metric
         if (df.metric.drop_duplicates().count() == 1):
             metric = df.metric.drop_duplicates()
             df = df[['test_baseline', 'train_score', 'test_score']]
