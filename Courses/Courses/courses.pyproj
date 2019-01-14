@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>025b859f-91ae-4c8a-a47a-428b2d610a26</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>course_projects\course_3_house.py</StartupFile>
+    <StartupFile>course_projects\module_3\houses_prices\course_3_house.py</StartupFile>
     <SearchPath>modules</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -24,8 +24,8 @@
     <Compile Include="modules\utils.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="course_projects\course_3.py" />
-    <Compile Include="course_projects\course_3_house.py" />
+    <Compile Include="course_projects\module_3\warm_up\course_3.py" />
+    <Compile Include="course_projects\module_3\houses_prices\course_3_house.py" />
     <Compile Include="poc_projects\chain_classifier.py">
       <SubType>Code</SubType>
     </Compile>
@@ -46,9 +46,9 @@
     <Compile Include="study\exercices_module_3_7_6.py" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="course_projects\data\" />
-    <Folder Include="course_projects\Data\module_3\" />
-    <Folder Include="course_projects\Data\module_3\.ipynb_checkpoints\" />
+    <Folder Include="course_projects\module_3\" />
+    <Folder Include="course_projects\module_3\houses_prices\" />
+    <Folder Include="course_projects\module_3\warm_up\" />
     <Folder Include="study\data\" />
     <Folder Include="study\Data\module_3\" />
     <Folder Include="poc_projects\" />
@@ -58,15 +58,15 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="course_projects\Course_1.ipynb" />
-    <Content Include="course_projects\Data\module_3\documentation.txt" />
-    <Content Include="course_projects\Data\module_3\encoding-categorical-variables.ipynb" />
-    <Content Include="course_projects\Data\module_3\house-prices-pred-example.csv" />
-    <Content Include="course_projects\Data\module_3\house-prices-test.csv" />
-    <Content Include="course_projects\Data\module_3\house-prices.csv" />
-    <Content Include="course_projects\Data\module_3\source.txt" />
-    <Content Include="course_projects\Data\module_3\task-1.csv" />
-    <Content Include="course_projects\Data\module_3\task-2.csv" />
-    <Content Include="course_projects\Data\module_3\task-3.csv" />
+    <Content Include="course_projects\module_3\houses_prices\documentation.txt" />
+    <Content Include="course_projects\module_3\houses_prices\encoding-categorical-variables.ipynb" />
+    <Content Include="course_projects\module_3\houses_prices\house-prices-pred-example.csv" />
+    <Content Include="course_projects\module_3\houses_prices\house-prices-test.csv" />
+    <Content Include="course_projects\module_3\houses_prices\house-prices.csv" />
+    <Content Include="course_projects\module_3\houses_prices\source.txt" />
+    <Content Include="course_projects\module_3\warm_up\task-1.csv" />
+    <Content Include="course_projects\module_3\warm_up\task-2.csv" />
+    <Content Include="course_projects\module_3\warm_up\task-3.csv" />
     <Content Include="course_projects\df_food_study_1.db" />
     <Content Include="course_projects\food.db" />
   </ItemGroup>
