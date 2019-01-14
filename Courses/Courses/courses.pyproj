@@ -37,7 +37,7 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="study\data_analyse.py" />
-    <Compile Include="study\dta_inspect.py" />
+    <Compile Include="poc_projects\dta_inspect.py" />
     <Compile Include="study\exercices_module_2.py" />
     <Compile Include="course_projects\course_2.py">
       <SubType>Code</SubType>
