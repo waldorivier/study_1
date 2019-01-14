@@ -22,6 +22,8 @@ try :
     result_comptes_file_name = 'comptes.csv'
     result_file_name = 'RESULT.csv'
 
+    pd.set_option('display.max_columns', 30)
+
     #--------------------------------------------------------------------------
     # chemin d'accès aux fichiers
     #--------------------------------------------------------------------------
@@ -34,7 +36,9 @@ try :
 
     else :
         client_root_dir = PureWindowsPath('O:\\')
-        data_dir = PureWindowsPath(client_root_dir.joinpath('UBS Optio 1e','24 BenAdmin-Param','06 Reprise','Atos','data_reprise'))
+        # data_dir = PureWindowsPath(client_root_dir.joinpath('UBS Optio 1e','24 BenAdmin-Param','06 Reprise','Atos','data_reprise'))
+        data_dir = PureWindowsPath(client_root_dir.joinpath('lausanne','24 BenAdmin-Param','09 Listes collectives','extractions'))
+
     
     #--------------------------------------------------------------------------
     def helper_get_file(file_name) :
@@ -150,7 +154,7 @@ try :
         df_ecrit.to_csv(helper_get_file(result_file_name), sep = ';')
         
 
-    if 1:
+    if 0:
         df_data_converted = pd.read_excel(helper_get_file('UBS Optio 1e_Mitarbeiterliste_Atos AG_01 01.2019_AON_wri.xls'), sheet_name='reprise')
         
         df_header = df_data_converted.iloc[0:3,:]
@@ -171,6 +175,23 @@ try :
         df_header.to_csv(helper_get_file('header_affi.csv'), sep = ';', index=False)
         df_data.to_csv(helper_get_file('data_affi.csv'), sep = ';', header=False, index=False, encoding='UTF-8')
         # df_data.to_csv(helper_get_file('data_affi.csv'), sep = ';', header=False, index=False)
+
+    if 1:
+        df_orig = pd.read_csv(helper_get_file('data_ctrl_salaires_gar_prec_ralr26332.csv'), sep = ';')
+        # df_orig = pd.read_csv(helper_get_file('data_ctrl_salaires_gar_prec_rakm3529e.csv'), sep = ';')
+ 
+        df = df_orig.iloc[2:,:].copy()
+        df = df[df.DTMUTX == '01.01.2019']
+        df['NO_CAS'] = df['NO_CAS'].astype(int)
+        
+        df[df.NO_CAS == 1].RVGARX.astype(float).sum()
+        df[df.NO_CAS == 2].RVGARX.astype(float).sum()
+
+        df[df.NO_CAS == 1].SACGAR.astype(float).sum()
+        df[df.NO_CAS == 2].SACGAR.astype(float).sum()
+ 
+        df[df.NO_CAS == 1].RVGARX.astype(float).sum()
+
 
 except ValueError as e  :
     print (e)
