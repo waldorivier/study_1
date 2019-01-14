@@ -32,6 +32,7 @@ import random
 # class which implements utilities to access house price meta data (columns, 
 # column's type, etc...), transformations ordinal column code mapping, tansfomation of entire ordinal 
 # columns of a dataframe, etc...)
+# meta data are stored in a text file
 #------------------------------------------------------------------------------
 class meta_data:
     _working_dir = None
@@ -73,7 +74,7 @@ class meta_data:
         return dict_ordinal
 
     #------------------------------------------------------------------------------
-    # return dictionnary build on code and code designation (used in special case
+    # return dictionary build on code and code designation (used in special case
     # for MS SubClass feature) 
     #------------------------------------------------------------------------------
     def get_dict_nominal(self, col):
@@ -151,14 +152,14 @@ class sample_data:
         self._meta_data.map_ordinal_cols(self._df_train_data)
 
         # special case for features MS SubClass; apply transformation in order 
-        # to use text nominal in place of numerical codes
+        # to use nominal text in place of numerical codes
         col = 'MS SubClass'
         dict_nominal = self._meta_data.get_dict_nominal(col)
         self._df_train_data[col] = self._df_train_data[col].map(dict_nominal)
 
         # apply some transformation to "normalize" the distribution
-        # self.apply_transformation('Fireplaces')
-        # self.apply_transformation('Year Built')
+        self.apply_transformation('Fireplaces')
+        self.apply_transformation('Year Built')
     
     # return the features which were removed in function prepare_train_data above
     def get_removed_cols(self): 
@@ -235,7 +236,7 @@ class sample_data:
     
     def _indicator(self, col):
         def _f_fire_places(x):
-            if x > 1:
+            if x >= 1:
                 return 1
             else:
                 return 0
@@ -243,9 +244,9 @@ class sample_data:
 
         def _f_year_built(x):
             if x > 1970:
-                return 1
+                return 'after_1970'
             else:
-                return 0
+                return 'before_1970'
 
         if col == 'Fireplaces':
             return _f_fire_places
@@ -544,8 +545,8 @@ meta_data = meta_data(working_dir)
 sample_data = sample_data(working_dir, 'SalePrice', meta_data)
 sample_data.load_data()
 
-
-model_results = {}
+# dictionnary to store the results
+model_optimal_train_results = {}
 
 #------------------------------------------------------------------------------
 # 1. Simple model with only two features
@@ -559,7 +560,7 @@ if 0:
     model_selector.get_prediction_distribution()
     model_selector._plot_optimal_train()
     model_selector._write_prediction('simple')
-    model_results['simple'] = model_selector._find_optimal_train()
+    model_optimal_train_results['simple'] = model_selector._find_optimal_train()
 
 #------------------------------------------------------------------------------
 # 2. Intermediate model build with the 2 features determined above 
@@ -578,7 +579,7 @@ cols_to_add = ['Fireplaces', 'Lot Area',
 
 if 0:
     model_selector.reset_run()
-    model_selector.run_combination('linear', None, 'median', optimal_cols)
+    model_selector.run_combination('linear', None, 'mean', optimal_cols)
     model_selector._find_optimal_train()
     model_selector.get_prediction_distribution()
 
@@ -586,7 +587,7 @@ if 0:
     # distribution conserves a good fit in comparison to the train'one 
 
     for col in cols_to_add:
-        model_selector.run_combination('linear', None, 'median', [col])
+        model_selector.run_combination('linear', None, 'mean', [col])
         model_selector._find_optimal_train()
         model_selector.get_prediction_distribution()
 
@@ -594,11 +595,11 @@ if 0:
     model_selector._plot_optimal_train()
     model_selector._write_prediction('intermediate')
 
-    model_results['intermediate'] = model_selector._find_optimal_train()
+    model_optimal_train_results['intermediate'] = model_selector._find_optimal_train()
 
 #------------------------------------------------------------------------------
 # adjust with ridge regression
-# Grid search with ridge regression model
+# grid search with ridge regression model
 #------------------------------------------------------------------------------
 
 if 0:
@@ -607,22 +608,43 @@ if 0:
     cols = optimal_cols.copy()
     cols.extend(cols_to_add)
 
-    model_selector.run_ridge_grid('median', cols)
+    model_selector.run_ridge_grid('mean', cols)
     model_selector._plot_optimal_train()
     model_selector._write_prediction('intermediate')
     model_selector.get_prediction_distribution()
 
-    model_results['intermediate_adjusted'] = model_selector._find_optimal_train()
+    model_optimal_train_results['intermediate_adjusted'] = model_selector._find_optimal_train()
+
 #------------------------------------------------------------------------------
 # 3. Complex model build with all the (remaining) features 
 #------------------------------------------------------------------------------
 if 0:
     alpha = 10
     model_selector.reset_run()
-
-    model_selector.run_combinations('ridge', alpha, 'median', 59, 2000)
-    model_results['complex'] = model_selector._find_optimal_train()
+    model_selector.run_combinations('ridge', alpha, 'median', 62, 2000)
+    model_optimal_train_results['complex'] = model_selector._find_optimal_train()
         
-   
-def plot_model_result(mode_results):
-     
+#------------------------------------------------------------------------------
+# 4. Plot model comparison
+#------------------------------------------------------------------------------
+
+if 0: 
+    def plot_model_result(mode_results):
+        df = pd.DataFrame(model_optimal_train_results)
+        df = df.transpose()
+
+        # check that all models have been evaluated with the same metric
+        if (df.metric.drop_duplicates().count() == 1):
+            metric = df.metric.drop_duplicates()
+            df = df[['test_baseline', 'train_score', 'test_score']]
+    
+            ax = df.plot.bar(width=0.8)
+            ax.set_title("Comparison of the models (metric : " + metric.values[0] + str(")"))
+            ax.set_xlabel("models")
+            ax.set_ylabel("scores")
+
+            ax.set_xticklabels(df.index, rotation=0)            
+            plt.show()
+
+    plot_model_result(model_optimal_train_results)  
+
