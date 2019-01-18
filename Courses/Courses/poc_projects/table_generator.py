@@ -41,17 +41,17 @@ tbl_columns = ['NOM_PARA', 'PE_PAUT_DDV', 'LIBF_PARA', 'TYSTRU_PARA',
 
 def generate_file():
     row_template = {}
-    row_template['NOM_PARA']     = "AX_IK" 
+    row_template['NOM_PARA']     = "AX_AK" 
     row_template['PE_PAUT_DDV']  = "01.01.2019" 
     row_template['LIBF_PARA']    = "Expectative enfant"
     row_template['TYSTRU_PARA']  = "02"
     row_template['FORMAT_PARA']  = "06"
     row_template['INCLCOLLID']   = "02"
 
-    row_template['CLATIT_PAUT']   = "PE_IP"
+    row_template['CLATIT_PAUT']   = "PE_CAS"
     row_template['NO_IP']         = 4250
     row_template['NO_PLAN']       = 1
-    row_template['NO_CAS']        = 8
+    row_template['NO_CAS']        = 3
 
     # load data from XL
 
