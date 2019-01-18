@@ -38,17 +38,15 @@ tbl_columns = ['NOM_PARA', 'PE_PAUT_DDV', 'LIBF_PARA', 'TYSTRU_PARA',
 
 rows = []
 row = {}
-row['NOM_PARA']    = "TTAFLP" 
-row['PE_PAUT_DDV'] = "01.01.2019" 
-row['LIBF_PARA']   = "Tarif achat LP"
-row['TYSTRU_PARA']   = "02"
+row['NOM_PARA']     = "AX_AK" 
+row['PE_PAUT_DDV']  = "01.01.2019" 
+row['LIBF_PARA']    = "Expectative enfant"
+row['TYSTRU_PARA']  = "02"
 
-
-#...
-
-rows.append(row)
-
-df_tbl = pd.DataFrame(rows, columns = tbl_columns)
+row['CLATIT_PAUT']   = "PE_IP"
+row['NO_IP']         = 4250
+row['NO_PLAN']       = 1
+row['NO_CAS']        = 3
 
 # load data from XL
 
@@ -60,4 +58,23 @@ for c in tbl_data_colums[:-1]:
     col = "LCRD" + str(i) + "F_PARA"
     row[col] = c
     i += 1
+
+row_template = row;
+rows.append(row_template)
+
+for index, row in df_tbl_data.iterrows():
+    _row = row_template
+    
+    i = 1
+    for c in tbl_data_colums[:-1]:
+        col = "LCRD" + str(i) + "F_PARA"
+        _row[col] = row[i]
+        i += 1
+
+    rows.append(_row)
+
+df_tbl = pd.DataFrame(rows, columns = tbl_columns)
+df_tbl.fillna(method='ffill', inplace=True)
+
+df_tbl.to_csv('table.csv', sep = ';', index=False)
 

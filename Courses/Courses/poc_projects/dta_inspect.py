@@ -37,9 +37,9 @@ try :
     else :
         client_root_dir = PureWindowsPath('O:\\')
         # data_dir = PureWindowsPath(client_root_dir.joinpath('UBS Optio 1e','24 BenAdmin-Param','06 Reprise','Atos','data_reprise'))
-        data_dir = PureWindowsPath(client_root_dir.joinpath('lausanne','24 BenAdmin-Param','09 Listes collectives','extractions'))
+        # data_dir = PureWindowsPath(client_root_dir.joinpath('lausanne','24 BenAdmin-Param','09 Listes collectives','extractions'))
+        data_dir = PureWindowsPath(client_root_dir.joinpath('cap','24 BenAdmin-Param','09 Listes collectives','extractions', '2019', '10_effectif_sig'))
 
-    
     #--------------------------------------------------------------------------
     def helper_get_file(file_name) :
         return PureWindowsPath(data_dir.joinpath(file_name).as_posix())
@@ -176,8 +176,8 @@ try :
         df_data.to_csv(helper_get_file('data_affi.csv'), sep = ';', header=False, index=False, encoding='UTF-8')
         # df_data.to_csv(helper_get_file('data_affi.csv'), sep = ';', header=False, index=False)
 
-    if 1:
-        df_orig = pd.read_csv(helper_get_file('data_ctrl_salaires_gar_prec_ralr26332.csv'), sep = ';')
+    if 0:
+        df_orig = pd.read_csv(helper_get_file('data_extr_actifs_raoj4045u.csv'), sep = ';')
         # df_orig = pd.read_csv(helper_get_file('data_ctrl_salaires_gar_prec_rakm3529e.csv'), sep = ';')
  
         df = df_orig.iloc[2:,:].copy()
@@ -191,6 +191,11 @@ try :
         df[df.NO_CAS == 2].SACGAR.astype(float).sum()
  
         df[df.NO_CAS == 1].RVGARX.astype(float).sum()
+
+
+    if 1:
+        df_before = pd.read_excel(helper_get_file('SIG_2019_data_extr_pens.xlsx'))
+        df_after  = pd.read_excel(helper_get_file('10_SIG_2019_data_extr_pens.xlsx'))
 
 
 except ValueError as e  :
