@@ -37,9 +37,10 @@ tbl_columns = ['NOM_PARA', 'PE_PAUT_DDV', 'LIBF_PARA', 'TYSTRU_PARA',
                'CLATIT_PAUT','NO_IP','NO_PLAN','NO_CAS',
                'COORD1_VAPA_MF','COORD2_VAPA_MF','COORD3_VAPA_MF','VALSTR_VAPA','INCLCOLLID','COLLECTIF','VALNUM_VAPA', '']
 
-# define a row template
 
 def generate_file():
+
+    # define a row template
     row_template = {}
     row_template['NOM_PARA']     = "AX_AK" 
     row_template['PE_PAUT_DDV']  = "01.01.2019" 
@@ -58,15 +59,14 @@ def generate_file():
     df_tbl_data = pd.read_excel(data_file)
     tbl_data_colums = df_tbl_data.columns
 
-    # header contains name
+    # header contains coordinate name
     i = 1
     for c in tbl_data_colums[:-1]:
         col = "LCRD" + str(i) + "F_PARA"
         row_template[col] = c
         i += 1
 
-    # first line contains type
-    # coordinate type 
+    # first line contains coordinate type 
     i = 1
     for c in df_tbl_data.iloc[0,:-1]:
         col = "TYCRD" + str(i) + "_PARA"
@@ -92,6 +92,7 @@ def generate_file():
         rows.append(_row)
 
     df_tbl = pd.DataFrame(rows, columns = tbl_columns)
-    df_tbl.to_csv(dest_dir.joinpath(row_template['NOM_PARA'] + ".csv"), sep = ';', index=False)
+    df_tbl.to_csv("generate_test_file.csv", sep = ';', index=False)
+    # df_tbl.to_csv(dest_dir.joinpath(row_template['NOM_PARA'] + ".csv"), sep = ';', index=False)
 
 generate_file()
