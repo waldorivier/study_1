@@ -35,17 +35,16 @@ tbl_columns = ['NOM_PARA', 'PE_PAUT_DDV', 'LIBF_PARA', 'TYSTRU_PARA',
                'LCRD3F_PARA','TYCRD3_PARA',
                'TYDATA_PARA','FORMAT_PARA',
                'CLATIT_PAUT','NO_IP','NO_PLAN','NO_CAS',
-               'COORD1_VAPA_MF','COORD2_VAPA_MF','COORD3_VAPA_MF','VALSTR_VAPA','INCLCOLLID','COLLECTIF','VALNUM_VAPA', '']
+               'COORD1_VAPA_MF','COORD2_VAPA_MF','COORD3_VAPA_MF','VALSTR_VAPA','INCLCOLLID','COLLECTIF','VALSTR_VAPA', '']
 
+table_value_type = ['VALSTR_VAPA', 'VALSTR_VAPA']
 
 def generate_file():
-
     # define a row template
     row_template = {}
     row_template['NOM_PARA']     = "AX_AK" 
     row_template['PE_PAUT_DDV']  = "01.01.2019" 
     row_template['LIBF_PARA']    = "Expectative enfant"
-    row_template['TYSTRU_PARA']  = "02"
     row_template['FORMAT_PARA']  = "06"
     row_template['INCLCOLLID']   = "02"
 
@@ -65,6 +64,13 @@ def generate_file():
         col = "LCRD" + str(i) + "F_PARA"
         row_template[col] = c
         i += 1
+
+    # checks last column's name
+    if tbl_data_colums[-1] not in table_value_type:
+        raise Exception("table column's name error")
+       
+    # table's dimension
+    row_template['TYSTRU_PARA']  = "0" + str(len(tbl_data_colums[:-1]))
 
     # first line contains coordinate type 
     i = 1
