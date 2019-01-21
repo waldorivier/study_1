@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>025b859f-91ae-4c8a-a47a-428b2d610a26</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>poc_projects\table_loader.py</StartupFile>
+    <StartupFile>poc_projects\table_generator.py</StartupFile>
     <SearchPath>modules</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -29,7 +29,7 @@
     <Compile Include="poc_projects\chain_classifier.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="poc_projects\table_loader.py" />
+    <Compile Include="poc_projects\table_generator.py" />
     <Compile Include="study\exercices_module_3_3_8.py" />
     <Compile Include="study\exercices_module_3.py">
       <SubType>Code</SubType>
