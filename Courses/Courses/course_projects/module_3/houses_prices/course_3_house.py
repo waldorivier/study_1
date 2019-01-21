@@ -116,6 +116,8 @@ class sample_data:
     _df_test_data = None
     _df_train_data = None
     _df_train_data_orig = None
+
+    _is_prepared = False
  
     def __init__(self, working_dir, target, meta_data):
         assert working_dir is not None and len(working_dir) > 0
@@ -125,6 +127,7 @@ class sample_data:
         self._working_dir = working_dir
         self._meta_data = meta_data
         self._target = target
+        self._is_prepared = False
 
     def load_data(self):
         self._load_train_data()
@@ -136,30 +139,39 @@ class sample_data:
     def prepare_train_data(self):
         assert self._df_train_data_orig is not None 
 
-        # drop all columns which contains more than one NAN value
-        # motivations :
-        #   a. number of features removed is not dramatically important (20 on 81)
-        #   b. 7 features contains only 1 NAN value; without big effort and modification of 
-        #        the informations, we can  easyly keep them
+        # ensured preparation take place only once
+        if self._is_prepared == False:
+            self._is_prepared = True
 
-        self._df_train_data = self._df_train_data_orig.dropna(thresh=2429, axis=1).copy()
-        self._df_train_data.fillna(method='ffill', inplace=True)
+            # drop all columns which contains more than one NAN value
+            # motivations :
+            #   a. number of features removed is not dramatically important (20 on 81)
+            #   b. 7 features contains only 1 NAN value; without big effort and modification of 
+            #        the informations, we can  easyly keep them
+       
+            self._df_train_data = self._df_train_data_orig.dropna(thresh=2429, axis=1).copy()
+            self._df_train_data.fillna(method='ffill', inplace=True)
 
-        # takes the log the target
-        self._df_train_data[self._target] = np.log(self._df_train_data[self._target])
+            # takes the log the target
+            self._df_train_data[self._target] = np.log(self._df_train_data[self._target])
 
-        # all ordinal features will be replaced with numerical (subjective) evaluations
-        self._meta_data.map_ordinal_cols(self._df_train_data)
+            # all ordinal features will be replaced with numerical (subjective) evaluations
+            self._meta_data.map_ordinal_cols(self._df_train_data)
 
-        # special case for features MS SubClass; apply transformation in order 
-        # to use nominal text in place of numerical codes
-        col = 'MS SubClass'
-        dict_nominal = self._meta_data.get_dict_nominal(col)
-        self._df_train_data[col] = self._df_train_data[col].map(dict_nominal)
+            # special case for features MS SubClass; apply transformation in order 
+            # to use nominal text in place of numerical codes
+            col = 'MS SubClass'
+            dict_nominal = self._meta_data.get_dict_nominal(col)
+            self._df_train_data[col] = self._df_train_data[col].map(dict_nominal)
 
-        # apply some transformation to "normalize" the distribution
-        self.apply_transformation('Fireplaces')
-        self.apply_transformation('Year Built')
+            # apply some transformation to "normalize" the distribution
+            self.apply_transformation('Fireplaces')
+            self.apply_transformation('Year Built')
+            
+            # for test purpose, remove all transformed columns
+
+            sample_data._df_train_data.drop(['Fireplaces','Year Built', 
+                                             'MS SubClass', 'Order', 'PID'], axis=1, inplace=True)
     
     # return the features which were removed in function prepare_train_data above
     def get_removed_cols(self): 
@@ -179,7 +191,6 @@ class sample_data:
 
         cols = self._df_train_data.columns.copy()
         cols = cols.drop(self._target)
-        cols = cols.drop(['Order', 'PID'])
         return cols
 
     def _load_train_data(self):
@@ -313,9 +324,11 @@ def run_train(reg_type, alpha, metric, sample_data, comb_cols, results):
 
         if reg_type == 'linear':
             reg = LinearRegression()
+
         elif reg_type == 'huber':
             reg = HuberRegressor(1.35)
             y_tr = y_tr.flatten()
+
         elif reg_type == 'ridge':    
             if alpha is not None: 
                 reg = Ridge(alpha)
@@ -353,7 +366,7 @@ def run_train(reg_type, alpha, metric, sample_data, comb_cols, results):
         print(comb_cols)
 
 #------------------------------------------------------------------------------
-# based on an optimal solution, return prediciton values for a given sample 
+# based on an optimal solution, return prediction values for a given sample 
 #------------------------------------------------------------------------------
 def build_prediction(optimal_train, sample_data):
     assert sample_data is not None
@@ -444,17 +457,18 @@ class model_selector:
     #--------------------------------------------------------------------------
     def run_combination(self, reg_type, alpha, metric, cols):
         self._sample_data.prepare_train_data()
-
-        # when no optimal train already exists, 
-        try :
-            opt_train = self._find_optimal_train()
-            combination = opt_train.comb_cols.copy()
-        except:
-            combination = []
-        combination.extend(cols)
+        
+        #  when no optimal train already exists, 
+        #  try :
+        #    opt_train = self._find_optimal_train()
+        #    combination = opt_train.comb_cols.copy()
+        # except:
+         
+        # combination = []
+        # combination.extend(cols)
 
         self._train_results = []
-        run_train(reg_type, alpha, metric, sample_data, combination, self._train_results)
+        run_train(reg_type, alpha, metric, sample_data, cols, self._train_results)
 
         sample_data.prepare_prediction_data()
         self._prediction = build_prediction(self._find_optimal_train(), sample_data)
@@ -539,7 +553,7 @@ class model_selector:
 #------------------------------------------------------------------------------
     
 working_dir = os.getcwd()
-working_dir = os.path.join(working_dir,'course_projects', 'data', 'module_3')
+working_dir = os.path.join(working_dir,'course_projects', 'module_3', 'houses_prices')
 
 meta_data = meta_data(working_dir)
 sample_data = sample_data(working_dir, 'SalePrice', meta_data)
@@ -548,14 +562,12 @@ sample_data.load_data()
 # dictionnary to store the results
 model_optimal_train_results = {}
 
+model_selector = model_selector(sample_data)
 #------------------------------------------------------------------------------
 # 1. Simple model with only two features
 #------------------------------------------------------------------------------
-
-model_selector = model_selector(sample_data)
-
-if 0:
-    model_selector.run_combinations('linear', None, 'median', 2, 2000)
+def run_model_simple():
+    model_selector.run_combinations('linear', None, 'mean', 2, 2000)
     model_selector._find_optimal_train()
     model_selector.get_prediction_distribution()
     model_selector._plot_optimal_train()
@@ -570,26 +582,25 @@ if 0:
 #    a. individual correlation with the target
 #    b. distribution as near as normal distribution
 #------------------------------------------------------------------------------
+def run_model_intermediate():
+    sample_data.prepare_train_data()
 
-optimal_cols =  ['Overall Qual', 'Gr Liv Area']
-cols_to_add = ['Fireplaces', 'Lot Area', 
-               'TotRms AbvGrd', 'Year Built',
-               '1st Flr SF', 'MS SubClass', 
-               'Central Air', 'Garage Cars']
-
-if 0:
-    model_selector.reset_run()
-    model_selector.run_combination('linear', None, 'mean', optimal_cols)
-    model_selector._find_optimal_train()
-    model_selector.get_prediction_distribution()
+    all_cols_to_add = sample_data.get_cols_wo_target()
 
     # adds columns one after the other to be sure that the prediction 
     # distribution conserves a good fit in comparison to the train'one 
 
-    for col in cols_to_add:
-        model_selector.run_combination('linear', None, 'mean', [col])
+    cols_to_add = []
+    
+    for col in all_cols_to_add:
+        print(col)
+        cols_to_add.append(col)
+
+        model_selector.run_combination('linear', None, 'mean', cols_to_add)
         model_selector._find_optimal_train()
-        model_selector.get_prediction_distribution()
+
+        print(model_selector._find_optimal_train().cols)
+        print(model_selector.get_prediction_distribution())
 
     sample_data.get_train_distribution()
     model_selector._plot_optimal_train()
@@ -601,8 +612,7 @@ if 0:
 # adjust with ridge regression
 # grid search with ridge regression model
 #------------------------------------------------------------------------------
-
-if 0:
+def run_model_intermediate_adjust():
     model_selector.reset_run()
     cols = []
     cols = optimal_cols.copy()
@@ -618,17 +628,16 @@ if 0:
 #------------------------------------------------------------------------------
 # 3. Complex model build with all the (remaining) features 
 #------------------------------------------------------------------------------
-if 0:
+def run_model_complex():
     alpha = 10
     model_selector.reset_run()
-    model_selector.run_combinations('ridge', alpha, 'median', 62, 2000)
+    model_selector.run_combinations('ridge', alpha, 'mean', 56, 2000)
     model_optimal_train_results['complex'] = model_selector._find_optimal_train()
         
 #------------------------------------------------------------------------------
 # 4. Plot model comparison
 #------------------------------------------------------------------------------
-
-if 0: 
+def plot_comparison():
     def plot_model_result(mode_results):
         df = pd.DataFrame(model_optimal_train_results)
         df = df.transpose()
@@ -647,5 +656,9 @@ if 0:
             plt.show()
 
     plot_model_result(model_optimal_train_results)  
+
+
+run_model_intermediate()
+
 
         
