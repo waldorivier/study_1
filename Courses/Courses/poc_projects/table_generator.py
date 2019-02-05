@@ -35,24 +35,25 @@ tbl_columns = ['NOM_PARA', 'PE_PAUT_DDV', 'LIBF_PARA', 'TYSTRU_PARA',
                'LCRD3F_PARA','TYCRD3_PARA',
                'TYDATA_PARA','FORMAT_PARA',
                'CLATIT_PAUT','NO_IP','NO_PLAN','NO_CAS',
-               'COORD1_VAPA_MF','COORD2_VAPA_MF','COORD3_VAPA_MF','VALSTR_VAPA','INCLCOLLID','COLLECTIF','VALSTR_VAPA', '']
+               'COORD1_VAPA_MF','COORD2_VAPA_MF','COORD3_VAPA_MF','VALSTR_VAPA','INCLCOLLID','COLLECTIF','VALNUM_VAPA', '']
 
-table_value_type = ['VALSTR_VAPA', 'VALSTR_VAPA']
+table_value_type = ['VALSTR_VAPA', 'VALNUM_VAPA']
+
+# define a row template
+
+row_template = {}
+row_template['NOM_PARA']     = "AX_IK_TT" 
+row_template['PE_PAUT_DDV']  = "01.01.2019" 
+row_template['LIBF_PARA']    = "Expectative enfant"
+row_template['FORMAT_PARA']  = "06"
+row_template['INCLCOLLID']   = "02"
+
+row_template['CLATIT_PAUT']   = "PE_CAS"
+row_template['NO_IP']         = 4250
+row_template['NO_PLAN']       = 1
+row_template['NO_CAS']        = 8
 
 def generate_file():
-    # define a row template
-    row_template = {}
-    row_template['NOM_PARA']     = "AX_AK" 
-    row_template['PE_PAUT_DDV']  = "01.01.2019" 
-    row_template['LIBF_PARA']    = "Expectative enfant"
-    row_template['FORMAT_PARA']  = "06"
-    row_template['INCLCOLLID']   = "02"
-
-    row_template['CLATIT_PAUT']   = "PE_CAS"
-    row_template['NO_IP']         = 4250
-    row_template['NO_PLAN']       = 1
-    row_template['NO_CAS']        = 3
-
     # load data from XL
 
     df_tbl_data = pd.read_excel(data_file)
@@ -68,7 +69,7 @@ def generate_file():
     # checks last column's name
     if tbl_data_colums[-1] not in table_value_type:
         raise Exception("table column's name error")
-       
+
     # table's dimension
     row_template['TYSTRU_PARA']  = "0" + str(len(tbl_data_colums[:-1]))
 
@@ -81,7 +82,10 @@ def generate_file():
 
     # data type 
     col = 'TYDATA_PARA';
-    row_template[col] = df_tbl_data.iloc[0,-1]
+    if (tbl_data_colums[-1] == 'VALNUM_VAPA'):
+        row_template[col] = 'N'
+    else: 
+        row_template[col] = 'S'
 
     df_tbl_data = df_tbl_data.iloc[1:,:]
     rows = []
@@ -98,7 +102,7 @@ def generate_file():
         rows.append(_row)
 
     df_tbl = pd.DataFrame(rows, columns = tbl_columns)
-    df_tbl.to_csv("generate_test_file.csv", sep = ';', index=False)
-    # df_tbl.to_csv(dest_dir.joinpath(row_template['NOM_PARA'] + ".csv"), sep = ';', index=False)
+    # df_tbl.to_csv("generate_test_file.csv", sep = ';', index=False)
+    df_tbl.to_csv(dest_dir.joinpath(row_template['NOM_PARA'] + ".csv"), sep = ';', index=False)
 
 generate_file()
