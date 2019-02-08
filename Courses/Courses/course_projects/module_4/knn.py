@@ -281,6 +281,6 @@ a_reduced_img = np.array(reduced_img)
 
 # convert to gray-scale image
 
-plt.imshow(a_reduced_img[0:,0:,0], cmap=plt.cm.Reds)
+plt.imshow(np.dot(a_reduced_img[...,:3], [0.299, 0.587, 0.114]))
 plt.show()  
 
