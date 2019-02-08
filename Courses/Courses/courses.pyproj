@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>025b859f-91ae-4c8a-a47a-428b2d610a26</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>poc_projects\table_generator.py</StartupFile>
+    <StartupFile>course_projects\module_4\knn.py</StartupFile>
     <SearchPath>modules</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -21,6 +21,9 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="course_projects\module_4\knn.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="modules\utils.py">
       <SubType>Code</SubType>
     </Compile>
@@ -52,6 +55,7 @@
     <Folder Include="course_projects\module_3\warm_up\" />
     <Folder Include="course_projects\module_2\" />
     <Folder Include="course_projects\module_1\" />
+    <Folder Include="course_projects\module_4\" />
     <Folder Include="study\data\" />
     <Folder Include="study\Data\module_3\" />
     <Folder Include="poc_projects\" />

@@ -29,7 +29,7 @@ from sklearn.model_selection import train_test_split
 
 import itertools
 import math
-import random
+import random as r
 
 import  PIL
 from PIL import Image
@@ -40,6 +40,8 @@ file_name = 'heart-disease.csv'
 
 working_dir = os.getcwd()
 working_dir = os.path.join(working_dir,'course_projects', 'module_4')
+
+#------------------------------------------------------------------------------
 
 data_file = os.path.join(working_dir, file_name)
 df_orig = pd.read_csv(data_file)
@@ -233,6 +235,44 @@ with np.load(data_file, allow_pickle=False) as npz_file:
     # Prints: [2, 3, 5]
     
 #-------------------------------------------------------------------------------
+# original image
+
+def format_number_image():
+    file_name = 'number_waldojpg'
+    data_file = os.path.join(working_dir, file_name)
+
+    img = Image.open(data_file)
+
+    # manually select portion 
+    # height = width = 500
+    # area = (left, top, left + width, top + height)
+
+    area = (1500, 750, 2000, 1250)
+    reduced_img = img.crop(area)
+    reduced_img = reduced_img.resize((28, 28))
+
+    # rotation (anti-clockwise)
+    reduced_img = reduced_img.rotate(-90)
+
+    file_name = 'reduced_number_waldo.jpg'
+
+    # convert to gray-scale
+    reduced_img.convert('LA')
+    plt.imshow(reduced_img)
+    plt.show()
+
+    # save it 
+    data_file = os.path.join(working_dir, file_name)
+    reduced_img.save(data_file)
+
+    # convert image to nd-array
+    a_reduced_img = np.array(reduced_img)
+    a_reduced_img[:,:,2]
+    plt.imshow(a_reduced_img)
+    plt.show()
+
+
+#-------------------------------------------------------------------------------
 
 file_name = 'mnist-6k.npz'
 data_file = os.path.join(working_dir, file_name)
@@ -250,37 +290,28 @@ for i, d in enumerate(data):
 
     if i > 1:
         break
+
 #-------------------------------------------------------------------------------
-# original image
+# categories and propostion of each one
 
-file_name = 'number_waldo.jpg'
-data_file = os.path.join(working_dir, file_name)
+categories = pd.Series(labels)
+l = len(categories)
 
-img = Image.open(data_file)
-
-# manually select portion 
-# height = width = 500
-# area = (left, top, left + width, top + height)
-
-area = (1500, 750, 2000, 1250)
-reduced_img = img.crop(area)
-reduced_img = reduced_img.resize((28, 28))
-
-# rotation (anti-clockwise)
-reduced_img = reduced_img.rotate(-90)
-
-file_name = 'reduced_number_waldo.jpg'
-data_file = os.path.join(working_dir, file_name)
-reduced_img.save(data_file)
-
-plt.imshow(reduced_img)
+categories = categories.value_counts()*100/l
+df_categories = pd.DataFrame(categories, columns=['nb'])
+plt.bar(df_categories.index, df_categories.nb)
 plt.show()
 
-# convet image to nd-array
-a_reduced_img = np.array(reduced_img)
+#-------------------------------------------------------------------------------
+# train / test split 
 
-# convert to gray-scale image
+X_tr, X_te, y_tr, y_te = train_test_split (
+    data, labels, test_size=1/6, random_state=0)
 
-plt.imshow(a_reduced_img[0:,0:,0], cmap=plt.cm.Reds)
-plt.show()  
+
+rand_idx = r.randint(0,5000)
+plt.imshow(X_tr[rand_idx].reshape((28,28))).show()
+plt.show()
+
+print (y_tr[rand_idx])
 
