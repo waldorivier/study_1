@@ -235,10 +235,11 @@ with np.load(data_file, allow_pickle=False) as npz_file:
     # Prints: [2, 3, 5]
     
 #-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
 # original image
 
-def format_number_image():
-    file_name = 'number_waldojpg'
+def format_number_image(min, max):
+    file_name = 'number_waldo.jpg'
     data_file = os.path.join(working_dir, file_name)
 
     img = Image.open(data_file)
@@ -254,23 +255,29 @@ def format_number_image():
     # rotation (anti-clockwise)
     reduced_img = reduced_img.rotate(-90)
 
-    file_name = 'reduced_number_waldo.jpg'
+    # convert to one-dimension 
+    reduced_img = reduced_img.convert('L')
 
-    # convert to gray-scale
-    reduced_img.convert('LA')
-    plt.imshow(reduced_img)
-    plt.show()
+    # filter < thresh -> 0
+    a_reduced_img = np.array(reduced_img)
+    l_flat_img = a_reduced_img.flatten()
+
+    l_filt_img = []
+    for i in l_flat_img:
+        if i <= max and i > min :
+            l_filt_img.append(i + 50)
+        else :
+            l_filt_img.append(0)
+
+    reduced_img = np.reshape(l_filt_img, (28,28))
 
     # save it 
+    file_name = 'number_waldo.png'
     data_file = os.path.join(working_dir, file_name)
-    reduced_img.save(data_file)
 
-    # convert image to nd-array
-    a_reduced_img = np.array(reduced_img)
-    a_reduced_img[:,:,2]
-    plt.imshow(a_reduced_img)
-    plt.show()
-
+    np.save(file_name, reduced_img)
+    
+    return  np.array(reduced_img)
 
 #-------------------------------------------------------------------------------
 
@@ -292,9 +299,15 @@ for i, d in enumerate(data):
         break
 
 #-------------------------------------------------------------------------------
-# categories and propostion of each one
+# train / test split 
 
-categories = pd.Series(labels)
+X_tr, X_te, y_tr, y_te = train_test_split (
+    data, labels, test_size=1/6, random_state=0)
+
+#-------------------------------------------------------------------------------
+# categories and proportion of each one
+
+categories = pd.Series(y_tr)
 l = len(categories)
 
 categories = categories.value_counts()*100/l
@@ -302,16 +315,77 @@ df_categories = pd.DataFrame(categories, columns=['nb'])
 plt.bar(df_categories.index, df_categories.nb)
 plt.show()
 
-#-------------------------------------------------------------------------------
-# train / test split 
-
-X_tr, X_te, y_tr, y_te = train_test_split (
-    data, labels, test_size=1/6, random_state=0)
-
-
 rand_idx = r.randint(0,5000)
-plt.imshow(X_tr[rand_idx].reshape((28,28))).show()
+plt.imshow(X_tr[rand_idx].reshape((28,28)))
 plt.show()
 
 print (y_tr[rand_idx])
+
+dummy = DummyClassifier(strategy = 'most_frequent')
+dummy.fit(X_tr, y_tr)
+accuracy = dummy.score(X_te, y_te)
+
+#-------------------------------------------------------------------------------
+# returns a array of one; in fact it appears that *most frequent" within y_tr
+# is one 
+
+dummy.predict(X_te)
+
+#-------------------------------------------------------------------------------
+
+#-------------------------------------------------------------------------------
+# try to predict my own numnber
+# convert image to matri
+
+a_img = format_number_image(125,140)
+plt.imshow(a_img)
+plt.show()
+
+# transfomr an array to a matrix with one row
+# a_img.reshape(1,-1)
+
+knn = KNeighborsClassifier(n_neighbors=1)
+knn.fit(X_tr, y_tr)
+
+knn.predict(X_te)
+accuracy = knn.score(X_te, y_te)
+knn.predict(a_img.reshape(1,-1))
+
+pipe = Pipeline([
+    # s('scaler', StandardScaler()),
+    # Create k-NN estimator without setting k
+    ('knn', KNeighborsClassifier())
+])
+
+train_curve = []
+test_curve = []
+
+k_values = np.arange(1, 10, 5) 
+for k in k_values:
+    # Set k
+
+    # parameter must be prefixed by pipe's step
+
+    pipe.set_params(knn__n_neighbors=k)
+
+    # Fit k-NN
+    pipe.fit(X_tr, y_tr)
+
+    # Compute train/test accuracy
+    train_acc = pipe.score(X_tr, y_tr)
+    test_acc = pipe.score(X_te, y_te)
+
+    # Save accuracy values
+    train_curve.append(train_acc)
+    test_curve.append(test_acc)
+
+plt.plot(k_values, train_curve, label='train')
+plt.plot(k_values, test_curve, label='test')
+plt.legend()
+plt.show()
+
+
+
+
+
 
