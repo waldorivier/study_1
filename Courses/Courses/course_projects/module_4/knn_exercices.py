@@ -68,7 +68,7 @@ def format_number_image(min, max):
     # save it 
     file_name = 'number_waldo.png'
     data_file = os.path.join(working_dir, file_name)
-    np.save(file_name, reduced_img)
+    np.save(data_file, reduced_img)
     
     return  np.array(reduced_img)
 
@@ -116,7 +116,7 @@ dummy.predict(X_te)
 
 #-------------------------------------------------------------------------------
 pipe = Pipeline([
-    ('scaler', StandardScaler()),
+    # ('scaler', StandardScaler()),
     # Create k-NN estimator without setting k
     ('knn', KNeighborsClassifier())
 ])
@@ -151,7 +151,7 @@ plt.show()
 # try to predict my own numnber
 # convert image to matrix
 #-------------------------------------------------------------------------------
-a_img = format_number_image(125,140)
+a_img = format_number_image(0,256)
 plt.imshow(a_img)
 plt.show()
 
