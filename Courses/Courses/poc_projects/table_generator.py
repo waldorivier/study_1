@@ -42,8 +42,8 @@ table_value_type = ['VALSTR_VAPA', 'VALNUM_VAPA']
 # define a row template
 
 row_template = {}
-row_template['NOM_PARA']     = "AX_IK_TT" 
-row_template['PE_PAUT_DDV']  = "01.01.2019" 
+row_template['NOM_PARA']     = "AX_AK_TT" 
+row_template['PE_PAUT_DDV']  = "01.01.2017" 
 row_template['LIBF_PARA']    = "Expectative enfant"
 row_template['FORMAT_PARA']  = "06"
 row_template['INCLCOLLID']   = "02"
@@ -51,7 +51,7 @@ row_template['INCLCOLLID']   = "02"
 row_template['CLATIT_PAUT']   = "PE_CAS"
 row_template['NO_IP']         = 4250
 row_template['NO_PLAN']       = 1
-row_template['NO_CAS']        = 8
+row_template['NO_CAS']        = 3
 
 def generate_file():
     # load data from XL
