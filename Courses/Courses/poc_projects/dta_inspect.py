@@ -208,8 +208,6 @@ try :
         df_este_gestion['No MUPE'] = df_este_gestion['No MUPE'].astype(int)
         df = pd.merge(df_este_gestion, df_gmes, how='outer', left_on=['No MUPE'], right_on=['NOM_ESTE'])
 
-        df__ = pd.merge(df_este_gestion, df_emp_sse, how='outer', left_on=['No MUPE'], right_on=['CODE'])
-
         # absent des gmes
         df[df['NOM_ESTE'].isnull()]
         

@@ -25,7 +25,7 @@ data_dir = PureWindowsPath(working_dir.joinpath('poc_projects'))
 data_file = PureWindowsPath(data_dir.joinpath('table_data.xlsx'))
 
 client_root_dir = PureWindowsPath('O:\\')
-dest_dir = PureWindowsPath(client_root_dir.joinpath('cap','24 BenAdmin-Param','01 Analyse règlement','Tabelles_2019'))
+dest_dir = PureWindowsPath(client_root_dir.joinpath('Lausanne','24 BenAdmin-Param','01 Analyse règlement','Tarifs'))
 
 #-------------------------------------------------------------------------
 
@@ -42,16 +42,16 @@ table_value_type = ['VALSTR_VAPA', 'VALNUM_VAPA']
 # define a row template
 
 row_template = {}
-row_template['NOM_PARA']     = "AX_AK_TT" 
-row_template['PE_PAUT_DDV']  = "01.01.2017" 
-row_template['LIBF_PARA']    = "Expectative enfant"
+row_template['NOM_PARA']     = "AXI_12" 
+row_template['PE_PAUT_DDV']  = "01.01.2019" 
+row_template['LIBF_PARA']    = "Val.act. inval."
 row_template['FORMAT_PARA']  = "06"
 row_template['INCLCOLLID']   = "02"
 
 row_template['CLATIT_PAUT']   = "PE_CAS"
-row_template['NO_IP']         = 4250
+row_template['NO_IP']         = 5750
 row_template['NO_PLAN']       = 1
-row_template['NO_CAS']        = 3
+row_template['NO_CAS']        = 8
 
 def generate_file():
     # load data from XL
@@ -103,6 +103,6 @@ def generate_file():
 
     df_tbl = pd.DataFrame(rows, columns = tbl_columns)
     # df_tbl.to_csv("generate_test_file.csv", sep = ';', index=False)
-    df_tbl.to_csv(dest_dir.joinpath(row_template['NOM_PARA'] + ".csv"), sep = ';', index=False)
+    df_tbl.to_csv(dest_dir.joinpath(row_template['NOM_PARA'] + "_param.csv"), sep = ';', index=False)
 
 generate_file()
