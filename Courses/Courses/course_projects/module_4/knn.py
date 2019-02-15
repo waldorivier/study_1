@@ -9,6 +9,9 @@ from sklearn.linear_model import HuberRegressor
 from sklearn.dummy import DummyRegressor
 from sklearn.dummy import DummyClassifier
 from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LogisticRegression
+
+# Create the estimator
 from sklearn.linear_model import Ridge
 
 from sklearn.preprocessing import PolynomialFeatures
@@ -19,6 +22,8 @@ from sklearn.metrics import mean_absolute_error as mae
 
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.pipeline import Pipeline
+
+from sklearn.model_selection import GridSearchCV
 
 from scipy.linalg import lstsq
 from scipy import stats
@@ -33,6 +38,8 @@ import random as r
 
 import  PIL
 from PIL import Image
+
+from sklearn import datasets
 
 #------------------------------------------------------------------------------
 
@@ -384,8 +391,159 @@ plt.plot(k_values, test_curve, label='test')
 plt.legend()
 plt.show()
 
+#-------------------------------------------------------------------------------
+#  LOGIT MULTI-CLASS
+#-------------------------------------------------------------------------------
 
+a = np.exp(1.2)
+b = np.exp(-0.5)
+c = np.exp(0.8)
 
+s = a + b + c
 
+p1 = a/s
+p2 = b/s
+p3 = c/s
 
+#-------------------------------------------------------------------------------
+# OVO / MULTICLASS
+#-------------------------------------------------------------------------------
 
+# Load data set
+iris = datasets.load_iris()
+
+# Create X/y arrays
+X = iris['data'][:, [2, 3]] # Keep only petal features
+y = iris['target']
+
+sns.set()
+
+# Get a few colors from the default color palette
+blue, green, red = sns.color_palette()[:3]
+
+# Plot data
+setosa_idx = (y == 0) # Setosa points
+versicolor_idx = (y == 1) # Versicolor points
+virginica_idx = (y==2) # Virginica points
+
+# Setosa
+plt.scatter(X[:, 0][setosa_idx], X[:, 1][setosa_idx],
+            color=blue, label='setosa')
+# Versicolor
+plt.scatter(X[:, 0][versicolor_idx], X[:, 1][versicolor_idx],
+            color=green, label='versicolor')
+# Virginica
+plt.scatter(X[:, 0][virginica_idx], X[:, 1][virginica_idx],
+            color=red, label='virginica')
+
+# Set labels
+plt.xlabel('petal length (cm)')
+plt.ylabel('petal width (cm)')
+plt.legend()
+plt.show()
+
+X_tr, X_te, y_tr, y_te = train_test_split(
+    X, y,test_size=0.3, random_state=0)
+
+# specifies that penalizazion term L2 (sum of square wi)
+# OVR by default One vs Rest
+
+logreg = LogisticRegression(C=1000)
+
+# Fit it to train data
+logreg.fit(X_tr, y_tr)
+
+# Accuracy on test set
+accuracy = logreg.score(X_te, y_te)
+print('Accuracy: {:.3f}'.format(accuracy))
+
+# New flower
+new_flower = [
+    5, # petal length (cm)
+    1.5, # petal width (cm)
+]
+
+# Predict probabilities
+logreg.predict_proba([new_flower])
+decision_boundaries(X, y, logreg)
+
+#-------------------------------------------------------------------------------
+def decision_boundaries(X, y, logreg):
+    # Create figure
+    fig = plt.figure()
+    axes = fig.gca() # Get the current axes
+
+    # Plot data
+    setosa_idx = (y == 0) # Setosa points
+    versicolor_idx = (y == 1) # Versicolor points
+    virginica_idx = (y==2) # Virginica points
+
+    plt.scatter(X[:, 0][setosa_idx], X[:, 1][setosa_idx],
+        color=blue, label='setosa')
+    plt.scatter(X[:, 0][versicolor_idx], X[:, 1][versicolor_idx],
+        color=green, label='versicolor')
+    plt.scatter(X[:, 0][virginica_idx], X[:, 1][virginica_idx],
+        color=red, label='virginica')
+
+    # Create a grid of values
+    xlim, ylim = axes.get_xlim(), axes.get_ylim()
+    xpoints = np.linspace(*xlim, num=1000)
+    ypoints = np.linspace(*ylim, num=1000)
+    xx, yy = np.meshgrid(xpoints, ypoints)
+
+    # Compute predictions
+    preds = logreg.predict(np.c_[xx.flatten(), yy.flatten()])
+
+    # Plot boundaries betwen classes 1-2 and 2-3
+    zz = preds.reshape(xx.shape)
+    plt.contour(xx, yy, zz, levels=[0.5, 1.5],
+                colors=[blue, red], linestyles='dashed')
+
+    # Add labels
+    plt.xlabel('petal length (cm)')
+    plt.ylabel('petal width (cm)')
+    plt.legend(loc='lower right')
+    plt.show()
+
+#-------------------------------------------------------------------------------
+#-------------------------------------------------------------------------------
+
+# use gradient inner gradient descent algo
+logreg = LogisticRegression(multi_class='multinomial', solver='saga')
+
+pipe = Pipeline([
+    ('scaler', StandardScaler()),
+    ('logreg', LogisticRegression(
+        multi_class='multinomial', solver='saga'))
+])
+
+pipe.fit(X_tr, y_tr)
+
+# Accuracy on test set
+accuracy = pipe.score(X_te, y_te)
+print('Accuracy: {:.3f}'.format(accuracy))
+# Prints: 0.956
+
+decision_boundaries(X, y, pipe)
+
+#-------------------------------------------------------------------------------
+# CROSS-VALIDATION
+#-------------------------------------------------------------------------------
+
+# Create cross-validation object
+grid_cv = GridSearchCV(LogisticRegression(multi_class='ovr'), {
+    'C': [0.1, 1, 10]
+}, cv=3)
+
+iris = datasets.load_iris()
+
+# Create X/y arrays
+X = iris['data']
+y = iris['target']
+
+# Fit estimator
+grid_cv.fit(X, y)
+
+# Get the results with "cv_results_"
+grid_cv.cv_results_.keys()
+# Returns: dict_keys(['mean_fit_time', 'std_fit_time','mean_score_time', ...
