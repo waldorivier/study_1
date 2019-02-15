@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import xml.etree.cElementTree as et
 from datetime import date
+import datetime
 
 try :
     dta_file_name = '_5750_18_101_qfzj46001.xml'
@@ -192,11 +193,120 @@ try :
  
         df[df.NO_CAS == 1].RVGARX.astype(float).sum()
 
-
-    if 1:
+    if 0:
         df_before = pd.read_excel(helper_get_file('SIG_2019_data_extr_pens.xlsx'))
         df_after  = pd.read_excel(helper_get_file('10_SIG_2019_data_extr_pens.xlsx'))
 
+        df_gmes = pd.read_excel('C:\\Users\\A0710996\\Desktop\\SWISSSTAFF_SSE_repartition_fixes_20192.xls', sheet_name="pe_gmes")
+        df_este_gestion = pd.read_excel('C:\\Users\\A0710996\\Desktop\\SWISSSTAFF_SSE_repartition_fixes_20192.xls', sheet_name="2015")
+        
+        # n'y sont pas toutes mais seulement les plus récentes fermées
+        df_e_fin = pd.read_excel('C:\\Users\\A0710996\\Desktop\\SWISSSTAFF_SSE_repartition_fixes_20192.xls', sheet_name="e_fin")
+        df_to_exclude = pd.read_excel('C:\\Users\\A0710996\\Desktop\\SWISSSTAFF_SSE_repartition_fixes_20192.xls', sheet_name="emp_to_exclude")
+        df_emp_sse = pd.read_excel('C:\\Users\\A0710996\\Desktop\\SWISSSTAFF_SSE_repartition_fixes_20192.xls', sheet_name="emp_sse")
+
+        df_este_gestion['No MUPE'] = df_este_gestion['No MUPE'].astype(int)
+        df = pd.merge(df_este_gestion, df_gmes, how='outer', left_on=['No MUPE'], right_on=['NOM_ESTE'])
+
+        # absent des gmes
+        df[df['NOM_ESTE'].isnull()]
+        
+        # absent de la liste gestion
+        df_e_to_delete = df[df['No MUPE'].isnull()]
+        df_e_to_delete.to_csv('emp_inconnu_liste.csv', sep=';')
+
+        # compte tenu qu'il faut les supprimer (este ne peut être associé à > 1 groupe de même type) 
+        # s'assurer que ces este ne sont plus actifs
+
+        df_ = pd.merge(df_e_fin, df_e_to_delete, how='inner')
+   
+    def generator(table, usr_id, no_ip, df_to_exclude):
+        def generate_user_access(row):
+            if df_to_exclude['CODE'].where(lambda x : x == row['No MUPE']).count() == 1:
+                return None
+
+            select = "(select c.id from companies c where c.code = '" + str(row['No MUPE']) + "' and c.cli_id = 1)"
+
+            sql_insert : str = "insert into user_access (cli_id, com_id, usr_id, active) values ("
+            sql_insert += '1,'
+            sql_insert += select
+            sql_insert += ',' 
+            sql_insert += str(usr_id)
+            sql_insert += ',' 
+            sql_insert += "'" 
+            sql_insert += 'Y'
+            sql_insert += "'" 
+            sql_insert += ');'
+            return sql_insert
+
+        def generate_companies(row):
+            if df_to_exclude['CODE'].where(lambda x : x == row['No MUPE']).count() == 1:
+                return None
+
+            sql_insert : str = "insert into companies (cli_id, id, code, name, intmail, active) values ("
+            sql_insert += '1,'
+            # sans effet car il y aune séquence auto sur com_id
+            sql_insert += str(row['ID'])
+            sql_insert += ',' 
+            sql_insert += str(row['No MUPE'])
+            sql_insert += ',' 
+            sql_insert += "'" 
+            sql_insert += row["Nom de exact de l'entreprise"]
+            sql_insert += "'" 
+            sql_insert += ',' 
+            sql_insert += "'" 
+            sql_insert += 'pasquale.ferrara@aonhewitt.com'
+            sql_insert += "'" 
+            sql_insert += ',' 
+            sql_insert += "'" 
+            sql_insert += 'Y'
+            sql_insert += "'" 
+            sql_insert += ');'
+            return sql_insert
+
+        def generate_pe_gmes(row):
+            pe_grmu_id = None
+
+            if df_to_exclude['CODE'].where(lambda x : x == row['No MUPE']).count() == 1:
+                return None
+
+            collectif_norm = row['Collectifs_norm']
+            if collectif_norm == 'C11':
+                pe_grmu_id = 70
+            elif collectif_norm == 'C21':
+                pe_grmu_id = 75
+            elif collectif_norm == 'C31':
+                pe_grmu_id = 76
+            elif collectif_norm == 'C41':
+                pe_grmu_id = 77
+
+            select = "(select pe_este_id from pe_este e where e.nom_este=" + str(row['No MUPE']) + " and e.no_ip = " + str(no_ip) + " and NO_NSTE=1)"
+
+            sql_insert : str = "insert into pe_gmes (user_cre, dh_cre, pe_grmu_id, pe_este_id) values ("
+            sql_insert += "'" 
+            sql_insert += 'WRI'
+            sql_insert += "'" 
+            sql_insert += ',' 
+            sql_insert += 'current_timestamp'
+            sql_insert += ',' 
+            sql_insert += str(pe_grmu_id)
+            sql_insert += ',' 
+            sql_insert += select
+            sql_insert += ');'
+            return sql_insert
+
+        if table == 'companies':
+            return generate_companies
+        elif table == 'user_access':
+            return generate_user_access
+        elif table == 'pe_gmes':
+            return generate_pe_gmes
+
+    if 1:
+        # f_generator = generator('companies', 0, 3490, df_to_exclude)
+        # f_generator = generator('user_access', 657, 3490, df_to_exclude)
+        f_generator = generator('pe_gmes', 657, 3490, df_to_exclude)
+        df_este_gestion.apply(f_generator, axis=1).to_csv('generate.csv', index=False, sep = '\t')
 
 except ValueError as e  :
     print (e)

@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>025b859f-91ae-4c8a-a47a-428b2d610a26</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>course_projects\module_4\knn_exercices.py</StartupFile>
+    <StartupFile>course_projects\module_4\knn.py</StartupFile>
     <SearchPath>modules</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
