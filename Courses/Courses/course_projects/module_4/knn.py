@@ -342,7 +342,7 @@ dummy.predict(X_te)
 
 #-------------------------------------------------------------------------------
 # try to predict my own numnber
-# convert image to matri
+# convert image to matrix
 
 a_img = format_number_image(125,140)
 plt.imshow(a_img)
@@ -535,6 +535,11 @@ grid_cv = GridSearchCV(LogisticRegression(multi_class='ovr'), {
     'C': [0.1, 1, 10]
 }, cv=3)
 
+# cv = 3 : means that dataset will be partitioned in 3 blocks organized that 
+# each block contains the same repartition of the categories
+# c parameer controls the weight attached to loss
+# term (in opposition of penalisation term)
+
 iris = datasets.load_iris()
 
 # Create X/y arrays
@@ -547,3 +552,28 @@ grid_cv.fit(X, y)
 # Get the results with "cv_results_"
 grid_cv.cv_results_.keys()
 # Returns: dict_keys(['mean_fit_time', 'std_fit_time','mean_score_time', ...
+
+grid_cv.cv_results_['rank_test_score']
+grid_cv.cv_results_['params']
+
+pipe = Pipeline([
+    ('scaler', None), # Optional step
+    ('logreg', LogisticRegression())
+])
+
+# Create cross-validation object
+grid_cv = GridSearchCV(pipe, [{
+    'logreg__multi_class': ['ovr'],
+    'logreg__C': [0.1, 1, 10],
+    'logreg__solver': ['liblinear']
+}, {
+    'scaler': [StandardScaler()],
+    'logreg__multi_class': ['multinomial'],
+    'logreg__C': [0.1, 1, 10],
+    'logreg__solver': ['saga'],
+    'logreg__max_iter': [1000],
+    'logreg__random_state': [0]
+}], cv=10)
+
+# Fit estimator
+grid_cv.fit(X, y)
