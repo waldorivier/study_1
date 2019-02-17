@@ -63,6 +63,8 @@ pd.Series(y_pre).value_counts()
 accuracy = baseline.score(X_te, y_te)
 
 #-------------------------------------------------------------------------------
+# KNN
+#-------------------------------------------------------------------------------
 pipe = Pipeline([
     ('scaler', StandardScaler()),
     ('knn', KNeighborsClassifier())
@@ -74,7 +76,7 @@ pipe = Pipeline([
 k_values = np.arange(1, 21)
 
 # distance : the closest, the more weight
-# uniform : all th
+# uniform : all the same weight
 weights_functions = ['uniform', 'distance']
 distance_types = [1, 2]
 
@@ -105,7 +107,7 @@ pipe.set_params(**best_params)
 pipe.fit(X_tr, y_tr)
 
 for i in np.arange(1,70):
-    a_patient = {'age':i, 'sex':'female'}
+    a_patient = {'age': i, 'sex':'female'}
     df_patient = pd.DataFrame(a_patient, index=[1])
     df_patient = pd.get_dummies(df_patient)
 
@@ -115,6 +117,15 @@ for i in np.arange(1,70):
 
     # format a_patient so that it 
     pipe.predict(df_patient.values)
+
+#-------------------------------------------------------------------------------
+# LOGIT 
+#-------------------------------------------------------------------------------
+
+# Create cross-validation object
+grid_cv = GridSearchCV(LogisticRegression(multi_class='ovr'), {
+    'C': [0.1, 1, 10]
+}, cv=10)
 
 
 

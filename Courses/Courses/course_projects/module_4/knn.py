@@ -507,7 +507,6 @@ def decision_boundaries(X, y, logreg):
 
 #-------------------------------------------------------------------------------
 #-------------------------------------------------------------------------------
-
 # use gradient inner gradient descent algo
 logreg = LogisticRegression(multi_class='multinomial', solver='saga')
 
