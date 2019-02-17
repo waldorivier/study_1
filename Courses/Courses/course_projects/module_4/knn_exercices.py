@@ -151,7 +151,7 @@ plt.show()
 # try to predict my own numnber
 # convert image to matrix
 #-------------------------------------------------------------------------------
-a_img = format_number_image(0,256)
+a_img = format_number_image(125,140)
 plt.imshow(a_img)
 plt.show()
 

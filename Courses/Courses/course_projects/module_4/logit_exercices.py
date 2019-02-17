@@ -8,6 +8,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.dummy import DummyClassifier
 
+from sklearn.linear_model import LogisticRegression
+from sklearn.model_selection import GridSearchCV
+
 from sklearn.pipeline import Pipeline
 from sklearn.model_selection import ParameterGrid
 
@@ -107,7 +110,7 @@ pipe.set_params(**best_params)
 pipe.fit(X_tr, y_tr)
 
 for i in np.arange(1,70):
-    a_patient = {'age': i, 'sex':'female'}
+    a_patient = {'age': 54, 'sex':'male'}
     df_patient = pd.DataFrame(a_patient, index=[1])
     df_patient = pd.get_dummies(df_patient)
 
@@ -118,14 +121,57 @@ for i in np.arange(1,70):
     # format a_patient so that it 
     pipe.predict(df_patient.values)
 
+# TODO : draw decisions boundaries 
+
 #-------------------------------------------------------------------------------
 # LOGIT 
 #-------------------------------------------------------------------------------
 
 # Create cross-validation object
-grid_cv = GridSearchCV(LogisticRegression(multi_class='ovr'), {
+grid_cv = GridSearchCV(LogisticRegression(multi_class='ovr', solver='liblinear'), {
     'C': [0.1, 1, 10]
 }, cv=10)
 
+grid_cv.fit(X_tr, y_tr)
+df_scores = pd.DataFrame.from_dict({
+    'mean_te' : grid_cv.cv_results_['mean_test_score'],
+    'std_te' : grid_cv.cv_results_['std_test_score']})
+
+df_scores.sort_values(by='mean_test_score', ascending=False)
+
+grid_cv.predict(df_patient.values)
+grid_cv.predict_proba(df_patient.values)
 
 
+#-------------------------------------------------------------------------------
+# SOFTMAX 
+#-------------------------------------------------------------------------------
+
+pipe = Pipeline([
+    ('scaler', None), # Optional step
+    ('logreg', LogisticRegression())
+])
+
+# Create cross-validation object
+grid_cv = GridSearchCV(pipe, [{
+    'logreg__multi_class': ['ovr'],
+    'logreg__C': [0.1, 1, 10],
+    'logreg__solver': ['liblinear']
+}, {
+    'scaler': [StandardScaler()],
+    'logreg__multi_class': ['multinomial'],
+    'logreg__C': [0.1, 1, 10],
+    'logreg__solver': ['saga'],
+    'logreg__max_iter': [1000],
+    'logreg__random_state': [0]
+}], cv=10)
+
+grid_cv.fit(X_tr, y_tr)
+df_scores = pd.DataFrame.from_dict({
+    'mean_te' : grid_cv.cv_results_['mean_test_score'],
+    'std_te' : grid_cv.cv_results_['std_test_score']})
+
+df_scores.sort_values(by='mean_te', ascending=False)
+
+grid_cv.predict(df_patient.values)
+grid_cv.predict_proba(df_patient.values)
