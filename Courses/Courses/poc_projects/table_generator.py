@@ -2,19 +2,6 @@ import os
 from pathlib import PureWindowsPath
 import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-from sklearn.linear_model import SGDRegressor
-from sklearn.linear_model import HuberRegressor
-from sklearn.dummy import DummyRegressor
-from sklearn.linear_model import LinearRegression
-from sklearn.linear_model import Ridge
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.metrics import mean_squared_error as mse
-
-import seaborn as sns
-from sklearn.metrics import r2_score
-from sklearn.preprocessing import scale
-from sklearn.model_selection import train_test_split
 
 #-------------------------------------------------------------------------
 # répertoire de travail
@@ -25,7 +12,7 @@ data_dir = PureWindowsPath(working_dir.joinpath('poc_projects'))
 data_file = PureWindowsPath(data_dir.joinpath('table_data.xlsx'))
 
 client_root_dir = PureWindowsPath('O:\\')
-dest_dir = PureWindowsPath(client_root_dir.joinpath('Lausanne','24 BenAdmin-Param','01 Analyse règlement','Tarifs'))
+dest_dir = PureWindowsPath(client_root_dir.joinpath('CAP','24 BenAdmin-Param','01 Analyse règlement','Tabelles_2019'))
 
 #-------------------------------------------------------------------------
 
@@ -42,16 +29,16 @@ table_value_type = ['VALSTR_VAPA', 'VALNUM_VAPA']
 # define a row template
 
 row_template = {}
-row_template['NOM_PARA']     = "TA0212" 
-row_template['PE_PAUT_DDV']  = "01.01.2019" 
-row_template['LIBF_PARA']    = "Val.act. enfant."
-row_template['FORMAT_PARA']  = "06"
+row_template['NOM_PARA']     = "TTAPLP" 
+row_template['PE_PAUT_DDV']  = "01.01.2020" 
+row_template['LIBF_PARA']    = "Tarif PLP"
+row_template['FORMAT_PARA']  = "99"
 row_template['INCLCOLLID']   = "02"
 
-row_template['CLATIT_PAUT']   = "PE_CAS"
-row_template['NO_IP']         = 5750
+row_template['CLATIT_PAUT']   = "PE_PLAN"
+row_template['NO_IP']         = 4250
 row_template['NO_PLAN']       = 1
-row_template['NO_CAS']        = 7
+row_template['NO_CAS']        = 1
 
 def generate_file():
     # load data from XL

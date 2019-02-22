@@ -21,6 +21,7 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="course_projects\module_4\svm.py" />
     <Compile Include="course_projects\module_4\knn_exercices.py" />
     <Compile Include="course_projects\module_4\knn.py">
       <SubType>Code</SubType>

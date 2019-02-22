@@ -38,8 +38,8 @@ try :
     else :
         client_root_dir = PureWindowsPath('O:\\')
         # data_dir = PureWindowsPath(client_root_dir.joinpath('UBS Optio 1e','24 BenAdmin-Param','06 Reprise','Atos','data_reprise'))
-        # data_dir = PureWindowsPath(client_root_dir.joinpath('lausanne','24 BenAdmin-Param','09 Listes collectives','extractions'))
-        data_dir = PureWindowsPath(client_root_dir.joinpath('cap','24 BenAdmin-Param','09 Listes collectives','extractions', '2019', '10_effectif_sig'))
+        data_dir = PureWindowsPath(client_root_dir.joinpath('lausanne','24 BenAdmin-Param','06 Reprise'))
+        # data_dir = PureWindowsPath(client_root_dir.joinpath('cap','24 BenAdmin-Param','09 Listes collectives','extractions', '2019', '10_effectif_sig'))
 
     #--------------------------------------------------------------------------
     def helper_get_file(file_name) :
@@ -156,26 +156,38 @@ try :
         
 
     if 0:
-        df_data_converted = pd.read_excel(helper_get_file('UBS Optio 1e_Mitarbeiterliste_Atos AG_01 01.2019_AON_wri.xls'), sheet_name='reprise')
+        df_data_converted = pd.read_excel(helper_get_file('chem_invalides.xlsx'), sheet_name='data_2')
         
         df_header = df_data_converted.iloc[0:3,:]
-        df_data = df_data_converted.iloc[4:,:]
+        df_data = df_data_converted.iloc[3:,:]
         # df_data = df_data_converted.iloc[4:5,:]
         
         # convert datetime to compatible mupe format
-
         date_columns = ['DAFFIL','DENSER','DATEFF','DANAIS']
 
         for column in date_columns:
-            df_data[column] = df_data[column].map(lambda x : x.strftime('%d.%m.%Y')) 
+            if column in df_data.columns:
+                df_data[column] = df_data[column].map(lambda x : x.strftime('%d.%m.%Y')) 
 
         int_columns = ['NPOST']
         for column in int_columns:
-            df_data[column] = df_data[column].astype(int)
+            if column in df_data.columns:
+                df_data[column] = df_data[column].astype(int)
 
-        df_header.to_csv(helper_get_file('header_affi.csv'), sep = ';', index=False)
-        df_data.to_csv(helper_get_file('data_affi.csv'), sep = ';', header=False, index=False, encoding='UTF-8')
-        # df_data.to_csv(helper_get_file('data_affi.csv'), sep = ';', header=False, index=False)
+        # df_data.fillna(method='ffill', inplace = True)
+
+        # tentative de conversion en entier
+        try:
+            df_data['CODMOU'] = df_data['CODMOU'].astype(int)
+        except:
+            None
+
+        df_header.to_csv(helper_get_file('header_chem.csv'), sep = ';', index=False)
+        df_data.to_csv(helper_get_file('data_chem.csv'), sep = ';', header=False, index=False)
+
+        df_data_extraction = pd.read_excel(helper_get_file('chem_invalides.xlsx'), sheet_name='EXTR')
+        df_data_extraction.to_csv(helper_get_file('header_extraction.csv'), sep = ';', index=False)
+
 
     if 0:
         df_orig = pd.read_csv(helper_get_file('data_extr_actifs_raoj4045u.csv'), sep = ';')
@@ -302,7 +314,7 @@ try :
         elif table == 'pe_gmes':
             return generate_pe_gmes
 
-    if 1:
+    if 0:
         # f_generator = generator('companies', 0, 3490, df_to_exclude)
         # f_generator = generator('user_access', 657, 3490, df_to_exclude)
         f_generator = generator('pe_gmes', 657, 3490, df_to_exclude)

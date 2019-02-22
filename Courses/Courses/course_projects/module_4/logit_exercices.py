@@ -9,6 +9,8 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.dummy import DummyClassifier
 
 from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegressionCV
+
 from sklearn.model_selection import GridSearchCV
 
 from sklearn.pipeline import Pipeline
@@ -37,9 +39,6 @@ df_data = pd.read_csv(data_file)
 target = 'disease'
 y = df_data[target]
 
-# sub_columns = ['age', 'sex']
-
-df_data_e = df_data[sub_columns]
 df_data_e = df_data.drop(columns=[target])
 df_data_e = pd.get_dummies(df_data_e)
 
@@ -166,7 +165,12 @@ grid_cv = GridSearchCV(pipe, [{
     'logreg__random_state': [0]
 }], cv=10)
 
+
 grid_cv.fit(X_tr, y_tr)
+grid_cv.score(X_te, y_te)
+
+#-------------------------------------------------------------------------------
+
 df_scores = pd.DataFrame.from_dict({
     'mean_te' : grid_cv.cv_results_['mean_test_score'],
     'std_te' : grid_cv.cv_results_['std_test_score']})
@@ -175,3 +179,9 @@ df_scores.sort_values(by='mean_te', ascending=False)
 
 grid_cv.predict(df_patient.values)
 grid_cv.predict_proba(df_patient.values)
+
+Cs = np.logspace(-4, 4, num=10)
+
+logreg_cv = LogisticRegressionCV(Cs, cv=10, multi_class='multinomial', solver='saga')
+logreg_cv.fit(X_tr, y_tr)
+
