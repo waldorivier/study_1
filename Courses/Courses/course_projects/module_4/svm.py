@@ -29,7 +29,7 @@ from sklearn.model_selection import train_test_split
 
 import itertools
 import math
-import random as r
+import random as r  
 
 import  PIL
 from PIL import Image

@@ -1,4 +1,6 @@
 #import mysql.connector
+import os
+import sqlite3
 import cx_Oracle    
 import numpy as np
 import pandas as pd
@@ -14,13 +16,58 @@ soldel_db = mysql.connector.connect(
 
 connection = cx_Oracle.connect("Data Source = LABCIT; User ID = PADEV96_DATA; Password = PADEV96_DATA")
 
+#-------------------------------------------------------------------------
+# persiste / charge un DataFrame vers / de la  base de données 
+# REM : db_name sans extension ; le nom de la table correspond à celui de 
+#       la base de données
+#-------------------------------------------------------------------------
+def helper_store_df_to_db(df, dir, db_name, table_name) :
+    db_file = os.path.join(dir, db_name + ".db" )
+    db = sqlite3.connect(db_file)
+
+    df.to_sql(table_name, db, chunksize=2000, if_exists='replace')
+    db.close()
+
+def helper_load_df_from_db(dir, db_name, table_name) :
+    db_file = os.path.join(dir, db_name + ".db")
+    db = sqlite3.connect(db_file)
+
+    df = pd.read_sql_query("select * from " + table_name, con=db)
+    db.close()
+
+    return df
+
+def helper_store_csv_to_db(dir, data_file, db_name, table_name) :
+    db_file = os.path.join(dir, db_name + ".db" )
+    db = sqlite3.connect(db_file)
+    
+    for chunk in pd.read_csv(data_file, chunksize=2000):
+        chunk.to_sql(name=table_name, con=db, if_exists="append", index=False)  
+
+    db.close()
+
+#-------------------------------------------------------------------------
+
+dir = os.getcwd()
+dir = os.path.join(dir, 'poc_projects')
+data_file = os.path.join(dir, 'chain.xlsx')
+
+if 0:
+    df_chain = pd.read_excel(data_file)
+    helper_store_df_to_db(df_chain, dir, 'chain', 'chain')
+
+#-------------------------------------------------------------------------
+
+df_chain = helper_load_df_from_db(dir, 'chain', 'chain')
+
+#-------------------------------------------------------------------------
 class chain_vector:
     _ser_items = None
     _nb_items = None
     _ref_dist = None
 
     def __init__(self, df):
-        self._ser_items = df.copy()[['nom_elem', 'nom_logi']]
+        self._ser_items = df.copy()[['NOM_ELEM', 'NOM_LOGI']]
         self._ser_items.drop_duplicates(inplace=True)
         self._nb_items = len(self._ser_items)
 
@@ -44,13 +91,12 @@ class chain_vector:
 
 # key of chain vector
 key_vector = ['no_ip',  'no_cas', 'no_cate', 'tymouv', 'pe_chai_ddv', 'no_plan',]
+key_vector = [x.upper() for x in key_vector]
 
-df = pd.read_sql_query("select * from pe_elca", con=soldel_db)
-
-ref = chain_vector(df)
+ref = chain_vector(df_chain)
 ref.compute_ref_dist()
 
-gr = df.groupby(by=key_vector)
+gr = df_chain.groupby(by=key_vector)
 
 results = []
 for key_vector, g in gr:
