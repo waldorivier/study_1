@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>025b859f-91ae-4c8a-a47a-428b2d610a26</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>course_projects\module_4\knn_exercices.py</StartupFile>
+    <StartupFile>poc_projects\chain_classifier.py</StartupFile>
     <SearchPath>modules</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -77,7 +77,9 @@
     <Content Include="course_projects\module_3\warm_up\task-2.csv" />
     <Content Include="course_projects\module_3\warm_up\task-3.csv" />
     <Content Include="course_projects\df_food_study_1.db" />
-    <Content Include="course_projects\food.db" />
+    <Content Include="poc_projects\chain.db" />
+    <Content Include="poc_projects\chain.xlsx" />
+    <Content Include="poc_projects\table_data.xlsx" />
   </ItemGroup>
   <ItemGroup>
     <Interpreter Include="env\">
