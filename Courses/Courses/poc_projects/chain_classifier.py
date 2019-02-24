@@ -1,20 +1,21 @@
-#import mysql.connector
+# import mysql.connector
 import os
 import sqlite3
-import cx_Oracle    
+# import cx_Oracle    
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import itertools
+import time
 
-soldel_db = mysql.connector.connect(
-  host="localhost",
-  user="root",
-  passwd="waldo",
-  database="mupe"
-)
+#soldel_db = mysql.connector.connect(
+#  host="localhost",
+#  user="root",
+#  passwd="waldo",
+#  database="mupe"
+#)
 
-connection = cx_Oracle.connect("Data Source = LABCIT; User ID = PADEV96_DATA; Password = PADEV96_DATA")
+# connection = cx_Oracle.connect("Data Source = LABCIT; User ID = PADEV96_DATA; Password = PADEV96_DATA")
 
 #-------------------------------------------------------------------------
 # persiste / charge un DataFrame vers / de la  base de données 
@@ -47,6 +48,17 @@ def helper_store_csv_to_db(dir, data_file, db_name, table_name) :
     db.close()
 
 #-------------------------------------------------------------------------
+def format_date():
+    def _f(d):
+        # transform to date time
+        # _d = datetime.strptime(d, '%Y-%m-%d')
+        _d = d.strftime('%d.%m.%Y')
+        return _d
+    return _f
+
+f_format_date = format_date()
+
+#-------------------------------------------------------------------------
 
 dir = os.getcwd()
 dir = os.path.join(dir, 'poc_projects')
@@ -54,6 +66,7 @@ data_file = os.path.join(dir, 'chain.xlsx')
 
 if 0:
     df_chain = pd.read_excel(data_file)
+    df_chain['PE_CHAI_DDV'] = df_chain['PE_CHAI_DDV'].apply(f_format_date)
     helper_store_df_to_db(df_chain, dir, 'chain', 'chain')
 
 #-------------------------------------------------------------------------
@@ -62,51 +75,48 @@ df_chain = helper_load_df_from_db(dir, 'chain', 'chain')
 
 #-------------------------------------------------------------------------
 class chain_vector:
-    _ser_items = None
-    _nb_items = None
-    _ref_dist = None
+    _df_items = None
 
     def __init__(self, df):
-        self._ser_items = df.copy()[['NOM_ELEM', 'NOM_LOGI']]
-        self._ser_items.drop_duplicates(inplace=True)
-        self._nb_items = len(self._ser_items)
-
-    def compute_ref_dist(self, nb_ref_items = None):
-        if nb_ref_items == 0 or nb_ref_items is None:
-            self._ref_dist = self._nb_items
-        else:
-            self._ref_dist = self._nb_items / nb_ref_items
-
-        return self._ref_dist
+        self._df_items = df.copy()[['NOM_ELEM', 'NOM_LOGI']]
+        self._df_items.drop_duplicates(inplace=True)
 
     def compute_dist(self, other):
-        # 
         if other == self:
             return -1
 
-        if self._ref_dist != None:
-            return np.abs(other._ref_dist - self._ref_dist)
-        else :
-            raise ValueError('_ref_dist must be set')    
-
+        if other != None:
+            lunion = len(pd.merge(self._df_items, other._df_items, how='outer'))
+            lintersection = len(pd.merge(self._df_items, other._df_items, how='inner'))
+            
+            return lintersection / lunion
+        
 # key of chain vector
-key_vector = ['no_ip',  'no_cas', 'no_cate', 'tymouv', 'pe_chai_ddv', 'no_plan',]
+key_vector = ['no_ip',  'no_cas', 'no_cate', 'no_plan', 'tymouv', 'pe_chai_ddv']
 key_vector = [x.upper() for x in key_vector]
 
-ref = chain_vector(df_chain)
-ref.compute_ref_dist()
-
 gr = df_chain.groupby(by=key_vector)
+
+# UNIT TEST
+
+chain_1 = chain_vector(gr.get_group((4250,1,1,1,'1', '01.01.2018')))
+chain_2 = chain_vector(gr.get_group((5750,1,1,1,'1', '01.01.2018')))
+chain_1.compute_dist(chain_2)
+
+# reference which contais all different defined elements 
+chain_ref = chain_vector(df_chain)
 
 results = []
 for key_vector, g in gr:
     result = {}
  
     chain = chain_vector(g)
-    result['reference_dist'] = chain.compute_ref_dist(ref._ref_dist)
+    result['dist_to_ref'] = chain.compute_dist(chain_ref)
     result['key_vector'] = key_vector
     
     results.append(result)
+
+    break
 
 df_results = pd.DataFrame(results)
 df_results.sort_values(by = 'reference_dist', ascending=False, inplace=True)
