@@ -52,6 +52,8 @@ def format_date():
     def _f(d):
         # transform to date time
         # _d = datetime.strptime(d, '%Y-%m-%d')
+
+        # transform to string as specified
         _d = d.strftime('%d.%m.%Y')
         return _d
     return _f
@@ -64,10 +66,22 @@ dir = os.getcwd()
 dir = os.path.join(dir, 'poc_projects')
 data_file = os.path.join(dir, 'chain.xlsx')
 
-if 0:
+def read_and_store(data_file):
     df_chain = pd.read_excel(data_file)
+    # df_chain = pd.DataFrame.from_csv(data_file, sep='\t')
+  
     df_chain['PE_CHAI_DDV'] = df_chain['PE_CHAI_DDV'].apply(f_format_date)
+    
+    # df_chain['PE_CHAI_DDV'] = df_chain['PE_CHAI_DDV'].str.replace(r' 00:00:00', "")
     helper_store_df_to_db(df_chain, dir, 'chain', 'chain')
+
+
+if 0:
+    data_file = os.path.join(dir, 'chain.xlsx')
+    read_and_store(data_file)
+
+    data_file = os.path.join(dir, 'chain_1.xlsx')
+    read_and_store(data_file)
 
 #-------------------------------------------------------------------------
 
@@ -89,7 +103,7 @@ class chain_vector:
             lunion = len(pd.merge(self._df_items, other._df_items, how='outer'))
             lintersection = len(pd.merge(self._df_items, other._df_items, how='inner'))
             
-            return lintersection / lunion
+            return  1 - lintersection / lunion
         
 # key of chain vector
 key_vector = ['no_ip',  'no_cas', 'no_cate', 'no_plan', 'tymouv', 'pe_chai_ddv']
@@ -99,8 +113,8 @@ gr = df_chain.groupby(by=key_vector)
 
 # UNIT TEST
 
-chain_1 = chain_vector(gr.get_group((4250,1,1,1,'1', '01.01.2018')))
-chain_2 = chain_vector(gr.get_group((5750,1,1,1,'1', '01.01.2018')))
+chain_1 = chain_vector(gr.get_group((5750,1,1,1,'1','01.01.2005')))
+chain_2 = chain_vector(gr.get_group((4250,1,1,1,'1','01.01.2005')))
 chain_1.compute_dist(chain_2)
 
 # reference which contais all different defined elements 
@@ -113,10 +127,7 @@ for key_vector, g in gr:
     chain = chain_vector(g)
     result['dist_to_ref'] = chain.compute_dist(chain_ref)
     result['key_vector'] = key_vector
-    
     results.append(result)
-
-    break
 
 df_results = pd.DataFrame(results)
 df_results.sort_values(by = 'reference_dist', ascending=False, inplace=True)
