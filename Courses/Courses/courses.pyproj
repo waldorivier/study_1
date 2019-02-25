@@ -79,6 +79,7 @@
     <Content Include="course_projects\df_food_study_1.db" />
     <Content Include="poc_projects\chain.db" />
     <Content Include="poc_projects\chain.xlsx" />
+    <Content Include="poc_projects\chain_1.xlsx" />
     <Content Include="poc_projects\table_data.xlsx" />
   </ItemGroup>
   <ItemGroup>
