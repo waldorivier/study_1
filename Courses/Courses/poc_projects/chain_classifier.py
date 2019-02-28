@@ -140,6 +140,8 @@ df_ref_matrix = chain_ref._to_elems_matrix(None)
 
 big_chain_matrix = pd.read_csv(os.path.join(dir, 'big_chain_matrix.csv'))
 
+#-------------------------------------------------------------------------
+
 # produce big matrix
 
 if 0:

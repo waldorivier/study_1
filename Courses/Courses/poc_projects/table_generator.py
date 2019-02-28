@@ -29,10 +29,10 @@ table_value_type = ['VALSTR_VAPA', 'VALNUM_VAPA']
 # define a row template
 
 row_template = {}
-row_template['NOM_PARA']     = "TTAPLP" 
+row_template['NOM_PARA']     = "TA0352" 
 row_template['PE_PAUT_DDV']  = "01.01.2020" 
-row_template['LIBF_PARA']    = "Tarif PLP"
-row_template['FORMAT_PARA']  = "99"
+row_template['LIBF_PARA']    = "Tarif val. act. rente inv. en cours"
+row_template['FORMAT_PARA']  = "05"
 row_template['INCLCOLLID']   = "02"
 
 row_template['CLATIT_PAUT']   = "PE_PLAN"
