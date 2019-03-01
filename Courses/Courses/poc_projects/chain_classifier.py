@@ -8,6 +8,12 @@ import matplotlib.pyplot as plt
 import itertools
 import time
 
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import Pipeline
+
+from sklearn.model_selection import ParameterGrid
+from sklearn.model_selection import GridSearchCV
+
 #soldel_db = mysql.connector.connect(
 #  host="localhost",
 #  user="root",
@@ -16,6 +22,8 @@ import time
 #)
 
 # connection = cx_Oracle.connect("Data Source = LABCIT; User ID = PADEV96_DATA; Password = PADEV96_DATA")
+
+pd.set_option('display.max_columns', 90)
 
 #-------------------------------------------------------------------------
 # persiste / charge un DataFrame vers / de la  base de données 
@@ -83,10 +91,6 @@ if 0:
     # read_and_store(data_file)
 
 #-------------------------------------------------------------------------
-
-df_chain = helper_load_df_from_db(dir, 'chain', 'chain')
-
-#-------------------------------------------------------------------------
 class chain_vector:
     _df_items = None
 
@@ -108,68 +112,93 @@ class chain_vector:
     def _build_logi_name(self):
         self._df_items['ID_LOGI'] = self._df_items['NOM_ELEM'] + "_" + self._df_items['NOM_LOGI']
     
-    def _to_elems_matrix(self, df_ref_matrix):
+    def _to_elems_matrix(self, cm_ref):
         assert self._df_items['ID_LOGI'] is not None
         
         _df_elems = self._df_items['ID_LOGI']
         ones = np.ones((1, _df_elems.shape[0]))
         _df_elems = pd.DataFrame(ones, columns=_df_elems)
 
-        if df_ref_matrix is not None:
-            _df_elems = _df_elems.reindex(columns=df_ref_matrix.columns)
+        if cm_ref is not None:
+            _df_elems = _df_elems.reindex(columns=cm_ref.columns)
             _df_elems.fillna(0, inplace=True)
 
         return _df_elems.astype(int)
     
-#-------------------------------------------------------------------------
-# key for chain vector
-key_vector = ['no_ip',  'no_cas', 'no_cate', 'no_plan', 'tymouv', 'pe_chai_ddv']
-key_vector = [x.upper() for x in key_vector]
+    @staticmethod
+    def get_key():
+        key = ['no_ip',  'no_cas', 'no_cate', 'no_plan', 'tymouv', 'pe_chai_ddv']
+        key = [x.upper() for x in key]
 
-gr = df_chain.groupby(by=key_vector)
-
-# UNIT TEST
-
-chain_1 = chain_vector(gr.get_group((5750,1,1,1,'1','01.01.2005')))
-chain_2 = chain_vector(gr.get_group((5750,1,1,1,'1','01.01.2019')))
-chain_1.compute_dist(chain_2)
-
-# reference which contains all different defined elements 
-chain_ref = chain_vector(df_chain)
-df_ref_matrix = chain_ref._to_elems_matrix(None)
-
-big_chain_matrix = pd.read_csv(os.path.join(dir, 'big_chain_matrix.csv'))
+        return key
 
 #-------------------------------------------------------------------------
+# build chain matrix
+#-------------------------------------------------------------------------
+def build_chain_matrix(keys, groups, cm_ref):
+    chain_matrix = pd.DataFrame()
+     
+    for k in keys  :
+        cv = chain_vector(groups.get_group(k))
+        cm = cv._to_elems_matrix(cm_ref)
+        chain_matrix = pd.concat([chain_matrix, cm])
 
-# produce big matrix
+    return chain_matrix
 
-if 0:
-    i = 0
-    for key_vector, g in gr:
-        chain = chain_vector(g)
-        chain_matrix = chain._to_elems_matrix(df_ref_matrix)
-        big_chain_matrix = pd.concat([big_chain_matrix, chain_matrix])
-        i = i + 1
+#-------------------------------------------------------------------------
 
-        if i > 6299:
-            break
+df_big_chain = helper_load_df_from_db(dir, 'chain', 'chain')
 
-if 0:
-    results = []
-    for key_vector, g in gr:
-        result = {}
- 
-        chain = chain_vector(g)
-        result['dist_to_ref'] = chain.compute_dist(chain_ref)
-        result['key_vector'] = key_vector
-        results.append(result)
+#-------------------------------------------------------------------------
 
-    df_results = pd.DataFrame(results)
-    df_results.sort_values(by = 'reference_dist', ascending=False, inplace=True)
-    df_results.index = np.arange(len(df_results))
-    df_results.hist()
-    plt.show()
+groups = df_big_chain.groupby(by=chain_vector.get_key())
+
+# define reference
+
+cv_ref = chain_vector(df_big_chain)
+cm_ref = cv_ref._to_elems_matrix(None)
+
+#-------------------------------------------------------------------------
+# operate on a sample
+#-------------------------------------------------------------------------
+ser_groups = pd.Series([k for k, g in groups])
+ser_groups_sample = ser_groups
+
+# ser_groups_sample = ser_groups.sample(1000)
+
+# retrieve list of ip from sample
+
+y = ser_groups_sample.apply(lambda x : x[0]).values
+df_matrix = build_matrix(ser_groups_sample, groups, cm_ref)
+X = df_matrix.values
+
+# grid search
+
+pipe = Pipeline([
+    ('scaler', None), # Optional step
+    ('knn', KNeighborsClassifier())
+])
+
+grid_cv = GridSearchCV(pipe, [{
+    'knn__n_neighbors': np.arange(1, 10)
+}], cv=2)
+
+grid_cv.fit(X, y)
+grid_cv.best_score_
+
+#-------------------------------------------------------------------------
+# make predictions
+#-------------------------------------------------------------------------
+
+cv_1 = chain_vector(groups.get_group((4250,1,1,1,'1','01.01.2016')))
+cm_1 = cv_1._to_elems_matrix(cm_ref)
+
+pred_ip = grid_cv.predict(cm_1)
+idx_ip = y.tolist().index(pred_ip)
+k = ser_groups_sample.iloc[idx_ip]
+k
+
+cv_1.compute_dist(chain_vector(groups.get_group(k)))
 
 
-
+# evaluates distances
