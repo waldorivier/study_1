@@ -9,10 +9,13 @@ import itertools
 import time
 
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.neighbors import NearestNeighbors
 from sklearn.pipeline import Pipeline
 
 from sklearn.model_selection import ParameterGrid
 from sklearn.model_selection import GridSearchCV
+
+from sklearn.model_selection import train_test_split
 
 #soldel_db = mysql.connector.connect(
 #  host="localhost",
@@ -154,7 +157,6 @@ df_big_chain = helper_load_df_from_db(dir, 'chain', 'chain')
 groups = df_big_chain.groupby(by=chain_vector.get_key())
 
 # define reference
-
 cv_ref = chain_vector(df_big_chain)
 cm_ref = cv_ref._to_elems_matrix(None)
 
@@ -162,26 +164,82 @@ cm_ref = cv_ref._to_elems_matrix(None)
 # operate on a sample
 #-------------------------------------------------------------------------
 ser_groups = pd.Series([k for k, g in groups])
+
 ser_groups_sample = ser_groups
 
 # ser_groups_sample = ser_groups.sample(1000)
 
 # retrieve list of ip from sample
 
-y = ser_groups_sample.apply(lambda x : x[0]).values
-df_matrix = build_matrix(ser_groups_sample, groups, cm_ref)
+def tuple_to_str():
+    def _f(tuple):
+        s = ""
+        for t in tuple:
+            s = s + str(t)
+            s = s + '_'
+        return s
+    return _f
+
+f_tuple = tuple_to_str()
+
+y = ser_groups_sample.apply(f_tuple).values
+df_matrix = build_chain_matrix(ser_groups_sample, groups, cm_ref)
 X = df_matrix.values
 
-# grid search
+#-------------------------------------------------------------------------
+# A. grid search / no TEST set, i.e test size  = 0
+#-------------------------------------------------------------------------
+X_tr, X_te, y_tr, y_te = train_test_split(
+    X, y, test_size=0, random_state=0)
 
 pipe = Pipeline([
     ('scaler', None), # Optional step
     ('knn', KNeighborsClassifier())
 ])
 
+k_values = np.arange(1,7)
+weights_functions = ['uniform', 'distance']
+distance_types = [1, 2]
+
+grid = ParameterGrid({
+    'knn__n_neighbors': k_values,
+    'knn__weights': weights_functions,
+    'knn__p': distance_types
+})
+
+test_scores = []
+for params_dict in grid:
+    # Set parameters
+    pipe.set_params(**params_dict)
+
+    # Fit a k-NN classifier
+    pipe.fit(X_tr, y_tr)
+
+    # Save accuracy on test set
+    params_dict['accuracy'] = pipe.score(X_tr, y_tr)
+    # params_dict['accuracy'] = pipe.score(X_te, y_te)
+     
+    # Save result
+    test_scores.append(params_dict)
+
+df_scores = pd.DataFrame(test_scores).sort_values(by ='accuracy', ascending=False)
+best_params = df_scores.iloc[0,:][1:]
+
+pipe.set_params(**best_params)
+pipe.fit(X_tr, y_tr)
+
+cv_1 = chain_vector(groups.get_group((4250,4,0,1,'1','01.01.2017')))
+cm_1 = cv_1._to_elems_matrix(cm_ref)
+
+pipe.predict(cm_1)
+
+#-------------------------------------------------------------------------
+# B. Grid search cross validation
+#-------------------------------------------------------------------------
+
 grid_cv = GridSearchCV(pipe, [{
-    'knn__n_neighbors': np.arange(1, 10)
-}], cv=2)
+    'knn__n_neighbors': np.arange(1, 8)
+}], cv=2, n_jobs=-1)
 
 grid_cv.fit(X, y)
 grid_cv.best_score_
@@ -190,7 +248,7 @@ grid_cv.best_score_
 # make predictions
 #-------------------------------------------------------------------------
 
-cv_1 = chain_vector(groups.get_group((4250,1,1,1,'1','01.01.2016')))
+cv_1 = chain_vector(groups.get_group((4250,1,0,1,'1','01.01.2019')))
 cm_1 = cv_1._to_elems_matrix(cm_ref)
 
 pred_ip = grid_cv.predict(cm_1)
@@ -200,5 +258,37 @@ k
 
 cv_1.compute_dist(chain_vector(groups.get_group(k)))
 
+#-------------------------------------------------------------------------
+# C. Empiric  
+# Evaluates all the distances and take the closest
+#-------------------------------------------------------------------------
+results = []
+for k, v in groups:
+    cv = chain_vector(groups.get_group(k))
+    results.append(cv.compute_dist(cv_1))
 
-# evaluates distances
+idx_k = pd.Series(results).idxmin()
+k = ser_groups.iloc[idx_k]
+
+#-------------------------------------------------------------------------
+# D. NearestNeighbor  
+# 
+#-------------------------------------------------------------------------
+n = NearestNeighbors(n_neighbors=40)
+n.fit(X)
+
+cv_1 = chain_vector(groups.get_group((4250,1,1,1,'1','01.01.2019')))
+cm_1 = cv_1._to_elems_matrix(cm_ref)
+
+a_dist, a_idx = n.kneighbors(cm_1)
+l_groups = [ser_groups_sample.iloc[idx] for idx in a_idx[0]]
+
+for group in l_groups:
+    cv = chain_vector(groups.get_group(group))
+    print (group, cv.compute_dist(cv_1))
+    
+neighbors_matrix = build_chain_matrix(l_groups, groups, cm_ref)
+
+results = []
+for i in np.arange(1,len(neighbors_matrix)):
+    results.append(np.vdot(cm_1, neighbors_matrix.iloc[i,:]))
