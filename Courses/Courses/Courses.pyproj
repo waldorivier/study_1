@@ -81,10 +81,11 @@
     <Content Include="course_projects\module_3\warm_up\task-2.csv" />
     <Content Include="course_projects\module_3\warm_up\task-3.csv" />
     <Content Include="course_projects\df_food_study_1.db" />
-    <Content Include="poc_projects\chain_big_matrix.csv" />
+    <Content Include="poc_projects\chain_matrix.csv" />
     <Content Include="poc_projects\chain.db" />
     <Content Include="poc_projects\chain.xlsx" />
     <Content Include="poc_projects\chain_1.xlsx" />
+    <Content Include="poc_projects\chain_elne.csv" />
     <Content Include="poc_projects\table_data.xlsx" />
   </ItemGroup>
   <ItemGroup>
