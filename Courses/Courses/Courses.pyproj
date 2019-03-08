@@ -4,7 +4,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>025b859f-91ae-4c8a-a47a-428b2d610a26</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>poc_projects\chain_classifier.py</StartupFile>
+    <StartupFile>poc_projects\chain_classifier_2.py</StartupFile>
     <SearchPath>modules</SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
     <OutputPath>.</OutputPath>
@@ -21,7 +21,8 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="course_projects\module_4\svm.py" />
+    <Compile Include="course_projects\module_4\clustering.py" />
+    <Compile Include="course_projects\module_4\svm_exercices.py" />
     <Compile Include="course_projects\module_4\knn_exercices.py" />
     <Compile Include="course_projects\module_4\knn.py">
       <SubType>Code</SubType>
@@ -31,7 +32,11 @@
     </Compile>
     <Compile Include="course_projects\module_3\warm_up\course_3.py" />
     <Compile Include="course_projects\module_3\houses_prices\course_3_house.py" />
-    <Compile Include="poc_projects\chain_classifier.py">
+    <Compile Include="poc_projects\chain_classifier_1" />
+    <Compile Include="poc_projects\chain_classifier_2.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="poc_projects\effectif_inspect.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="poc_projects\table_generator.py" />
@@ -77,10 +82,11 @@
     <Content Include="course_projects\module_3\warm_up\task-2.csv" />
     <Content Include="course_projects\module_3\warm_up\task-3.csv" />
     <Content Include="course_projects\df_food_study_1.db" />
-    <Content Include="poc_projects\big_chain_matrix.csv" />
+    <Content Include="poc_projects\chain_matrix.csv" />
     <Content Include="poc_projects\chain.db" />
     <Content Include="poc_projects\chain.xlsx" />
     <Content Include="poc_projects\chain_1.xlsx" />
+    <Content Include="poc_projects\chain_elne.csv" />
     <Content Include="poc_projects\table_data.xlsx" />
   </ItemGroup>
   <ItemGroup>
