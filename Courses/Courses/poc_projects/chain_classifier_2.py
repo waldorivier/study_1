@@ -16,6 +16,13 @@ from sklearn.model_selection import ParameterGrid
 from sklearn.model_selection import GridSearchCV
 
 from sklearn.model_selection import train_test_split
+from sklearn.cluster import KMeans
+
+# Create k-means object
+kmeans = KMeans(
+    n_clusters=3,
+    random_state=0 # Fix results
+)
 
 # from natsort import natsorted
 
@@ -179,8 +186,9 @@ if 0:
     df_chain_matrix.to_csv(os.path.join(dir, 'chain_matrix.csv'), index=False)
 
 #-------------------------------------------------------------------------
+#
 #-------------------------------------------------------------------------
-def find_neighbors_of(df_matrix, gb_keys, cm_ref, target_k, cond):
+def find_neighbors_of(df_chain_matrix, gb_keys, cm_ref, target_k, cond):
     
     # inner class
     class res:
@@ -196,10 +204,10 @@ def find_neighbors_of(df_matrix, gb_keys, cm_ref, target_k, cond):
 
     #---------------------------------------------------------------------
 
-    idx_cols_cond = df_matrix.columns[df_matrix.columns.str.contains(cond)]
+    idx_cols_cond = df_chain_matrix.columns[df_chain_matrix.columns.str.contains(cond)]
 
     # dépend la condition
-    df_matrix_f = df_matrix[df_matrix[idx_cols_cond].sum(axis=1) >= 1]
+    df_matrix_f = df_chain_matrix[df_chain_matrix[idx_cols_cond].sum(axis=1) >= 1]
     df_matrix_f.index = np.arange(len(df_matrix_f))
 
     X = df_matrix_f.drop(columns=['KEY']).values
@@ -221,6 +229,31 @@ def find_neighbors_of(df_matrix, gb_keys, cm_ref, target_k, cond):
     
     return pd.DataFrame([x.as_dict() for x in l_neighbors])
 
+#-------------------------------------------------------------------------
+# return all sibling chains (i.e belonging to the same cluster) of target_k chain
+#-------------------------------------------------------------------------
+def find_cluster_of(df_chain_matrix, gb_keys, cm_ref, target_k, cond):
+
+    idx_cols_cond = df_chain_matrix.columns[df_chain_matrix.columns.str.contains(cond)]
+
+    # dépend la condition
+    df_matrix_f = df_chain_matrix[df_chain_matrix[idx_cols_cond].sum(axis=1) >= 1]
+    df_matrix_f.index = np.arange(len(df_matrix_f))
+
+    X = df_matrix_f.drop(columns=['KEY']).values
+    n = KMeans(n_clusters=5)
+    n.fit(X)
+    a_labels = n.labels_
+
+    cv_1 = chain_vector(target_k, gb_keys.get_group(target_k))
+    cm_1 = cv_1._to_elems_matrix(cm_ref).drop(columns=['KEY'])
+
+    a_cluster = n.predict(cm_1)
+
+    return df_matrix_f[a_labels == a_cluster[0]]
+
+#-------------------------------------------------------------------------
+# LETS GO
 #-------------------------------------------------------------------------
 
 df_elems = helper_load_df_from_db(dir, 'chain', 'chain')
@@ -252,5 +285,14 @@ logi_cond = optimal_items.index.str.contains(cond)
 
 pd.merge(optimal_items[logi_cond], df_elne)
 
+#-------------------------------------------------------------------------
+# CLUSTERING / comparison with 
+#-------------------------------------------------------------------------
 
+df_cluster = find_cluster_of(df_chain_matrix, gb_keys, cm_ref, target_k, cond)
 
+optimal_k = (2720, 1, 1, 1, '1', '01.01.2018')
+optimal_chain = chain_vector(optimal_k,gb_keys.get_group(optimal_k))
+
+intersect = optimal_chain.compute_dist(chain_vector(target_k,gb_keys.get_group(target_k)))
+intersect                                                    
