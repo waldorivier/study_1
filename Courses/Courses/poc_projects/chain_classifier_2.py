@@ -199,7 +199,7 @@ def find_neighbors_of(df_matrix, gb_keys, cm_ref, target_k, cond):
     idx_cols_cond = df_matrix.columns[df_matrix.columns.str.contains(cond)]
 
     # dépend la condition
-    df_matrix_f = df_matrix[df_matrix[idx_cols_cond].sum(axis=1)== 2]
+    df_matrix_f = df_matrix[df_matrix[idx_cols_cond].sum(axis=1) >= 1]
     df_matrix_f.index = np.arange(len(df_matrix_f))
 
     X = df_matrix_f.drop(columns=['KEY']).values
@@ -240,17 +240,17 @@ df_elne.set_index(keys=['ID_LOGI'],inplace=True)
 
 #-------------------------------------------------------------------------
 
-cond = 'CFAASX|CRISCA'
+cond = 'CFAASX'
 target_k = (3290,1,1,1,'1','31.12.2017')
 
 df_neighbors = find_neighbors_of(df_chain_matrix, gb_keys, cm_ref, target_k, cond)
 
 optimal_k = df_neighbors.iloc[0,0]
+optimal_k
 optimal_items = chain_vector(optimal_k,gb_keys.get_group(optimal_k))._df_items
 logi_cond = optimal_items.index.str.contains(cond)
-optimal_items[logi_cond]
 
-pd.merge(optimal_items, df_elne, )
+pd.merge(optimal_items[logi_cond], df_elne)
 
 
-df_elne
+

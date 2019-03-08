@@ -50,19 +50,6 @@ def helper_store_csv_to_db(dir, data_file, db_name, table_name) :
     db.close()
 
 #-------------------------------------------------------------------------
-def format_date():
-    def _f(d):
-        # transform to date time
-        # _d = datetime.strptime(d, '%Y-%m-%d')
-
-        # transform to string as specified
-        _d = d.strftime('%d.%m.%Y')
-        return _d
-    return _f
-
-f_format_date = format_date()
-
-#-------------------------------------------------------------------------
 
 dir = os.getcwd()
 dir = os.path.join(dir, 'poc_projects')
@@ -84,14 +71,14 @@ def produce_df(filename):
     df.to_csv(os.path.join(dir, str(filename) + ".csv"))
     return df    
     
-filename = 'HSBC_before_corr_bonif'
+filename = 'effectif_HSBC_before_corr_bonif'
 if 0:
     produce_df(filename)
 
 df_hsbc_before = pd.read_csv(os.path.join(dir, str(filename) + ".csv"))
 df_hsbc_before.set_index(keys=['NPERSO'],inplace=True)
 
-filename = 'HSBC_after_corr_bonif'
+filename = 'effectif_HSBC_after_corr_bonif'
 if 0:
     produce_df(filename)
     
