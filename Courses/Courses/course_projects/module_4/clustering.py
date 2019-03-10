@@ -42,6 +42,7 @@ from PIL import Image
 from sklearn import datasets
 
 #------------------------------------------------------------------------------
+pd.set_option('display.max_columns', 90)
 
 file_name = 'chicago-crimes.csv'
 
@@ -51,7 +52,7 @@ working_dir = os.path.join(working_dir,'course_projects', 'module_4')
 #------------------------------------------------------------------------------
 
 data_file = os.path.join(working_dir, file_name)
-df_orig = pd.read_csv(data_file)
+df_data = pd.read_csv(data_file)
 
 from sklearn.cluster import KMeans
 
@@ -61,5 +62,69 @@ kmeans = KMeans(
     random_state=0 # Fix results
 )
 
+df_data.set_index(keys=['Case Number'], inplace=True)
+features = ['Longitude', 'Latitude']
 
-pd.get_dummies(df_orig)
+df_data_f = df_data[features]
+
+X = df_data_f.values
+
+kmeans.fit(X)
+pd.Series(kmeans.labels_).value_counts()
+kmeans.cluster_centers_
+
+kmeans.score(X)
+
+for k in np.arange(0, 7):
+    df_cluster = df_data[kmeans.labels_ == k]
+    print (k, df_cluster.groupby('Year')['Block'].count().mean())
+
+
+for cluster in np.arange(8):
+    # Get points in this cluster
+    idx = (kmeans.labels_ == cluster)
+
+    # Plot points
+    plt.scatter(
+        X[idx, 0], 
+        X[idx, 1], 
+        label='cluster {}'.format(cluster)
+    )
+
+    # Plot centroid
+    centroid = kmeans.cluster_centers_[cluster]
+    plt.plot(centroid[0], centroid[1], marker='*', color='black', markersize=18)
+
+# Add legend and labels
+plt.legend()
+plt.xlabel('Longitude')
+plt.ylabel('Latitude')
+plt.show()
+
+#------------------------------------------------------------------------------
+# PEPPER
+#------------------------------------------------------------------------------
+file_name = 'pepper.jpg'
+
+data_file = os.path.join(working_dir, file_name)
+img = Image.open(data_file)
+
+a_img = np.array(img)
+a_original_shape = a_img.shape
+
+X = a_img.reshape(-1, 3)
+
+#------------------------------------------------------------------------------
+kmeans.n_clusters = 5
+kmeans.fit(X)
+pd.Series(kmeans.labels_).value_counts()
+
+kmeans.cluster_centers_ = kmeans.cluster_centers_.astype(int)
+
+X_ = kmeans.cluster_centers_[kmeans.labels_]
+
+a_img_reduced = X_.reshape(a_original_shape)
+plt.imshow(a_img_reduced)
+plt.show()
+
+#------------------------------------------------------------------------------
