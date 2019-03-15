@@ -59,7 +59,8 @@ from sklearn.cluster import KMeans
 # Create k-means object
 kmeans = KMeans(
     n_clusters=8,
-    random_state=0 # Fix results
+    random_state=0, 
+    n_jobs=-1
 )
 
 df_data.set_index(keys=['Case Number'], inplace=True)
@@ -115,7 +116,7 @@ a_original_shape = a_img.shape
 X = a_img.reshape(-1, 3)
 
 #------------------------------------------------------------------------------
-kmeans.n_clusters = 5
+kmeans.n_clusters = 1
 kmeans.fit(X)
 pd.Series(kmeans.labels_).value_counts()
 

@@ -334,3 +334,4 @@ optimal_items = chain_vector(optimal_k,gb_keys.get_group(optimal_k))._df_items
 logi_cond = optimal_items.ID_LOGI.str.contains(cond)
 optimal_items[logi_cond]
 
+
