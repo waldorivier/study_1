@@ -10,6 +10,8 @@ import xml.etree.cElementTree as et
 from datetime import date
 import datetime
 
+pd.set_option('display.max_columns', 30)
+
 try :
     dta_file_name = '_5750_18_101_qfzj46001.xml'
     comptes_techniques_file_name = 'comptes_techniques.xlsx'
@@ -206,31 +208,20 @@ try :
         df[df.NO_CAS == 1].RVGARX.astype(float).sum()
 
     if 0:
-        df_before = pd.read_excel(helper_get_file('SIG_2019_data_extr_pens.xlsx'))
-        df_after  = pd.read_excel(helper_get_file('10_SIG_2019_data_extr_pens.xlsx'))
-
-        df_gmes = pd.read_excel('C:\\Users\\A0710996\\Desktop\\SWISSSTAFF_SSE_repartition_fixes_20192.xls', sheet_name="pe_gmes")
+    
+        df_gmes = pd.read_excel('C:\\Users\\A0710996\\Desktop\\SWISSSTAFF_SSE_repartition_fixes_20192.xls', sheet_name="pe_gmes_prod")
+        # df_gmes_test = pd.read_excel('C:\\Users\\A0710996\\Desktop\\SWISSSTAFF_SSE_repartition_fixes_20192.xls', sheet_name="pe_gmes_qc_test")
         df_este_gestion = pd.read_excel('C:\\Users\\A0710996\\Desktop\\SWISSSTAFF_SSE_repartition_fixes_20192.xls', sheet_name="2015")
         
-        # n'y sont pas toutes mais seulement les plus récentes fermées
-        df_e_fin = pd.read_excel('C:\\Users\\A0710996\\Desktop\\SWISSSTAFF_SSE_repartition_fixes_20192.xls', sheet_name="e_fin")
-        df_to_exclude = pd.read_excel('C:\\Users\\A0710996\\Desktop\\SWISSSTAFF_SSE_repartition_fixes_20192.xls', sheet_name="emp_to_exclude")
-        df_emp_sse = pd.read_excel('C:\\Users\\A0710996\\Desktop\\SWISSSTAFF_SSE_repartition_fixes_20192.xls', sheet_name="emp_sse")
-
         df_este_gestion['No MUPE'] = df_este_gestion['No MUPE'].astype(int)
         df = pd.merge(df_este_gestion, df_gmes, how='outer', left_on=['No MUPE'], right_on=['NOM_ESTE'])
-
-        # absent des gmes
+    
+        # absents des gmes
         df[df['NOM_ESTE'].isnull()]
-        
-        # absent de la liste gestion
-        df_e_to_delete = df[df['No MUPE'].isnull()]
-        df_e_to_delete.to_csv('emp_inconnu_liste.csv', sep=';')
 
-        # compte tenu qu'il faut les supprimer (este ne peut être associé à > 1 groupe de même type) 
-        # s'assurer que ces este ne sont plus actifs
-
-        df_ = pd.merge(df_e_fin, df_e_to_delete, how='inner')
+        # n'existe pas dans la liste de gestion car probablement entreprises fermée
+        df_to_exclude = df[df['No MUPE'].isnull()]
+       
    
     def generator(table, usr_id, no_ip, df_to_exclude):
         def generate_user_access(row):
@@ -279,7 +270,10 @@ try :
         def generate_pe_gmes(row):
             pe_grmu_id = None
 
-            if df_to_exclude['CODE'].where(lambda x : x == row['No MUPE']).count() == 1:
+            # if df_to_exclude['CODE'].where(lambda x : x == row['No MUPE']).count() == 1:
+            #     return None
+
+            if row['No MUPE'] is None:
                 return None
 
             collectif_norm = row['Collectifs_norm']
@@ -291,21 +285,35 @@ try :
                 pe_grmu_id = 76
             elif collectif_norm == 'C41':
                 pe_grmu_id = 77
-
+            
             select = "(select pe_este_id from pe_este e where e.nom_este=" + str(row['No MUPE']) + " and e.no_ip = " + str(no_ip) + " and NO_NSTE=1)"
+                
+            if 0:
+                sql_insert : str = "insert into pe_gmes (user_cre, dh_cre, pe_grmu_id, pe_este_id) values ("
+                sql_insert += "'" 
+                sql_insert += 'WRI'
+                sql_insert += "'" 
+                sql_insert += ',' 
+                sql_insert += 'current_timestamp'
+                sql_insert += ',' 
+                sql_insert += str(pe_grmu_id)
+                sql_insert += ',' 
+                sql_insert += select
+                sql_insert += ');'
+                return sql_insert
 
-            sql_insert : str = "insert into pe_gmes (user_cre, dh_cre, pe_grmu_id, pe_este_id) values ("
-            sql_insert += "'" 
-            sql_insert += 'WRI'
-            sql_insert += "'" 
-            sql_insert += ',' 
-            sql_insert += 'current_timestamp'
-            sql_insert += ',' 
-            sql_insert += str(pe_grmu_id)
-            sql_insert += ',' 
-            sql_insert += select
-            sql_insert += ');'
-            return sql_insert
+            sql_update : str = "update pe_gmes"
+            sql_update += " set user_MAJ = 'WRI'"
+            sql_update += ",dh_maj = "
+            sql_update += 'current_timestamp'
+            sql_update += ",pe_grmu_id = "
+            sql_update += str(pe_grmu_id)
+            sql_update += " where pe_este_id = "
+            sql_update += select
+            sql_update += ';'
+          
+            return sql_update
+
 
         if table == 'companies':
             return generate_companies
@@ -318,7 +326,9 @@ try :
         # f_generator = generator('companies', 0, 3490, df_to_exclude)
         # f_generator = generator('user_access', 657, 3490, df_to_exclude)
         f_generator = generator('pe_gmes', 657, 3490, df_to_exclude)
-        df_este_gestion.apply(f_generator, axis=1).to_csv('generate.csv', index=False, sep = '\t')
+        # df_este_gestion.apply(f_generator, axis=1).to_csv('generate.csv', index=False, sep = '\t')
+        df.apply(f_generator, axis=1).to_csv('generate.csv', index=False, sep = '\t')
+
 
 except ValueError as e  :
     print (e)

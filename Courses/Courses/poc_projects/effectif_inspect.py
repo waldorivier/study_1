@@ -55,7 +55,7 @@ dir = os.getcwd()
 dir = os.path.join(dir, 'poc_projects')
    
 #-------------------------------------------------------------------------
-# digression HSBC
+# digression 
 # 
 #-------------------------------------------------------------------------
 def produce_df(filename):
@@ -71,12 +71,12 @@ def produce_df(filename):
     df.to_csv(os.path.join(dir, str(filename) + ".csv"))
     return df    
     
-filename = 'effectif_HSBC_before_corr_bonif'
+filename = 'effectif_mikron'
 if 0:
     produce_df(filename)
 
-df_hsbc_before = pd.read_csv(os.path.join(dir, str(filename) + ".csv"))
-df_hsbc_before.set_index(keys=['NPERSO'],inplace=True)
+df_effectif = pd.read_csv(os.path.join(dir, str(filename) + ".csv"))
+df_effectif.set_index(keys=['NPERSO'],inplace=True)
 
 filename = 'effectif_HSBC_after_corr_bonif'
 if 0:

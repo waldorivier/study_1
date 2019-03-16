@@ -236,12 +236,12 @@ def find_cluster_of(df_chain_matrix, gb_keys, cm_ref, target_k, cond):
 
     idx_cols_cond = df_chain_matrix.columns[df_chain_matrix.columns.str.contains(cond)]
 
-    # dépend la condition
+    # depends on the condition
     df_matrix_f = df_chain_matrix[df_chain_matrix[idx_cols_cond].sum(axis=1) >= 1]
     df_matrix_f.index = np.arange(len(df_matrix_f))
 
     X = df_matrix_f.drop(columns=['KEY']).values
-    n = KMeans(n_clusters=5)
+    n = KMeans(n_clusters=100)
     n.fit(X)
     a_labels = n.labels_
 
@@ -273,7 +273,7 @@ df_elne.set_index(keys=['ID_LOGI'],inplace=True)
 
 #-------------------------------------------------------------------------
 
-cond = 'CFAASX'
+cond = ''
 target_k = (3290,1,1,1,'1','31.12.2017')
 
 df_neighbors = find_neighbors_of(df_chain_matrix, gb_keys, cm_ref, target_k, cond)
@@ -291,8 +291,35 @@ pd.merge(optimal_items[logi_cond], df_elne)
 
 df_cluster = find_cluster_of(df_chain_matrix, gb_keys, cm_ref, target_k, cond)
 
-optimal_k = (2720, 1, 1, 1, '1', '01.01.2018')
+optimal_k = (1910, 1, 1, 2, '1', '31.12.2013')  
 optimal_chain = chain_vector(optimal_k,gb_keys.get_group(optimal_k))
 
 intersect = optimal_chain.compute_dist(chain_vector(target_k,gb_keys.get_group(target_k)))
 intersect                                                    
+
+optimal_g = gb_keys.get_group(optimal_k) 
+
+#-------------------------------------------------------------------------
+# finds dependencies
+#-------------------------------------------------------------------------
+
+elem_base = 'CASS2X'
+df_ = df_elne.loc[df_elne.index[df_elne.index.str.contains(elem_base)]]
+
+#-------------------------------------------------------------------------
+# variant with facturation's elem
+# try to find a consensus 
+#-------------------------------------------------------------------------
+
+data_file = 'fact_elem.xlsx'
+data_file = os.path.join(dir, data_file)
+df_elem_fact = pd.read_excel(data_file)
+
+features = ['NO_IP', 'NO_PLAN', 'NO_CAS', 'NO_CATE', 'NOM_ELEM_FAC', 'COMPTE_ELFA']
+df_elem = df_elem_fact[features]
+df_elem.set_index(['NO_IP', 'NO_PLAN','NO_CAS', 'NO_CATE', 'NOM_ELEM_FAC'], inplace=True)
+
+gb = df_elem.groupby(['NOM_ELEM_FAC'])
+gb.get_group('CRIAME').sort_values(by = ['COMPTE_ELFA'])
+
+
