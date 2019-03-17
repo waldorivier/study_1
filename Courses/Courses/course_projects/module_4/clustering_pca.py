@@ -33,6 +33,8 @@ from sklearn.metrics import r2_score
 from sklearn.preprocessing import scale
 from sklearn.model_selection import train_test_split
 
+from sklearn.decomposition import PCA
+
 import itertools
 import math
 import random as r
@@ -44,7 +46,6 @@ from sklearn import datasets
 
 #------------------------------------------------------------------------------
 pd.set_option('display.max_columns', 90)
-
 
 working_dir = os.getcwd()
 working_dir = os.path.join(working_dir,'course_projects', 'module_4')
@@ -131,7 +132,82 @@ if 0:
     plt.show()
 
 #------------------------------------------------------------------------------
+# PCA
+#------------------------------------------------------------------------------
 
 file_name = 'wine-data.csv'
 data_file = os.path.join(working_dir, file_name)
 df_data = pd.read_csv(data_file)
+
+features = df_data.drop('kind', axis=1)
+X = features.values
+y = df_data.kind.values
+
+print('X:', X.shape) # (178, 13)
+print('y:', y.shape) # (178,)
+
+pca = PCA(n_components=2)
+X_2d = pca.fit_transform(X)
+
+plot_pca(X_2d)
+
+#
+
+scaler = StandardScaler()
+X_scaled = scaler.fit_transform(X)
+
+pca.fit_transform(X_scaled)
+
+#------------------------------------------------------------------------------
+# Pipeline version
+#------------------------------------------------------------------------------
+pipe = Pipeline([
+    ('scaler', StandardScaler()),
+    ('pca', pca)
+    ])
+
+plot_pca(pipe.fit_transform(X))
+
+pca_components_ = pipe.named_steps['pca'].components_
+scaler_ = pipe.named_steps['scaler']
+
+results_df = pd.DataFrame.from_items([
+    ('variance', X.var(axis=0)),
+    ('1st component', pca_components_[0]),
+    ('2nd component', pca_components_[1])
+]).set_index(features.columns)
+
+# Sort DataFrame by variance
+results_df.sort_values('variance', ascending=False)
+
+#------------------------------------------------------------------------------
+def plot_pca(X):
+    sns.set()
+
+    # Plot each kind of wine
+    for kind in [1, 2, 3]:
+        # Wine samples of this type
+        idx = (y == kind)
+
+        # Plot their components
+        plt.scatter(
+            X[idx, 0], X[idx, 1],
+            label='type {}'.format(kind)
+        )
+
+    # Labels and legend
+    plt.legend()
+    plt.xlabel('1st component')
+    plt.ylabel('2nd component')
+    plt.show()
+
+#------------------------------------------------------------------------------
+def show_result(X, features, pca_compoents_):
+    results_df = pd.DataFrame.from_items([
+        ('variance', X.var(axis=0)),
+        ('1st component', pca_components_[0]),
+        ('2nd component', pca_components_[1])
+        ]).set_index(features)
+
+    # Sort DataFrame by variance
+    results_df.sort_values('variance', ascending=False)

@@ -32,7 +32,6 @@
     </Compile>
     <Compile Include="course_projects\module_3\warm_up\course_3.py" />
     <Compile Include="course_projects\module_3\houses_prices\course_3_house.py" />
-    <Compile Include="poc_projects\chain_classifier_1" />
     <Compile Include="poc_projects\chain_classifier_2.py">
       <SubType>Code</SubType>
     </Compile>

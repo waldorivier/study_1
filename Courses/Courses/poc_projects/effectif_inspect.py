@@ -1,7 +1,5 @@
-# import mysql.connector
 import os
 import sqlite3
-# import cx_Oracle    
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -14,6 +12,9 @@ from sklearn.pipeline import Pipeline
 
 from sklearn.model_selection import ParameterGrid
 from sklearn.model_selection import GridSearchCV
+
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 
 from sklearn.model_selection import train_test_split
 
@@ -78,26 +79,21 @@ if 0:
 df_effectif = pd.read_csv(os.path.join(dir, str(filename) + ".csv"))
 df_effectif.set_index(keys=['NPERSO'],inplace=True)
 
-filename = 'effectif_HSBC_after_corr_bonif'
-if 0:
-    produce_df(filename)
-    
-df_hsbc_after = pd.read_csv(os.path.join(dir, str(filename) + ".csv"))
-df_hsbc_after.set_index(keys=['NPERSO'],inplace=True)
+i_elems = df_effectif.columns[df_effectif.columns.str.contains('CEP')]
 
-#-------------------------------------------------------------------------
-# main idea is to define subroup to compare 
-#-------------------------------------------------------------------------
-i_elems = df_hsbc_after.columns[df_hsbc_after.columns.str.contains('CEP')]
+target = 'RVREGL'
+y = df_effectif[target]
 
-diff = df_hsbc_after[i_elems] - df_hsbc_before[i_elems]
-diff.describe()
+# eliminates all columns which are not float
+df = df_effectif.drop(columns=df_effectif.columns[df_effectif.dtypes == object])
 
-# identifies outliers
-diff.idxmax()
+df.fillna(value=0, inplace=True)
 
-# removes them
-diff.drop(index=diff.idxmax().values, inplace=True)
-diff.describe()
+X = df.values
 
+pipe = Pipeline([
+    ('scaler' , StandardScaler()), 
+    ('pca' , PCA())])
 
+pipe.fit(X)
+pipe.transform(X)
