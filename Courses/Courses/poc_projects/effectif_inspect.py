@@ -68,36 +68,24 @@ def produce_df(filename):
 
     df = df.reindex(columns=ser_index)
     df.set_index(keys=['NPERSO'],inplace=True)
+    # df.set_index(keys=['NEMPLO'],inplace=True)
     df.to_csv(os.path.join(dir, str(filename) + ".csv"))
     return df    
     
 filename = 'effectif_mikron'
-if 0:
-    produce_df(filename)
+produce_df(filename)
+df_fact_after = pd.read_csv(os.path.join(dir, str(filename) + ".csv"))
+df_fact_after.set_index(keys=['NEMPLO'],inplace=True)
 
-df_effectif = pd.read_csv(os.path.join(dir, str(filename) + ".csv"))
-df_effectif.set_index(keys=['NPERSO'],inplace=True)
+filename = 'fact_mikron_before'
+produce_df(filename)
+df_fact_before = pd.read_csv(os.path.join(dir, str(filename) + ".csv"))
+df_fact_before.set_index(keys=['NEMPLO'],inplace=True)
 
-filename = 'effectif_HSBC_after_corr_bonif'
-if 0:
-    produce_df(filename)
-    
-df_hsbc_after = pd.read_csv(os.path.join(dir, str(filename) + ".csv"))
-df_hsbc_after.set_index(keys=['NPERSO'],inplace=True)
+cols = df_fact_before.columns[12:]
+for c in cols:
+    print (c, df_fact_before[c].sum())
 
-#-------------------------------------------------------------------------
-# main idea is to define subroup to compare 
-#-------------------------------------------------------------------------
-i_elems = df_hsbc_after.columns[df_hsbc_after.columns.str.contains('CEP')]
-
-diff = df_hsbc_after[i_elems] - df_hsbc_before[i_elems]
-diff.describe()
-
-# identifies outliers
-diff.idxmax()
-
-# removes them
-diff.drop(index=diff.idxmax().values, inplace=True)
-diff.describe()
-
-
+cols = df_fact_after.columns[12:]
+for c in cols:
+    print (c, df_fact_after[c].sum())
