@@ -150,20 +150,22 @@ pca = PCA(n_components=2)
 X_2d = pca.fit_transform(X)
 
 plot_pca(X_2d)
-
-#
+print_result(X, features, pca)
 
 scaler = StandardScaler()
 X_scaled = scaler.fit_transform(X)
 
 pca.fit_transform(X_scaled)
 
+print_result(X_scaled, features, pca).iloc[:,1].sum()
+print_result(X_scaled, features, pca).iloc[:,2].sum()
+
 #------------------------------------------------------------------------------
 # Pipeline version
 #------------------------------------------------------------------------------
 pipe = Pipeline([
     ('scaler', StandardScaler()),
-    ('pca', pca)
+    ('pca',PCA(n_components=2))
     ])
 
 plot_pca(pipe.fit_transform(X))
@@ -171,14 +173,6 @@ plot_pca(pipe.fit_transform(X))
 pca_components_ = pipe.named_steps['pca'].components_
 scaler_ = pipe.named_steps['scaler']
 
-results_df = pd.DataFrame.from_items([
-    ('variance', X.var(axis=0)),
-    ('1st component', pca_components_[0]),
-    ('2nd component', pca_components_[1])
-]).set_index(features.columns)
-
-# Sort DataFrame by variance
-results_df.sort_values('variance', ascending=False)
 
 #------------------------------------------------------------------------------
 def plot_pca(X):
@@ -202,12 +196,13 @@ def plot_pca(X):
     plt.show()
 
 #------------------------------------------------------------------------------
-def show_result(X, features, pca_compoents_):
+def print_result(X, features, pca):
     results_df = pd.DataFrame.from_items([
         ('variance', X.var(axis=0)),
-        ('1st component', pca_components_[0]),
-        ('2nd component', pca_components_[1])
-        ]).set_index(features)
+        ('1st component', pca.components_[0]),
+        ('2nd component', pca.components_[1])
+        ]).set_index(features.columns)
 
     # Sort DataFrame by variance
-    results_df.sort_values('variance', ascending=False)
+    results_df.sort_values('variance', ascending=False, inplace=True)
+    return results_df
