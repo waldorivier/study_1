@@ -268,3 +268,4 @@ __pycache__/
 *.db
 /Courses/Courses/poc_projects/*.xlsx
 /Courses/Courses/poc_projects/*.csv
+*.npz

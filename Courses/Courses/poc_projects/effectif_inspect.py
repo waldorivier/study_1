@@ -60,19 +60,19 @@ dir = os.path.join(dir, 'poc_projects')
 #-------------------------------------------------------------------------
 def produce_df(filename):
     df = pd.read_excel(os.path.join(dir, str(filename) + ".xlsx" ))
-    ser_index = pd.Series(df.columns)
+    # ser_index = pd.Series(df.columns)
 
     # une solution pour retirer tout ce qui n'est pas alnum (date par exemple)
-    ser_index = ser_index[~ser_index.str.isalnum().isnull()]
-    ser_index.sort_values(inplace=True)
+    # ser_index = ser_index[~ser_index.str.isalnum().isnull()]
+    # ser_index.sort_values(inplace=True)
 
-    df = df.reindex(columns=ser_index)
-    df.set_index(keys=['NPERSO'],inplace=True)
-    # df.set_index(keys=['NEMPLO'],inplace=True)
+    # df = df.reindex(columns=ser_index)
+    # df.set_index(keys=['NPERSO'],inplace=True)
+    df.set_index(keys=['NEMPLO'],inplace=True)
     df.to_csv(os.path.join(dir, str(filename) + ".csv"))
     return df    
     
-filename = 'effectif_mikron'
+filename = 'fact_mikron_after_3'
 produce_df(filename)
 df_fact_after = pd.read_csv(os.path.join(dir, str(filename) + ".csv"))
 df_fact_after.set_index(keys=['NEMPLO'],inplace=True)
@@ -89,3 +89,11 @@ for c in cols:
 cols = df_fact_after.columns[12:]
 for c in cols:
     print (c, df_fact_after[c].sum())
+
+
+cols = df_fact_before.columns[12:]
+for c in cols:
+    data_before = df_fact_after.groupby(['NEMPLO'])[c].sum()
+    data_after = df_fact_before.groupby(['NEMPLO'])[c].sum()
+
+    print (c, data_after[data_after - data_before != 0])

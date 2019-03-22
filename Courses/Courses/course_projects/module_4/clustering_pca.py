@@ -173,6 +173,9 @@ plot_pca(pipe.fit_transform(X))
 pca_components_ = pipe.named_steps['pca'].components_
 scaler_ = pipe.named_steps['scaler']
 
+# verify othogonality
+
+np.dot(pca.components_[0], pca.components_[1])
 
 #------------------------------------------------------------------------------
 def plot_pca(X):
@@ -206,3 +209,6 @@ def print_result(X, features, pca):
     # Sort DataFrame by variance
     results_df.sort_values('variance', ascending=False, inplace=True)
     return results_df
+
+#------------------------------------------------------------------------------
+
