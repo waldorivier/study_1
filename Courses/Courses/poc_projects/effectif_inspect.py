@@ -1,5 +1,7 @@
+# import mysql.connector
 import os
 import sqlite3
+# import cx_Oracle    
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -12,9 +14,6 @@ from sklearn.pipeline import Pipeline
 
 from sklearn.model_selection import ParameterGrid
 from sklearn.model_selection import GridSearchCV
-
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
 
 from sklearn.model_selection import train_test_split
 
@@ -69,31 +68,24 @@ def produce_df(filename):
 
     df = df.reindex(columns=ser_index)
     df.set_index(keys=['NPERSO'],inplace=True)
+    # df.set_index(keys=['NEMPLO'],inplace=True)
     df.to_csv(os.path.join(dir, str(filename) + ".csv"))
     return df    
     
 filename = 'effectif_mikron'
-if 0:
-    produce_df(filename)
+produce_df(filename)
+df_fact_after = pd.read_csv(os.path.join(dir, str(filename) + ".csv"))
+df_fact_after.set_index(keys=['NEMPLO'],inplace=True)
 
-df_effectif = pd.read_csv(os.path.join(dir, str(filename) + ".csv"))
-df_effectif.set_index(keys=['NPERSO'],inplace=True)
+filename = 'fact_mikron_before'
+produce_df(filename)
+df_fact_before = pd.read_csv(os.path.join(dir, str(filename) + ".csv"))
+df_fact_before.set_index(keys=['NEMPLO'],inplace=True)
 
-i_elems = df_effectif.columns[df_effectif.columns.str.contains('CEP')]
+cols = df_fact_before.columns[12:]
+for c in cols:
+    print (c, df_fact_before[c].sum())
 
-target = 'RVREGL'
-y = df_effectif[target]
-
-# eliminates all columns which are not float
-df = df_effectif.drop(columns=df_effectif.columns[df_effectif.dtypes == object])
-
-df.fillna(value=0, inplace=True)
-
-X = df.values
-
-pipe = Pipeline([
-    ('scaler' , StandardScaler()), 
-    ('pca' , PCA())])
-
-pipe.fit(X)
-pipe.transform(X)
+cols = df_fact_after.columns[12:]
+for c in cols:
+    print (c, df_fact_after[c].sum())
