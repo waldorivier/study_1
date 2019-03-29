@@ -1,4 +1,4 @@
-    # import mysql.connector
+# import mysql.connector
 import os
 import sqlite3
 # import cx_Oracle    
@@ -273,8 +273,8 @@ df_elne.set_index(keys=['ID_LOGI'],inplace=True)
 
 #-------------------------------------------------------------------------
 
-cond = ''
-target_k = (3290,1,1,1,'1','31.12.2017')
+cond = 'RVPRET'
+target_k = (4400,1,1,1,'1','01.01.2018')
 
 df_neighbors = find_neighbors_of(df_chain_matrix, gb_keys, cm_ref, target_k, cond)
 

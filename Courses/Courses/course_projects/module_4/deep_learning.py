@@ -7,6 +7,8 @@ from sklearn.model_selection import train_test_split
 import tensorflow as tf
 import  PIL
 from PIL import Image
+from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import MinMaxScaler
 
 #------------------------------------------------------------------------------
 pd.set_option('display.max_columns', 90)
@@ -92,7 +94,8 @@ with tf.Session() as sess:
 
 #------------------------------------------------------------------------------
 
-resolution = (3072)
+resolution = 3072
+# resolution = (784)
 
 # file_name = 'mnist-6k.npz'
 file_name = 'cifar10-6k.npz'
@@ -106,8 +109,11 @@ X_train, X_test, y_train, y_test = train_test_split(
     # Convert uint8 pixel values to float
     data.astype(np.float32),
     labels,
-    test_size=5000, random_state=0
+    test_size=1000, random_state=0
 )
+
+scaler = StandardScaler()
+scaler.fit(X_train)
 
 # Split again into validation/test sets
 X_valid, X_test, y_valid, y_test = train_test_split(
@@ -190,13 +196,16 @@ with tf.Session() as sess:
     # Initialize the graph
     sess.run(initialization_op)
 
+    X_train_s = scaler.transform(X_train)
+    # X_train_s = X_train
+
     # Get batches of data
-    for X_batch, y_batch in get_batches(X_train, y_train, 32):
+    for X_batch, y_batch in get_batches(X_train_s, y_train, 64):
         # Run training and evaluate accuracy
         _, batch_acc = sess.run([train_op, accuracy], feed_dict={
             X: X_batch,
             y: y_batch,
-            lr: 0.1 # learning rate
+            lr: 0.01 # learning rate
         })
         acc_values.append(batch_acc)
 
@@ -229,7 +238,7 @@ with tf.Session() as sess:
     sess.run(initialization_op)
 
     y_values = sess.run([logits, predictions], feed_dict={
-            X: A, # Sample body weights
+            X: x_values, # Sample body weights
             W: W_fitted, 
             b: b_fitted 
         })
@@ -237,14 +246,23 @@ with tf.Session() as sess:
 #------------------------------------------------------------------------------
 # cifar animals recognition / classification
 #------------------------------------------------------------------------------
+W_fitted_rescaled = MinMaxScaler().fit_transform(W_fitted)
 
-file_name = 'cifar10-6k.npz'
-data_file = os.path.join(working_dir, file_name)
+fig, axes = plt.subplots(nrows=2, ncols=5, figsize=(10, 4))
+flat_axes = axes.flatten() # from shape (2,5) to (10,)
 
-labels = None
-with np.load(data_file, allow_pickle=False) as npz_file:
-    data = npz_file['data']
-    labels = npz_file['labels']
+# Plot the weights for each class in a subplot
+for i, axis in enumerate(flat_axes):
 
-plt.imshow(data[0,:].reshape((32, 32, 3)))
+        # Get weights of the i-th class
+        weights = W_fitted_rescaled[:, i]
+
+        # Reshape weight values into a 32x32 array
+        template = weights.reshape(32, 32, 3)
+
+        # Plot array
+        axis.imshow(template)
+        axis.get_xaxis().set_visible(False) # disable x-axis
+        axis.get_yaxis().set_visible(False) # disable y-axis
+
 plt.show()
