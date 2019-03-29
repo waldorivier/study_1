@@ -3,8 +3,8 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import tensorflow as tf
 from sklearn.model_selection import train_test_split
+import tensorflow as tf
 import  PIL
 from PIL import Image
 
@@ -171,7 +171,6 @@ accuracy = tf.reduce_mean(
 #------------------------------------------------------------------------------
 # Batcher
 #------------------------------------------------------------------------------
-
 def get_batches(X, y, batch_size):
     # Enumerate indexes by steps of batch_size
     # i: 0, b, 2b, 3b, 4b, .. where b is the batch size

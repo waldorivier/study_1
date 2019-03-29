@@ -21,6 +21,8 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="course_projects\module_4\deep_learning.py" />
+    <Compile Include="course_projects\module_4\pca_exercices.py" />
     <Compile Include="course_projects\module_4\clustering_pca.py" />
     <Compile Include="course_projects\module_4\svm_exercices.py" />
     <Compile Include="course_projects\module_4\knn_exercices.py" />
