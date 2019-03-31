@@ -62,8 +62,10 @@ b = tf.Variable(initial_value=0, dtype=tf.float32)
 x = tf.placeholder(dtype=tf.float32)
 y = tf.placeholder(dtype=tf.float32)
 
+# estimator
 y_hat = a*x + b
 
+# erreur == différnce entre estimateur et valeur attendure
 loss = tf.reduce_mean( # Equivalent to np.mean()
     tf.square( # Equivalent to np.square()
         y - y_hat # Implements broadcasting like Numpy
@@ -73,7 +75,6 @@ loss = tf.reduce_mean( # Equivalent to np.mean()
 loss = tf.losses.huber_loss(y, y_hat, delta=1.0)
 
 lr = tf.placeholder(dtype=tf.float32)
-
 gd = tf.train.GradientDescentOptimizer(
     learning_rate=lr)
 

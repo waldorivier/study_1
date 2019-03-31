@@ -7,9 +7,15 @@ import tensorflow as tf
 from sklearn.preprocessing import PolynomialFeatures
 
 #--------------------------------------------------------------------------
-a = b = c = 1
-def f_(a, b, c, x1, x2):
-    return (a * x1 +  b * x2 + c)
+def get_batches(X, y, bulk):
+    for i in range(0, len(y), bulk):
+        yield X[i:i + bulk], y[i:i + bulk]
+
+#--------------------------------------------------------------------------
+
+w1 = w2 = b = 2
+def f_(x1, x2, w1, w2, b):
+    return (w1 * x1 ** 2 +  w2 * x2 + b)
     
 # prepare train data 
 
@@ -18,7 +24,8 @@ y = []
 
 for i in np.arange(0, 10):
     for j in np.arange(0, 10):
-        yy = f_(a, b, c, i, j)
+        yy = f_(i, j, w1, w2, b)
+        xx = [i,j]
         X.append(xx)
         y.append(yy)
 
@@ -27,18 +34,16 @@ y = np.c_[y]
     
 #--------------------------------------------------------------------------
 
-a_ = tf.Variable(initial_value=0.0, dtype=tf.float32)
+X_ = tf.placeholder(dtype=tf.float32, shape=[None, 2])
+y_ = tf.placeholder(dtype=tf.float32, shape=[None, 1])
 b_ = tf.Variable(initial_value=0.0, dtype=tf.float32)
-c_ = tf.Variable(initial_value=0.0, dtype=tf.float32)
 
-X_ = tf.placeholder(dtype=tf.float32, shape=[X.shape[0], 2])
 W_ = tf.Variable(initial_value=tf.zeros(shape=[2, 1]))
-
-y_ = tf.matmul(X_, W_) + b_
+y_est = tf.matmul(X_, W_) + b_
 
 loss = tf.reduce_mean( # Equivalent to np.mean()
     tf.square( # Equivalent to np.square()
-        y_ - y
+        y_ - y_est
     )
 )
 
@@ -48,22 +53,26 @@ gd = tf.train.GradientDescentOptimizer(
 
 train_op = gd.minimize(loss)
 
+l_loss = []
 initialization_op = tf.global_variables_initializer()
 with tf.Session() as sess:
     # Initialize the graph
     sess.run(initialization_op)
 
-    # Compute predictions
-    result = sess.run([train_op, loss], feed_dict={
-        X_  : X, 
-        y_  : y, 
-        lr_ : 0.1
-    })
+    for X_b, y_b  in get_batches(X, y, 1):
+        _, l = sess.run([train_op, loss], feed_dict={
+                        X_  : X_b, 
+                        y_  : y_b, 
+                        lr_ : 0.001
+        })
 
-    W_fitt = W_.eval()
-    print(result)
-
-
+        l_loss.append(l)
+        W_fitt = W_.eval()
+        b_fitt = b_.eval()
+       
+    
+plt.plot(l_loss)
+plt.show()
 
 #------------------------------------------------------------------------------
 
