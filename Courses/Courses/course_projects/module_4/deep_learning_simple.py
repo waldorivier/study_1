@@ -44,23 +44,25 @@ def get_batches(X, y, bulk):
 
 w1 = 1
 w2 = 1
-b = 1
+b = 0
 
+#--------------------------------------------------------------------------
+# function to make net finds paramteters
+#--------------------------------------------------------------------------
 def f(w1, w2, b):
     w1_ = w1
     w2_ = w2
     b_ = b
 
     def f_(x1, x2):
-        return (w1_ * x1 +  w2_ * x2 + b_)
-        # return (w1_ * x1 ** 2 +  w2_ * x2 ** 2 + b_)
+        # return (w1_ * x1 +  w2_ * x2 + b_)
+        return (w1_ * x1 ** 2 +  w2_ * x2 ** 2 + b_)
     
     return f_
 
 #--------------------------------------------------------------------------
 # generates pseudo data
-# prepare train data 
-
+#--------------------------------------------------------------------------
 f_pseudo = f(w1, w2, b)
 
 X = []
@@ -137,9 +139,75 @@ if 0:
 #------------------------------------------------------------------------------
 # try adding one hidden layer
 #------------------------------------------------------------------------------
+tf.reset_default_graph()
+graph = tf.Graph()
 
+with graph.as_default():
+    X_ = tf.placeholder(dtype=tf.float32, shape=[None, 2])
+    y_ = tf.placeholder(dtype=tf.float32, shape=[None, 1])
+    
+    hidden = tf.layers.dense(
+        X_, 10, activation=tf.nn.sigmoid, 
+        kernel_initializer=tf.variance_scaling_initializer(scale=2, seed=0),
+        # bias_initializer=tf.zeros_initializer(),
+        bias_initializer = None,
+        name='hidden'
+    )
 
+    # Output layer
+    y_est_ = tf.layers.dense(
+        hidden, 1, activation=None, 
+        kernel_initializer=tf.variance_scaling_initializer(scale=1, seed=0),
+        # bias_initializer=tf.zeros_initializer(),
+        bias_initializer = None,
+        name='output'
+    )
 
+    loss = tf.reduce_mean( # Equivalent to np.mean()
+        tf.square( # Equivalent to np.square()
+            y_ - y_est_
+        )
+    )
 
+    lr_ = tf.placeholder(dtype=tf.float32)
+    gd = tf.train.GradientDescentOptimizer(
+        learning_rate=lr_)
+
+    train_op = gd.minimize(loss)
+
+#------------------------------------------------------------------------------
+# training
+#------------------------------------------------------------------------------
+scaler.fit(X)
+X_s = scaler.transform(X)
+l_loss = []
+
+with tf.Session(graph=graph) as sess:
+    sess.run(tf.global_variables_initializer())
+    np.random.seed(0)
+
+    for epoch in range(10):
+        batch_acc = []
+
+        for X_b, y_b in get_batches(X_s, y, 10):
+            _, l = sess.run([train_op, loss], feed_dict={
+                            X_  : X_b, 
+                            y_  : y_b, 
+                            lr_ : 0.01
+            })
+
+            l_loss.append(l)
+    
+    y_est = sess.run(y_est_, feed_dict={
+                X_ : X_s})
+
+    # Weights of the hidden and output layers
+    weights_hidden = graph.get_tensor_by_name('hidden/kernel:0').eval()
+    weights_output = graph.get_tensor_by_name('output/kernel:0').eval()
+    bias_output = graph.get_tensor_by_name('output/bias:0').eval()
+
+    
+plt.plot(l_loss)
+plt.show()
 
 
