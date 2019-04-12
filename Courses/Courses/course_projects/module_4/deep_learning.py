@@ -62,8 +62,10 @@ b = tf.Variable(initial_value=0, dtype=tf.float32)
 x = tf.placeholder(dtype=tf.float32)
 y = tf.placeholder(dtype=tf.float32)
 
+# estimator
 y_hat = a*x + b
 
+# erreur == différnce entre estimateur et valeur attendure
 loss = tf.reduce_mean( # Equivalent to np.mean()
     tf.square( # Equivalent to np.square()
         y - y_hat # Implements broadcasting like Numpy
@@ -73,7 +75,6 @@ loss = tf.reduce_mean( # Equivalent to np.mean()
 loss = tf.losses.huber_loss(y, y_hat, delta=1.0)
 
 lr = tf.placeholder(dtype=tf.float32)
-
 gd = tf.train.GradientDescentOptimizer(
     learning_rate=lr)
 
@@ -94,8 +95,8 @@ with tf.Session() as sess:
 
 #------------------------------------------------------------------------------
 
-resolution = 3072
-# resolution = (784)
+# resolution = 3072
+resolution = (784)
 
 # file_name = 'mnist-6k.npz'
 file_name = 'cifar10-6k.npz'
@@ -266,3 +267,36 @@ for i, axis in enumerate(flat_axes):
         axis.get_yaxis().set_visible(False) # disable y-axis
 
 plt.show()
+
+#------------------------------------------------------------------------------
+# MULTI LAYER NET-NEURONES
+#------------------------------------------------------------------------------
+
+# Create a new graph
+graph = tf.Graph()
+
+with graph.as_default():
+    # Create placeholders
+    X = tf.placeholder(dtype=tf.float32, shape=[None, 784])
+    y = tf.placeholder(dtype=tf.int32, shape=[None])
+
+    # Hidden layer with 16 units
+    W1 = tf.Variable(initial_value=tf.truncated_normal(
+        shape=[784, 16], # Shape
+        stddev=(2/784)**0.5, # Calibrating variance
+        seed=0
+    ))
+    b1 = tf.Variable(initial_value=tf.zeros(shape=[16]))
+
+    # Output layer
+    W2 = tf.Variable(initial_value=tf.truncated_normal(
+        shape=[16, 10], # Shape
+        stddev=1/16**0.5, # Calibrating variance
+        seed=0
+    ))
+    b2 = tf.Variable(initial_value=tf.zeros(shape=[10]))
+
+    # Compute logits
+    hidden = tf.nn.relu( # ReLU
+        tf.matmul(X, W1) + b1)
+    logits = tf.matmul(hidden, W2) + b2
